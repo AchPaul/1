@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GrowHub</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#28003c">
+<style>
+:root{--clr-neon:hsl(288,52%,35%);--clr-bg:hsl(295,14%,67%)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Courier New',monospace}
+h2,h3{text-align:center;padding:0 5px}
+h3{margin-bottom:20px}
+.neon-buttom{background:#000;font-size:16px;text-decoration:none;color:#ebebeb;cursor:pointer;border:var(--clr-neon) .125em solid;padding:.35em 2em;border-radius:.25em;width:260px;text-align:center;box-shadow:inset 0 0 .5em 0 var(--clr-neon),0 0 .5em 0 var(--clr-neon);position:relative}
+.neon-buttom:disabled{background:#3d3b3d;color:#fff;cursor:wait}
+.neon-buttom::before{content:"";position:absolute;background:var(--clr-neon);top:120%;left:0;width:100%;height:100%;transform:perspective(3em)rotateX(40deg)scale(1,.35);filter:blur(1em);opacity:.7}
+.neon-buttom::after{content:"";position:absolute;background:var(--clr-neon);top:0;left:0;bottom:0;right:0;box-shadow:0 0 2em .5em var(--clr-neon);opacity:0;z-index:-1;transition:opacity 100ms}
+.neon-buttom:hover,.neon-buttom:focus{color:var(--clr-bg);text-shadow:none}
+.neon-buttom:hover::before,.neon-buttom:focus::before,.neon-buttom:hover::after,.neon-buttom:focus::after{opacity:1}
+.icon{position:relative}
+.icon_btn{position:absolute;top:3px;left:10px}
+.main{display:flex;margin:20px 0;justify-content:center;align-items:center;flex-direction:column;gap:15px}
+.state{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:10px 20px 10px;color:#fff;position:relative;padding-top:25px;margin-bottom:20px;width:320px}
+.state h1{width:280px;text-align:center;position:absolute;top:-15px;color:#000;border-radius:15px;font-size:17px;background:#f5cafe;border:3px solid #000;padding:8px 0;box-shadow:0 3px 6px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;gap:8px;z-index:10}
+.param-icon{width:24px;height:24px;display:inline-block;vertical-align:middle;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+.state_info{display:flex;margin-top:5px;margin-bottom:15px;width:100%;justify-content:center}
+.state_info div{text-align:center;width:160px;padding:12px 10px;background:#3f005c;font-size:16px;border:3px solid #000;border-radius:15px;box-shadow:0 3px 6px #000;transition:box-shadow .2s}
+.state_info div:hover{box-shadow:0 4px 8px #000}
+.child-param{position:relative;padding-left:25px}
+.logo{margin-top:2px;display:inline-block}
+.grow{font-size:35px;color:#fff;font-weight:700;letter-spacing:5px}
+.hub{font-size:35px;color:#c900cc;font-weight:700;letter-spacing:5px;border:7px solid #c900cc;border-radius:13px;padding:2px 2px 2px 8px}
+header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.5);position:relative;z-index:100}
+.header-transition{height:40px;background:linear-gradient(180deg,#28003c 0%,#1a0026 50%,#000 100%);margin-top:-5px;margin-bottom:15px}
+#status-line{font-size:12px;opacity:.75;text-align:center;margin-bottom:10px}
+</style>
+</head>
+<body>
+<header>
+<div class="logo"><span class="grow">Grow</span><span class="hub">Hub</span></div>
+</header>
+<div class="header-transition"></div>
+<div id="status-line">Подключение...</div>
+<main class="main">
+<h2 style="margin-bottom:15px">Состояние гроукэпа</h2>
+<section class="state">
+<h1>🪴Текущий профиль</h1>
+<div class="state_info"><div><span data-field="profile_name">—</span></div></div>
+</section>
+<section class="state">
+<h1>☀️Освещение</h1>
+<div class="state_info">
+<div class="child-param">Время <span data-field="lig_hours">—</span>ч.</div>
+<div class="child-param">Яркость <span data-field="lig_pwm">—</span>%</div>
+</div>
+<div class="state_info" style="margin-top:-25px">
+<div class="child-param">Тип <span data-field="lig_type_name">—</span></div>
+</div>
+</section>
+<section class="state">
+<h1>🌡️Температура <span data-field="temp_now">—</span>°C</h1>
+<div class="state_info">
+<div class="child-param">День <span data-field="temp_day">—</span>°C</div>
+<div class="child-param">Ночь <span data-field="temp_night">—</span>°C</div>
+</div>
+</section>
+<section class="state">
+<h1>💧Влажность почвы <span data-field="humgr_now">—</span>%</h1>
+<div class="state_info">
+<div class="child-param">День <span data-field="humgr_day">—</span>%</div>
+<div class="child-param">Ночь <span data-field="humgr_night">—</span>%</div>
+</div>
+</section>
+<section class="state">
+<h1>💨Влажность воздуха <span data-field="humair_now">—</span>%</h1>
+<div class="state_info">
+<div class="child-param">День <span data-field="humair_day">—</span>%</div>
+<div class="child-param">Ночь <span data-field="humair_night">—</span>%</div>
+</div>
+</section>
+<a class="neon-buttom icon" href="index.html">Выйти<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M21 11H6.414l5.293-5.293-1.414-1.414L2.586 12l7.707 7.707 1.414-1.414L6.414 13H21z"/></svg></div></a>
+</main>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

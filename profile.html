@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GrowHub</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#28003c">
+<style>
+:root{--clr-neon:hsl(288,52%,35%);--clr-bg:hsl(295,14%,67%)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Courier New',monospace}
+h2,h3{text-align:center;padding:0 5px}
+h3{margin-bottom:20px}
+.neon-buttom{background:#000;font-size:16px;text-decoration:none;color:#ebebeb;cursor:pointer;border:var(--clr-neon) .125em solid;padding:.35em 2em;border-radius:.25em;width:260px;text-align:center;box-shadow:inset 0 0 .5em 0 var(--clr-neon),0 0 .5em 0 var(--clr-neon);position:relative}
+.neon-buttom:disabled{background:#3d3b3d;color:#fff;cursor:wait}
+.neon-buttom::before{content:"";position:absolute;background:var(--clr-neon);top:120%;left:0;width:100%;height:100%;transform:perspective(3em)rotateX(40deg)scale(1,.35);filter:blur(1em);opacity:.7}
+.neon-buttom::after{content:"";position:absolute;background:var(--clr-neon);top:0;left:0;bottom:0;right:0;box-shadow:0 0 2em .5em var(--clr-neon);opacity:0;z-index:-1;transition:opacity 100ms}
+.neon-buttom:hover,.neon-buttom:focus{color:var(--clr-bg);text-shadow:none}
+.neon-buttom:hover::before,.neon-buttom:focus::before,.neon-buttom:hover::after,.neon-buttom:focus::after{opacity:1}
+.icon{position:relative}
+.icon_btn{position:absolute;top:3px;left:10px}
+.main{display:flex;margin:20px 0;justify-content:center;align-items:center;flex-direction:column;gap:25px}
+.container{display:flex;flex-flow:row wrap;justify-content:center;align-items:center;margin-bottom:-10px}
+.select-dropdown{position:relative;display:inline-block;max-width:60%;transition:all ease-in-out .3s}
+.select-dropdown__button{font-family:'Courier New',monospace;padding:10px 0 10px 10px;background:rgb(63,0,92);color:#fff;border:3px solid rgb(63,0,92);border-radius:15px;text-align:center}
+.select-dropdown__button:focus{outline:none}
+.group_input{color:#fff;font-family:'Courier New',monospace;width:300px;padding:10px;border:2px solid var(--clr-neon);border-radius:8px;background:transparent;font-size:16px}
+header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.5);position:relative;z-index:100}
+.header-transition{height:40px;background:linear-gradient(#370053, #000);margin-top:-10px;margin-bottom:15px}
+.logo{margin-top:2px;display:inline-block}
+.grow{font-size:35px;color:#fff;font-weight:700;letter-spacing:5px}
+.hub{font-size:35px;color:#c900cc;font-weight:700;letter-spacing:5px;border:7px solid #c900cc;border-radius:13px;padding:2px 2px 2px 8px}
+</style>
+</head>
+<body>
+<header>
+<div class="logo"><span class="grow">Grow</span><span class="hub">Hub</span></div>
+</header>
+<div class="header-transition"></div>
+<main class="main">
+<form action="\send_profile" method="POST" id="form_profile">
+<h2 style="margin-bottom:20px">Профили настроек</h2>
+<div class="group_input" style="margin-bottom:20px">
+<h3 style="margin-bottom:-5px">Пользовательские:</h3>
+<div class="container" style="margin-bottom:20px">
+<div class="select-dropdown">
+<select name="profile" id="profile_custom" data-plant-select class="select-dropdown__button" style="margin-top:20px">
+<option value="0">Профиль 1</option>
+<option value="1">Профиль 2</option>
+<option value="2">Профиль 3</option>
+<option value="3">Профиль 4</option>
+<option value="4">Профиль 5</option>
+</select>
+</div>
+</div>
+<div style="text-align:center;margin-top:20px">
+<input class="neon-buttom icon" type="submit" value="Сохранить"></input>
+</div>
+</div>
+</form>
+<form action="\send_plant" method="POST" id="form_plant_a">
+<h2 style="margin-bottom:20px">Растения по алфавиту</h2>
+<div class="group_input">
+<h3 style="margin-bottom:-5px">А:</h3>
+<div class="container" style="margin-bottom:20px">
+<div class="select-dropdown">
+<select name="plant" data-plant-select class="select-dropdown__button" style="margin-top:20px">
+<option value="5">Абутилон</option><option value="6">Агава</option><option value="7">Агапантус</option><option value="8">Аглаонема</option><option value="9">Аденантос</option><option value="10">Адениум</option><option value="11">Адиантум</option><option value="12">Азалия</option><option value="13">Аихризон</option><option value="14">Акалифа</option><option value="15">Акация</option><option value="16">Алламанда</option><option value="17">Алоказия</option><option value="18">Алоэ</option><option value="19">Альбиция</option><option value="20">Альбука</option><option value="21">Альстромерия</option><option value="22">Амариллис</option><option value="23">Аморфофаллус</option><option value="24">Ананас</option><option value="25">Андромисхус</option><option value="26">Антуриум</option><option value="27">Апельсин</option><option value="28">Апорокактус</option><option value="29">Аптения</option><option value="30">Араукария</option><option value="31">Ардизия</option><option value="32">Арека</option><option value="33">Аспарагус</option><option value="34">Аспелениум</option><option value="35">Аспидистра</option><option value="36">Астрофитум</option><option value="37">Аукуба</option><option value="38">Афеландра</option><option value="39">Ахименес</option>
+</select>
+</div>
+</div>
+<div style="text-align:center;margin-top:20px">
+<input class="neon-buttom icon" type="submit" value="Сохранить"></input>
+</div>
+</div>
+</form>
+<form action="\send_plant" method="POST" id="form_plant_bv">
+<div class="group_input">
+<h3 style="margin-bottom:-5px">Б, В:</h3>
+<div class="container" style="margin-bottom:20px">
+<div class="select-dropdown">
+<select name="plant" data-plant-select class="select-dropdown__button" style="margin-top:20px">
+<option value="40">Бакопа</option><option value="41">Бальзамин</option><option value="42">Бамбук</option><option value="43">Бегония</option><option value="44">Белопороне</option><option value="45">Бересклет</option><option value="46">Бильбергия</option><option value="47">Блехнум</option><option value="48">Броваллия</option><option value="49">Бромелия</option><option value="50">Бругмансия</option><option value="51">Брунфельсия</option><option value="52">Бувардия</option><option value="53">Бугенвиллия</option><option value="54">Вайлстекеара</option><option value="55">Валотта</option><option value="56">Ванда</option><option value="57">Вашингтония</option><option value="58">Венерины баш.</option><option value="59">Вереск</option><option value="60">Вриезия</option>
+</select>
+</div>
+</div>
+<div style="text-align:center;margin-top:20px">
+<input class="neon-buttom icon" type="submit" value="Сохранить"></input>
+</div>
+</div>
+</form>
+<form action="\send_plant" method="POST" id="form_plant_g">
+<div class="group_input">
+<h3 style="margin-bottom:-5px">Г:</h3>
+<div class="container" style="margin-bottom:20px">
+<div class="select-dropdown">
+<select name="plant" data-plant-select class="select-dropdown__button" style="margin-top:20px">
+<option value="61">Габрантус</option><option value="62">Гардения</option><option value="63">Гастерия</option><option value="64">Гаултерия</option><option value="65">Геликония</option><option value="66">Гемантус</option><option value="67">Гемиграфис</option><option value="68">Геогенантус</option><option value="69">Герань</option><option value="70">Гербера</option><option value="71">Гиацинт</option><option value="72">Гибискус</option><option value="73">Гилоцереус</option><option value="74">Гименокаллис</option><option value="75">Гимнокалициум</option><option value="76">Гинура</option><option value="77">Гипоцирта</option><option value="78">Гипоэстес</option><option value="79">Гиппеаструм</option><option value="80">Глициния</option><option value="81">Глоксиния</option><option value="82">Глориоза</option><option value="83">Гортензия</option><option value="84">Гранат</option><option value="85">Граптопеталум</option><option value="86">Гревиллея</option><option value="87">Гризелиния</option><option value="88">Гриффиния</option><option value="89">Гузмания</option><option value="90">Гуэрния</option>
+</select>
+</div>
+</div>
+<div style="text-align:center;margin-top:20px">
+<input class="neon-buttom icon" type="submit" value="Сохранить"></input>
+</div>
+</div>
+</form>
+<form action="\send_plant" method="POST" id="form_plant_dejz">
+<div class="group_input">
+<h3 style="margin-bottom:-5px">Д, Е, Ж, З:</h3>
+<div class="container" style="margin-bottom:20px">
+<div class="select-dropdown">
+<select name="plant" data-plant-select class="select-dropdown__button" style="margin-top:20px">
+<option value="91">Даваллия</option><option value="92">Делоникс</option><option value="93">Делосперма</option><option value="94">Дендробиум</option><option value="95">Дизиготека</option><option value="96">Дипладения</option><option value="97">Диффенбрахия</option><option value="98">Дихондра</option><option value="99">Драцена</option><option value="100">Дримиопсис</option><option value="101">Дуранта</option><option value="102">Евгения</option><option value="103">Жакаранда</option><option value="104">Жасмин</option><option value="105">Замиокулькас</option><option value="106">Зантоксиум</option><option value="107">Земляника</option><option value="108">Зефирантес</option><option value="109">Зигопеталум</option>
+</select>
+</div>
+</div>
+<div style="text-align:center;margin-top:20px">
+<input class="neon-buttom icon" type="submit" value="Сохранить"></input>
+</div>
+</div>
+</form>
+<form action="\send_plant" method="POST" id="form_plant_ik">
+<div class="group_input">
+<h3 style="margin-bottom:-5px">И, К:</h3>
+<div class="container" style="margin-bottom:20px">
+<div class="select-dropdown">
+<select name="plant" data-plant-select class="select-dropdown__button" style="margin-top:20px">
+<option value="110">Иксора</option><option value="111">Иланг-иланг</option><option value="112">Ипомея</option><option value="113">Исмене</option><option value="114">Кадзура</option><option value="115">Каладиум</option><option value="116">Каланхое</option><option value="117">Калатея</option><option value="118">Калла</option><option value="119">Каллизия</option><option value="120">Каллистемон</option><option value="121">Кальцеолярия</option><option value="122">Камбрия</option><option value="123">Камелия</option><option value="124">Камнеломка</option><option value="125">Кампанула</option><option value="126">Капсикум</option><option value="127">Кариота</option><option value="128">Карисса</option><option value="129">Кармона</option><option value="130">Катарантус</option><option value="131">Каттлея</option><option value="132">Каштаноспермум</option><option value="133">Кипарис</option><option value="134">Кислица</option><option value="135">Клеродендрум</option><option value="136">Кливия</option><option value="137">Клубника</option><option value="138">Кокос</option><option value="139">Колерия</option><option value="140">Колеус</option><option value="141">Колумнея</option><option value="142">Конофитум</option><option value="143">Кордилина</option><option value="144">Коринокарпус</option><option value="145">Котиледон</option><option value="146">Кофе</option><option value="147">Крестовник</option><option value="148">Кринум</option><option value="149">Криптомерия</option><option value="150">Крокус</option><option value="151">Кроссандра</option><option value="152">Кротон</option><option value="153">Ктенанта</option><option value="154">Куссония</option><option value="155">Куфея</option>
+</select>
+</div>
+</div>
+<div style="text-align:center;margin-top:20px">
+<input class="neon-buttom icon" type="submit" value="Сохранить"></input>
+</div>
+</div>
+</form>
+<form action="\send_plant" method="POST" id="form_plant_lm">
+<div class="group_input">
+<h3 style="margin-bottom:-5px">Л, М:</h3>
+<div class="container" style="margin-bottom:20px">
+<div class="select-dropdown">
+<select name="plant" data-plant-select class="select-dropdown__button" style="margin-top:20px">
+<option value="156">Лаванда</option><option value="157">Лавр</option><option value="158">Лампарантус</option><option value="159">Лантана</option><option value="160">Лашеналия</option><option value="161">Лептоспермум</option><option value="162">Лейя</option><option value="163">Ливистона</option><option value="164">Ликорис</option><option value="165">Лилейник</option><option value="166">Лимон</option><option value="167">Литопс</option><option value="168">Лобелия</option><option value="169">Лудизия</option><option value="170">Малина</option><option value="171">Малалеука</option><option value="172">Маммилярия</option><option value="173">Мандарин</option><option value="174">Манеттия</option><option value="175">Маранта</option><option value="176">Мединилла</option><option value="177">Мезембриантемум</option><option value="178">Метросидерос</option><option value="179">Микания</option><option value="180">Мильтония</option><option value="181">Мирсина</option><option value="182">Мирт</option><option value="183">Можжевельник</option><option value="184">Молодило</option><option value="185">Молочай</option><option value="186">Монстера</option><option value="187">Моринга</option><option value="188">Муррайя</option><option value="189">Мюленбекия</option>
+</select>
+</div>
+</div>
+<div style="text-align:center;margin-top:20px">
+<input class="neon-buttom icon" type="submit" value="Сохранить"></input>
+</div>
+</div>
+</form>
+<form action="\send_plant" method="POST" id="form_plant_nop">
+<div class="group_input">
+<h3 style="margin-bottom:-5px">Н, О, П:</h3>
+<div class="container" style="margin-bottom:20px">
+<div class="select-dropdown">
+<select name="plant" data-plant-select class="select-dropdown__button" style="margin-top:20px">
+<option value="190">Немесия</option><option value="191">Неоальсомитра</option><option value="192">Неомарика</option><option value="193">Неорегелия</option><option value="194">Непентес</option><option value="195">Нерине</option><option value="196">Нертера</option><option value="197">Нефролепис</option><option value="198">Нидуляриум</option><option value="199">Нолина</option><option value="200">Нотокактус</option><option value="201">Олеандр</option><option value="202">Олива</option><option value="203">Онцидиум</option><option value="204">Оперкуликария</option><option value="205">Опунция</option><option value="206">Орнитогалум</option><option value="207">Очиток</option><option value="208">Пародия</option><option value="209">Паслён</option><option value="210">Пассифлора</option><option value="211">Пахиподиум</option><option value="212">Пахира</option><option value="213">Пахистахис</option><option value="214">Пахифитум</option><option value="215">Педилантус</option><option value="216">Пеларгония</option><option value="217">Пеллея</option><option value="218">Пенданус</option><option value="219">Пентас</option><option value="220">Пеперомия</option><option value="221">Переския</option><option value="222">Перец</option><option value="223">Петуния</option><option value="224">Пизония</option><option value="225">Пилея</option><option value="226">Платицериум</option><option value="227">Плекрантус</option><option value="228">Плюмбаго</option><option value="229">Плюмерия</option><option value="230">Плющ</option><option value="231">Подокарпус</option><option value="232">Полиподиум</option><option value="233">Полисциас</option><option value="234">Примула</option><option value="235">Птерис</option><option value="236">Пуансеттия</option>
+</select>
+</div>
+</div>
+<div style="text-align:center;margin-top:20px">
+<input class="neon-buttom icon" type="submit" value="Сохранить"></input>
+</div>
+</div>
+</form>
+<form action="\send_plant" method="POST" id="form_plant_rs">
+<div class="group_input">
+<h3 style="margin-bottom:-5px">Р, С:</h3>
+<div class="container" style="margin-bottom:20px">
+<div class="select-dropdown">
+<select name="plant" data-plant-select class="select-dropdown__button" style="margin-top:20px">
+<option value="237">Радермахера</option><option value="238">Рапис</option><option value="239">Рафидофора</option><option value="240">Ребуция</option><option value="241">Рео</option><option value="242">Ривина</option><option value="243">Рипсалидопсис</option><option value="244">Рипсалис</option><option value="245">Родофиала</option><option value="246">Роза</option><option value="247">Рускус</option><option value="248">Руэллия</option><option value="249">Самшит</option><option value="250">Сансевиерия</option><option value="251">Санхезия</option><option value="252">Селагинелла</option><option value="253">Синадениум</option><option value="254">Сингонантус</option><option value="255">Сингониум</option><option value="256">Скиммия</option><option value="257">Смитианта</option><option value="258">Солейролия</option><option value="259">Спармания</option><option value="260">Спатифиллум</option><option value="261">Спрекелия</option><option value="262">Стапелия</option><option value="263">Стефанотис</option><option value="264">Стрелиция</option><option value="265">Стрептокарпус</option><option value="266">Строманте</option><option value="267">Сциндапсус</option>
+</select>
+</div>
+</div>
+<div style="text-align:center;margin-top:20px">
+<input class="neon-buttom icon" type="submit" value="Сохранить"></input>
+</div>
+</div>
+</form>
+<form action="\send_plant" method="POST" id="form_plant_tfh">
+<div class="group_input">
+<h3 style="margin-bottom:-5px">Т, Ф, Х:</h3>
+<div class="container" style="margin-bottom:20px">
+<div class="select-dropdown">
+<select name="plant" data-plant-select class="select-dropdown__button" style="margin-top:20px">
+<option value="268">Табернемонтана</option><option value="269">Тетрастигма</option><option value="270">Тилландсия</option><option value="271">Толстянка</option><option value="272">Траубия</option><option value="273">Трахикарпус</option><option value="274">Тунбергия</option><option value="275">Туя</option><option value="276">Фаленопсис</option><option value="277">Фатсия</option><option value="278">Фатсхедера</option><option value="279">Фаукария</option><option value="280">Фейхоа</option><option value="281">Ферокактус</option><option value="282">Фиалка</option><option value="283">Фикус</option><option value="284">Филодендрон</option><option value="285">Финик</option><option value="286">Фиттония</option><option value="287">Фоккея</option><option value="288">Фрезия</option><option value="289">Фуксия</option><option value="290">Хавортия</option><option value="291">Хамедорея</option><option value="292">Хамелациум</option><option value="293">Хамеропс</option><option value="294">Хатиора</option><option value="295">Хебе</option><option value="296">Хирита</option><option value="297">Хлорофитум</option><option value="298">Хойя</option><option value="299">Хризалидокарпус</option><option value="300">Хризантема</option><option value="301">Хуануллоа</option>
+</select>
+</div>
+</div>
+<div style="text-align:center;margin-top:20px">
+<input class="neon-buttom icon" type="submit" value="Сохранить"></input>
+</div>
+</div>
+</form>
+<form action="\send_plant" method="POST" id="form_plant_z">
+<div class="group_input">
+<h3 style="margin-bottom:-5px">Ц, Ш, Э, Ю, Я:</h3>
+<div class="container" style="margin-bottom:20px">
+<div class="select-dropdown">
+<select name="plant" data-plant-select class="select-dropdown__button" style="margin-top:20px">
+<option value="302">Цереус</option><option value="303">Церопегия</option><option value="304">Цеструм</option><option value="305">Цефалоцереус</option><option value="306">Цианотис</option><option value="307">Цикас</option><option value="308">Цикламен</option><option value="309">Цимбидиум</option><option value="310">Цинерария</option><option value="311">Циперус</option><option value="312">Циртомиум</option><option value="313">Циссус</option><option value="314">Цитрофортунелла</option><option value="315">Шеффлера</option><option value="316">Шлюмбергера</option><option value="317">Эвкалипт</option><option value="318">Эйхорния</option><option value="319">Экзакум</option><option value="320">Эониум</option><option value="321">Эписция</option><option value="322">Эпифиллум</option><option value="323">Эрантемум</option><option value="324">Эсхинантус</option><option value="325">Эухарис</option><option value="326">Эхеверия</option><option value="327">Эхинокактус</option><option value="328">Эхинопсис</option><option value="329">Эхиноцереус</option><option value="330">Эхмея</option><option value="331">Юкка</option><option value="332">Юстиция</option><option value="333">Ятрофа</option>
+</select>
+</div>
+</div>
+<div style="text-align:center;margin-top:20px">
+<input class="neon-buttom icon" type="submit" value="Сохранить"></input>
+</div>
+</div>
+</form>
+<a class="neon-buttom icon" href="index.html">Выйти<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M21 11H6.414l5.293-5.293-1.414-1.414L2.586 12l7.707 7.707 1.414-1.414L6.414 13H21z"/></svg></div></a>
+</main>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script src="app.js"></script>
+<script>
+// Перехватываем отправку всех форм
+document.querySelectorAll('form').forEach(form => {
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const selectEl = form.querySelector('select');
+    if(selectEl && window.ghPublish) {
+      const val = selectEl.value;
+      window.ghPublish('profile', val);
+    }
+  });
+});
+</script>
+</body>
+</html>

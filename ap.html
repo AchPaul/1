@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GrowHub</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#28003c">
+<style>
+:root{--clr-neon:hsl(288,52%,35%);--clr-bg:hsl(295,14%,67%)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Courier New',monospace}
+h2{text-align:center;padding:0 5px}
+p{text-align:center;padding:0 5px;margin-bottom:20px}
+.neon-buttom{background:#000;font-size:16px;text-decoration:none;color:#ebebeb;cursor:pointer;border:var(--clr-neon) .125em solid;padding:.35em 2em;border-radius:.25em;width:260px;text-align:center;box-shadow:inset 0 0 .5em 0 var(--clr-neon),0 0 .5em 0 var(--clr-neon);position:relative}
+.neon-buttom:disabled{background:#3d3b3d;color:#fff;cursor:wait}
+.neon-buttom::before{content:"";position:absolute;background:var(--clr-neon);top:120%;left:0;width:100%;height:100%;transform:perspective(3em)rotateX(40deg)scale(1,.35);filter:blur(1em);opacity:.7}
+.neon-buttom::after{content:"";position:absolute;background:var(--clr-neon);top:0;left:0;bottom:0;right:0;box-shadow:0 0 2em .5em var(--clr-neon);opacity:0;z-index:-1;transition:opacity 100ms}
+.neon-buttom:hover,.neon-buttom:focus{color:var(--clr-bg);text-shadow:none}
+.neon-buttom:hover::before,.neon-buttom:focus::before,.neon-buttom:hover::after,.neon-buttom:focus::after{opacity:1}
+.icon{position:relative}
+.icon_btn{position:absolute;top:3px;left:10px}
+.main{display:flex;margin:20px 0;justify-content:center;align-items:center;flex-direction:column;gap:25px}
+.group_input{color:#fff;width:300px;padding:10px;border:2px solid var(--clr-neon);border-radius:8px;background:transparent;font-size:16px;transition:box-shadow .3s}
+.container{display:flex;flex-flow:row wrap;justify-content:center;align-items:center;margin-bottom:-10px}
+.select-dropdown{position:relative;display:inline-block;max-width:60%;transition:all .3s}
+.select-dropdown__button{padding:10px 0 10px 10px;background:#3f005c;color:#fff;border:3px solid #3f005c;border-radius:15px;text-align:center}
+.select-dropdown__button:focus{outline:0}
+.select-dropdown__list{position:absolute;display:block;left:0;right:0;max-height:300px;overflow:auto;margin:0;padding:0;list-style-type:none;opacity:0;transform-origin:top left;transform:scale(1,0);transition:all .3s;z-index:2}
+.select-dropdown__list.active{opacity:1;pointer-events:auto;transform:scale(1,1);border:2px solid #3f005c;border-radius:5px}
+.select-dropdown__list-item{display:block;list-style-type:none;background:#985abf;font-size:14px;line-height:1.4;cursor:pointer;color:#fff;transition:all .3s}
+.select-dropdown__list-item:hover{background:#cfc9c1}
+.select-dropdown::after{position:absolute;right:7px;top:13px;content:"";display:block;width:15px;height:15px;background-repeat:no-repeat;background-position:center;transition:400ms;pointer-events:none;filter:brightness(.5)}
+.select-dropdown.active::after{transform:rotate(180deg)}
+.attention{max-width:300px;margin:10px auto 0;padding:10px 14px;border:2px solid #ff2e63;border-radius:10px;background:rgba(255,0,80,.08);color:#ffb3c4;line-height:1.25;font-size:14px;box-shadow:0 0 12px rgba(255,0,80,.35),inset 0 0 6px rgba(255,0,80,.25);text-align:center;animation:pulseWarn 2.5s infinite}
+@keyframes pulseWarn{0%{box-shadow:0 0 4px rgba(255,0,80,.3),inset 0 0 3px rgba(255,0,80,.2)}50%{box-shadow:0 0 14px rgba(255,0,80,.6),inset 0 0 8px rgba(255,0,80,.35)}100%{box-shadow:0 0 4px rgba(255,0,80,.3),inset 0 0 3px rgba(255,0,80,.2)}}
+header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.5);position:relative;z-index:100}
+.header-transition{height:40px;background:linear-gradient(#370053, #000);margin-top:-10px;margin-bottom:15px}
+.logo{margin-top:2px;display:inline-block}
+.grow{font-size:35px;color:#fff;font-weight:700;letter-spacing:5px}
+.hub{font-size:35px;color:#c900cc;font-weight:700;letter-spacing:5px;border:7px solid #c900cc;border-radius:13px;padding:2px 2px 2px 8px}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{display:none!important}
+</style>
+</head>
+<body>
+<header>
+<div class="logo"><span class="grow">Grow</span><span class="hub">Hub</span></div>
+</header>
+<div class="header-transition"></div>
+<main class="main">
+<form action="\send_ap" method="POST" id="form_ap">
+<h2>Смена режима WiFi (AP)</h2><br>
+<div class="group_input" style="margin-left:10px">
+<p style="margin-bottom:-5px">В режиме "AP включена" гроукэп всегда раздает свой WiFi, даже при подключении к другой сети.</p><br>
+<p style="margin-bottom:-5px">В режиме "AP переключение" гроукэп отключает свой WiFi после успешного подключения к заданной сети и включает снова, если соединение потеряно.</p><br>
+<p class="attention" style="margin-bottom:10px">Внимание! В некоторых сетях WiFi есть ограничение доступа к веб-серверу с телефона. Настройте MQTT, прежде чем отключать AP.</p><br>
+<p>Текущий режим: <b><span data-field="ap_mode_label">—</span></b><br>Состояние точки доступа: <b><span data-field="ap_state">—</span></b></p>
+<div class="container" style="margin-bottom:10px">
+<div class="select-dropdown">
+<select name="ap_mode" class="select-dropdown__button" style="margin-top:5px">
+<option value="1" class="select-dropdown__list-item">AP включена</option>
+<option value="0" class="select-dropdown__list-item">AP переключение</option>
+</select>
+</div>
+</div>
+<div style="text-align:center;margin-top:20px"><input class="neon-buttom icon" type="submit" value="Сохранить"></div>
+</div>
+</form>
+<a class="neon-buttom icon" href="service.html">Выйти<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M21 11H6.414l5.293-5.293-1.414-1.414L2.586 12l7.707 7.707 1.414-1.414L6.414 13H21z"/></svg></div></a>
+</main>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script src="app.js"></script>
+<script>
+// Перехватываем отправку формы
+document.getElementById('form_ap').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const select = document.querySelector('select[name="ap_mode"]');
+  if(select && window.ghPublish) {
+    const val = select.value;
+    window.ghPublish('ap_mode', val);
+  }
+});
+</script>
+</body>
+</html>
