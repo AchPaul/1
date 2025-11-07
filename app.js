@@ -206,13 +206,17 @@ function renderState(js){
   }
   // Alerts
   if(alertsBox){
+    let hasActiveAlerts = false;
     alertsBox.querySelectorAll('[data-alert]').forEach(el=>{
       const key = el.getAttribute('data-alert');
-      el.classList.toggle('on', !!js[key]);
+      const isActive = !!js[key];
+      // Hide/show individual alert elements
+      el.style.display = isActive ? 'flex' : 'none';
+      if(isActive) hasActiveAlerts = true;
     });
-    const hasAlerts = Array.from(alertsBox.querySelectorAll('.alert')).some(el=> el.classList.contains('on'));
+    // Hide entire alerts section if no active alerts
     const wrapper = alertsBox.closest('.alerts-section');
-    if(wrapper) wrapper.classList.toggle('hidden', !hasAlerts);
+    if(wrapper) wrapper.style.display = hasActiveAlerts ? 'block' : 'none';
   }
   if(ackBox){
     const showWater = !!js.alert_water;
