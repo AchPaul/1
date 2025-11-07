@@ -276,11 +276,17 @@ window.ghPublish = publish;
 // Helper function to show "Saved" state on buttons
 function showSavedState(button, savedText = 'Сохранено ✓', originalText = null, duration = 2000){
   if(!button) return;
-  if(!originalText) originalText = button.textContent;
-  button.textContent = savedText;
+  
+  // Determine if it's an input or button element
+  const isInput = button.tagName === 'INPUT';
+  const textProp = isInput ? 'value' : 'textContent';
+  
+  if(!originalText) originalText = button[textProp];
+  button[textProp] = savedText;
   button.disabled = true;
+  
   setTimeout(() => {
-    button.textContent = originalText;
+    button[textProp] = originalText;
     button.disabled = false;
   }, duration);
 }
