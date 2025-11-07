@@ -72,12 +72,18 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <script src="app.js"></script>
 <script>
 // Перехватываем отправку формы
-document.getElementById('form_ap').addEventListener('submit', (e) => {
+const formAp = document.getElementById('form_ap');
+const submitBtn = formAp.querySelector('input[type="submit"]');
+
+formAp.addEventListener('submit', (e) => {
   e.preventDefault();
   const select = document.querySelector('select[name="ap_mode"]');
   if(select && window.ghPublish) {
     const val = select.value;
     window.ghPublish('ap_mode', val);
+    if(window.ghShowSaved && submitBtn) {
+      window.ghShowSaved(submitBtn);
+    }
   }
 });
 </script>

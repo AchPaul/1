@@ -181,8 +181,7 @@ document.addEventListener("DOMContentLoaded",function(){
   if(btnSaveDay){
     btnSaveDay.addEventListener('click', function(){
       saveDaySettings();
-      this.textContent = 'Сохранено ✓';
-      setTimeout(() => { this.textContent = 'Сохранить'; }, 2000);
+      if(window.ghShowSaved) window.ghShowSaved(this);
     });
   }
   
@@ -191,8 +190,7 @@ document.addEventListener("DOMContentLoaded",function(){
   if(btnSaveNight){
     btnSaveNight.addEventListener('click', function(){
       saveNightSettings();
-      this.textContent = 'Сохранено ✓';
-      setTimeout(() => { this.textContent = 'Сохранить'; }, 2000);
+      if(window.ghShowSaved) window.ghShowSaved(this);
     });
   }
 });

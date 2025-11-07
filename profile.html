@@ -217,12 +217,17 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <script>
 // Перехватываем отправку всех форм
 document.querySelectorAll('form').forEach(form => {
+  const submitBtn = form.querySelector('input[type="submit"]');
+  
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const selectEl = form.querySelector('select');
     if(selectEl && window.ghPublish) {
       const val = selectEl.value;
       window.ghPublish('profile', val);
+      if(window.ghShowSaved && submitBtn) {
+        window.ghShowSaved(submitBtn);
+      }
     }
   });
 });

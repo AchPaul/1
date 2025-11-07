@@ -273,6 +273,20 @@ function publish(key, val){
 // Expose for inline forms on other pages
 window.ghPublish = publish;
 
+// Helper function to show "Saved" state on buttons
+function showSavedState(button, savedText = 'Сохранено ✓', originalText = null, duration = 2000){
+  if(!button) return;
+  if(!originalText) originalText = button.textContent;
+  button.textContent = savedText;
+  button.disabled = true;
+  setTimeout(() => {
+    button.textContent = originalText;
+    button.disabled = false;
+  }, duration);
+}
+// Expose for inline forms on other pages
+window.ghShowSaved = showSavedState;
+
 function flashPub(msg){
   if(!pubStatusEl) return;
   pubStatusEl.textContent = 'Отправлено: ' + msg;
@@ -332,6 +346,7 @@ if(formCfg.save){
     };
     if(cfgBox) cfgBox.classList.remove('show');
     connect(cfg);
+    showSavedState(formCfg.save);
   });
 }
 if(formCfg.clear){

@@ -50,13 +50,19 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <script src="app.js"></script>
 <script>
 // Перехватываем отправку формы
-document.getElementById('form_name').addEventListener('submit', (e) => {
+const formName = document.getElementById('form_name');
+const submitBtn = formName.querySelector('input[type="submit"]');
+
+formName.addEventListener('submit', (e) => {
   e.preventDefault();
   const input = document.querySelector('input[name="gh_name"]');
   if(input && window.ghPublish) {
     const val = input.value.trim();
     if(val) {
       window.ghPublish('name', val);
+      if(window.ghShowSaved && submitBtn) {
+        window.ghShowSaved(submitBtn);
+      }
     }
   }
 });
