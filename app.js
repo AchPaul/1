@@ -152,6 +152,14 @@ function bindMqttEvents(){
 }
 
 function renderState(js){
+  // Debug alerts (uncomment if needed)
+  // console.log('Alerts state:', {
+  //   alert_water: js.alert_water, alert_humid: js.alert_humid,
+  //   alert_high_temp: js.alert_high_temp, alert_low_temp: js.alert_low_temp,
+  //   err_sensor_temp: js.err_sensor_temp, err_sensor_hg: js.err_sensor_hg,
+  //   err_sensor_dht: js.err_sensor_dht
+  // });
+  
   // Primary numeric / text fields
   document.querySelectorAll('[data-field]').forEach(el=>{
     const k = el.getAttribute('data-field');
@@ -204,19 +212,24 @@ function renderState(js){
     const apStateText = js.ap_started === 1 ? 'Включена' : 'Выключена';
     apStateEls.forEach(el=> el.textContent = apStateText);
   }
-  // Alerts
+  // Alerts - always process all alerts to ensure proper hide/show
   if(alertsBox){
     let hasActiveAlerts = false;
+    const wrapper = alertsBox.closest('.alerts-section');
+    
     alertsBox.querySelectorAll('[data-alert]').forEach(el=>{
       const key = el.getAttribute('data-alert');
-      const isActive = !!js[key];
-      // Hide/show individual alert elements
+      // Check if key exists in state and is truthy
+      const isActive = (key in js) && !!js[key];
+      // Always update display to ensure state is fresh
       el.style.display = isActive ? 'flex' : 'none';
       if(isActive) hasActiveAlerts = true;
     });
-    // Hide entire alerts section if no active alerts
-    const wrapper = alertsBox.closest('.alerts-section');
-    if(wrapper) wrapper.style.display = hasActiveAlerts ? 'block' : 'none';
+    
+    // Hide/show entire alerts section based on active alerts
+    if(wrapper){
+      wrapper.style.display = hasActiveAlerts ? 'block' : 'none';
+    }
   }
   if(ackBox){
     const showWater = !!js.alert_water;
@@ -340,6 +353,20 @@ function periodic(){
 function init(){
   const cfg = loadConfig();
   fillConfigForm(cfg);
+  
+  // Initialize alerts section as hidden on page load
+  const alertsSection = document.querySelector('.alerts-section');
+  if(alertsSection){
+    alertsSection.style.display = 'none';
+    // Hide all individual alerts initially
+    const alertsBox = document.getElementById('alerts');
+    if(alertsBox){
+      alertsBox.querySelectorAll('[data-alert]').forEach(el=>{
+        el.style.display = 'none';
+      });
+    }
+  }
+  
   // Если нет сохраненной конфигурации - показать форму
   if(!ensureValidConfig(cfg)) {
     if(cfgBox) cfgBox.classList.add('show');
