@@ -178,13 +178,17 @@ function bindMqttEvents(){
 function renderState(js){
   const alertStates = {};
   ALERT_KEYS.forEach(key=>{ alertStates[key] = isFlagActive(js[key]); });
-  // Debug alerts (uncomment if needed)
-  // console.log('Alerts state:', {
-  //   alert_water: alertStates.alert_water, alert_humid: alertStates.alert_humid,
-  //   alert_high_temp: alertStates.alert_high_temp, alert_low_temp: alertStates.alert_low_temp,
-  //   err_sensor_temp: alertStates.err_sensor_temp, err_sensor_hg: alertStates.err_sensor_hg,
-  //   err_sensor_dht: alertStates.err_sensor_dht
-  // });
+  // Debug alerts
+  console.log('📦 Received JSON:', js);
+  console.log('🚨 Alerts state:', {
+    alert_water: alertStates.alert_water,
+    alert_humid: alertStates.alert_humid,
+    alert_high_temp: alertStates.alert_high_temp,
+    alert_low_temp: alertStates.alert_low_temp,
+    err_sensor_temp: alertStates.err_sensor_temp,
+    err_sensor_hg: alertStates.err_sensor_hg,
+    err_sensor_dht: alertStates.err_sensor_dht
+  });
   
   // Primary numeric / text fields
   document.querySelectorAll('[data-field]').forEach(el=>{
@@ -243,13 +247,17 @@ function renderState(js){
     let hasActiveAlerts = false;
     const wrapper = alertsBox.closest('.alerts-section');
     
+    console.log('🔍 Processing alerts...');
     alertsBox.querySelectorAll('[data-alert]').forEach(el=>{
       const key = el.getAttribute('data-alert');
       const isActive = key in alertStates ? alertStates[key] : isFlagActive(js[key]);
+      console.log(`  ${key}: isActive=${isActive}, display will be: ${isActive ? 'flex' : 'none'}`);
       // Always update display to ensure state is fresh
       el.style.display = isActive ? 'flex' : 'none';
       if(isActive) hasActiveAlerts = true;
     });
+    
+    console.log(`✅ Total active alerts: ${hasActiveAlerts}, section display: ${hasActiveAlerts ? 'block' : 'none'}`);
     
     // Hide/show entire alerts section based on active alerts
     if(wrapper){
