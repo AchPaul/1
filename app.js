@@ -21,6 +21,30 @@ const PUB_THROTTLE_MS = 400; // minimal interval per key
 const FORCE_STATE_INTERVAL = 20000; // if no state for this long -> show stale
 let lastStateTs = 0;
 
+const ALERT_KEYS = [
+  'alert_water',
+  'alert_humid',
+  'alert_high_temp',
+  'alert_low_temp',
+  'err_sensor_temp',
+  'err_sensor_hg',
+  'err_sensor_dht'
+];
+
+function isFlagActive(val){
+  if(val === true || val === 1 || val === '1') return true;
+  if(val === false || val === 0 || val === '0' || val === null || val === undefined) return false;
+  if(typeof val === 'string'){
+    const trimmed = val.trim().toLowerCase();
+    if(trimmed === 'true') return true;
+    if(trimmed === 'false') return false;
+    const numeric = Number(trimmed);
+    if(!Number.isNaN(numeric)) return numeric !== 0;
+  }
+  if(typeof val === 'number') return val !== 0;
+  return false;
+}
+
 // UI references
 const statusLine = document.getElementById('status-line');
 const badgesEl = document.getElementById('badges');
@@ -152,12 +176,14 @@ function bindMqttEvents(){
 }
 
 function renderState(js){
+  const alertStates = {};
+  ALERT_KEYS.forEach(key=>{ alertStates[key] = isFlagActive(js[key]); });
   // Debug alerts (uncomment if needed)
   // console.log('Alerts state:', {
-  //   alert_water: js.alert_water, alert_humid: js.alert_humid,
-  //   alert_high_temp: js.alert_high_temp, alert_low_temp: js.alert_low_temp,
-  //   err_sensor_temp: js.err_sensor_temp, err_sensor_hg: js.err_sensor_hg,
-  //   err_sensor_dht: js.err_sensor_dht
+  //   alert_water: alertStates.alert_water, alert_humid: alertStates.alert_humid,
+  //   alert_high_temp: alertStates.alert_high_temp, alert_low_temp: alertStates.alert_low_temp,
+  //   err_sensor_temp: alertStates.err_sensor_temp, err_sensor_hg: alertStates.err_sensor_hg,
+  //   err_sensor_dht: alertStates.err_sensor_dht
   // });
   
   // Primary numeric / text fields
@@ -219,8 +245,7 @@ function renderState(js){
     
     alertsBox.querySelectorAll('[data-alert]').forEach(el=>{
       const key = el.getAttribute('data-alert');
-      // Check if key exists in state and is truthy
-      const isActive = (key in js) && !!js[key];
+      const isActive = key in alertStates ? alertStates[key] : isFlagActive(js[key]);
       // Always update display to ensure state is fresh
       el.style.display = isActive ? 'flex' : 'none';
       if(isActive) hasActiveAlerts = true;
@@ -232,8 +257,8 @@ function renderState(js){
     }
   }
   if(ackBox){
-    const showWater = !!js.alert_water;
-    const showHumid = !!js.alert_humid;
+  const showWater = alertStates.alert_water;
+  const showHumid = alertStates.alert_humid;
     ackBox.classList.toggle('hidden', !(showWater || showHumid));
     if(ackButtons.water) ackButtons.water.classList.toggle('hidden', !showWater);
     if(ackButtons.humid) ackButtons.humid.classList.toggle('hidden', !showHumid);
