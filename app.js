@@ -21,6 +21,8 @@ const PUB_THROTTLE_MS = 400; // minimal interval per key
 const FORCE_STATE_INTERVAL = 20000; // if no state for this long -> show stale
 let lastStateTs = 0;
 
+let configFromUrl = false;
+
 const ALERT_KEYS = [
   'alert_water',
   'alert_humid',
@@ -101,13 +103,31 @@ function loadConfig(){
   let cfg = null;
   const stored = localStorage.getItem(LS_KEY);
   if(stored){ try { cfg = JSON.parse(stored); } catch(_){} }
-  // URL overrides stored if present
-  const urlCfg = {
-    host: p('h'), port: p('p'), user: p('u'), pass: p('pw'), base: p('b')
+  // Support both short (h,p,u,pw,b) and long (host,port,user,pass,topic) parameter styles
+  const longParams = {
+    host: p('host'),
+    port: p('port'),
+    user: p('user'),
+    pass: p('pass'),
+    base: p('topic')
   };
-  if(urlCfg.base && !urlCfg.base.endsWith('/')) urlCfg.base += '/';
-  // Merge preference: URL values if non-empty, else stored
-  const merged = Object.assign({}, cfg||{}, Object.fromEntries(Object.entries(urlCfg).filter(([,v])=>v)));
+  const shortParams = {
+    host: p('h'),
+    port: p('p'),
+    user: p('u'),
+    pass: p('pw'),
+    base: p('b')
+  };
+  // Prefer long params when provided, else fall back to short
+  const chosen = {};
+  ['host','port','user','pass','base'].forEach(k=>{
+    if(longParams[k]) chosen[k] = longParams[k]; else if(shortParams[k]) chosen[k] = shortParams[k];
+  });
+  configFromUrl = Object.values(chosen).some(Boolean);
+  // Normalize base topic trailing slash
+  if(chosen.base && !chosen.base.endsWith('/')) chosen.base += '/';
+  // Merge with stored config (URL params override stored when non-empty)
+  const merged = Object.assign({}, cfg||{}, Object.fromEntries(Object.entries(chosen).filter(([,v])=>v)));
   return merged;
 }
 
@@ -419,6 +439,10 @@ function periodic(){
 function init(){
   const cfg = loadConfig();
   fillConfigForm(cfg);
+  if(configFromUrl){
+    saveConfig(cfg);
+    if(cfgBox) cfgBox.classList.remove('show');
+  }
   
   // Initialize alerts section as hidden on page load
   const alertsSection = document.querySelector('.alerts-section');
