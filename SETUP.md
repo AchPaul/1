@@ -12,11 +12,11 @@
 2. **При первом запуске** появится форма "⚙️ Настройка подключения"
 
 3. **Заполните поля:**
-   - **MQTT Host:** `broker.hivemq.cloud` (или адрес вашего брокера)
-   - **WebSocket Port:** `8884` (для TLS) или `9001` (без TLS)
+   - **MQTT Host:** адрес вашего брокера
+   - **WebSocket Port:** TLS
    - **MQTT Username:** ваш логин
    - **MQTT Password:** ваш пароль
-   - **Base Topic:** `growhub/<ваш-mac>/` (например `growhub/aabbccdd/`)
+   - **Base Topic:** ваш-mac
 
 4. **Нажмите "Сохранить"**
 
@@ -29,7 +29,7 @@
 Можно передать параметры через URL (кроме пароля):
 
 ```
-https://<username>.github.io/growhub/?h=broker.hivemq.cloud&p=8884&u=myuser&b=growhub/aabbccdd/
+https://<username>.github.io/growhub/?h=broker.hivemq.cloud&p=8884&u=myuser&b=aabbccdd
 ```
 
 При открытии:

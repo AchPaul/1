@@ -71,12 +71,12 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <span class="slider-value" data-live="lig_hours">—</span> часов в сутки
 <input type="range" class="slider" min="0" max="24" id="inp_lig_hours">
 </div>
-<div class="neon-divider-1"></div>
+<!-- <div class="neon-divider-1"></div>
 <div class="slider-container">
 <div class="slider-title"><div><span>Яркость:</span></div></div>
 <span class="slider-value" data-live="lig_pwm">—</span>%
 <input type="range" class="slider" min="0" max="100" id="inp_lig_pwm">
-</div>
+</div> -->
 <div class="neon-divider-1"></div>
 <div class="slider-container">
 <div class="slider-title"><div><span>Температура:</span></div></div>
@@ -96,11 +96,32 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <input type="range" class="slider" min="0" max="90" id="inp_humair_day">
 </div>
 <div class="neon-divider-1"></div>
+<div class="slider-container">
+<div class="slider-title"><div><span>Проветривание (мин):</span></div></div>
+<span class="slider-value" data-live="vent_day">—</span>
+<input type="range" class="slider" min="0" max="180" id="inp_vent_day">
+</div>
+<div class="neon-divider-1"></div>
 <div style="text-align:center;margin-top:20px">
 <button class="neon-buttom icon" id="btn_save_day">Сохранить</button>
 </div>
 <div class="neon-divider-1"></div>
 </section>
+<!--
+<section class="group_input">
+<h3 style="margin-top:10px">Проветривание</h3>
+<div class="neon-divider-1"></div>
+<div class="slider-container">
+<div class="slider-title"><div><span>Интервал (мин):</span></div></div>
+<span class="slider-value" data-live="vent_interval">—</span>
+<input type="range" class="slider" min="0" max="180" id="inp_vent_interval">
+</div>
+<div style="text-align:center;margin-top:20px">
+<button class="neon-buttom icon" id="btn_save_vent">Сохранить</button>
+</div>
+<div class="neon-divider-1"></div>
+</section>
+-->
 <section class="group_input">
 <h3 style="margin-top:10px">Ночные параметры</h3>
 <div class="neon-divider-1"></div>
@@ -120,6 +141,12 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <div class="slider-title"><div><span>Влажность воздуха:</span></div></div>
 <span class="slider-value" data-live="humair_night">—</span>%
 <input type="range" class="slider" min="0" max="90" id="inp_humair_night">
+</div>
+<div class="neon-divider-1"></div>
+<div class="slider-container">
+<div class="slider-title"><div><span>Проветривание (мин):</span></div></div>
+<span class="slider-value" data-live="vent_night">—</span>
+<input type="range" class="slider" min="0" max="180" id="inp_vent_night">
 </div>
 <div class="neon-divider-1"></div>
 <div style="text-align:center;margin-top:20px">
@@ -147,7 +174,8 @@ document.addEventListener("DOMContentLoaded",function(){
       ['lig_pwm', 'inp_lig_pwm'],
       ['temp_day', 'inp_temp_day'],
       ['humgr_day', 'inp_humgr_day'],
-      ['humair_day', 'inp_humair_day']
+      ['humair_day', 'inp_humair_day'],
+      ['vent_day', 'inp_vent_day']
     ];
     
     dayParams.forEach(([key, id]) => {
@@ -165,7 +193,8 @@ document.addEventListener("DOMContentLoaded",function(){
     const nightParams = [
       ['temp_night', 'inp_temp_night'],
       ['humgr_night', 'inp_humgr_night'],
-      ['humair_night', 'inp_humair_night']
+      ['humair_night', 'inp_humair_night'],
+      ['vent_night', 'inp_vent_night']
     ];
     
     nightParams.forEach(([key, id]) => {
@@ -175,6 +204,13 @@ document.addEventListener("DOMContentLoaded",function(){
       }
     });
   }
+  /*
+  function saveVentSettings(){
+    if(!window.ghPublish) return;
+    const el=document.getElementById('inp_vent_interval');
+    if(el) window.ghPublish('vent_interval', el.value);
+  }
+  */
   
   // Кнопка сохранения дневных параметров
   const btnSaveDay = document.getElementById('btn_save_day');
@@ -193,6 +229,15 @@ document.addEventListener("DOMContentLoaded",function(){
       if(window.ghShowSaved) window.ghShowSaved(this);
     });
   }
+  /*
+  const btnSaveVent=document.getElementById('btn_save_vent');
+  if(btnSaveVent){
+    btnSaveVent.addEventListener('click', function(){
+      saveVentSettings();
+      if(window.ghShowSaved) window.ghShowSaved(this);
+    });
+  }
+  */
 });
 </script>
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>

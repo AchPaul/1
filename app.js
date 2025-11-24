@@ -82,6 +82,9 @@ const inputs = {
   humgr_night: document.getElementById('inp_humgr_night'),
   humair_day: document.getElementById('inp_humair_day'),
   humair_night: document.getElementById('inp_humair_night'),
+  vent_day: document.getElementById('inp_vent_day'),
+  vent_night: document.getElementById('inp_vent_night'),
+  vent_interval: document.getElementById('inp_vent_interval'),
   profile: document.getElementById('inp_profile'),
   btn_profile: document.getElementById('btn_profile'),
   sync_now: document.getElementById('btn_sync_now'),
@@ -178,17 +181,13 @@ function bindMqttEvents(){
 function renderState(js){
   const alertStates = {};
   ALERT_KEYS.forEach(key=>{ alertStates[key] = isFlagActive(js[key]); });
-  // Debug alerts
-  console.log('📦 Received JSON:', js);
-  console.log('🚨 Alerts state:', {
-    alert_water: alertStates.alert_water,
-    alert_humid: alertStates.alert_humid,
-    alert_high_temp: alertStates.alert_high_temp,
-    alert_low_temp: alertStates.alert_low_temp,
-    err_sensor_temp: alertStates.err_sensor_temp,
-    err_sensor_hg: alertStates.err_sensor_hg,
-    err_sensor_dht: alertStates.err_sensor_dht
-  });
+  // Debug alerts (uncomment if needed)
+  // console.log('Alerts state:', {
+  //   alert_water: alertStates.alert_water, alert_humid: alertStates.alert_humid,
+  //   alert_high_temp: alertStates.alert_high_temp, alert_low_temp: alertStates.alert_low_temp,
+  //   err_sensor_temp: alertStates.err_sensor_temp, err_sensor_hg: alertStates.err_sensor_hg,
+  //   err_sensor_dht: alertStates.err_sensor_dht
+  // });
   
   // Primary numeric / text fields
   document.querySelectorAll('[data-field]').forEach(el=>{
@@ -212,6 +211,9 @@ function renderState(js){
   syncInputIfIdle(inputs.humgr_night, js.humgr_night);
   syncInputIfIdle(inputs.humair_day, js.humair_day);
   syncInputIfIdle(inputs.humair_night, js.humair_night);
+  syncInputIfIdle(inputs.vent_day, js.vent_day);
+  syncInputIfIdle(inputs.vent_night, js.vent_night);
+  syncInputIfIdle(inputs.vent_interval, js.vent_interval);
   // Sync AP mode select
   if(js.ap_mode !== undefined){
     const apSelect = document.querySelector('select[name="ap_mode"]');
@@ -247,17 +249,13 @@ function renderState(js){
     let hasActiveAlerts = false;
     const wrapper = alertsBox.closest('.alerts-section');
     
-    console.log('🔍 Processing alerts...');
     alertsBox.querySelectorAll('[data-alert]').forEach(el=>{
       const key = el.getAttribute('data-alert');
       const isActive = key in alertStates ? alertStates[key] : isFlagActive(js[key]);
-      console.log(`  ${key}: isActive=${isActive}, display will be: ${isActive ? 'flex' : 'none'}`);
       // Always update display to ensure state is fresh
       el.style.display = isActive ? 'flex' : 'none';
       if(isActive) hasActiveAlerts = true;
     });
-    
-    console.log(`✅ Total active alerts: ${hasActiveAlerts}, section display: ${hasActiveAlerts ? 'block' : 'none'}`);
     
     // Hide/show entire alerts section based on active alerts
     if(wrapper){
@@ -317,6 +315,19 @@ function showSavedState(button, savedText = 'Сохранено ✓', originalTe
   if(!originalText) originalText = button[textProp];
   button[textProp] = savedText;
   button.disabled = true;
+
+  const wrap = button.closest('[data-save-wrap]');
+  const status = wrap ? wrap.querySelector('.save-status') : null;
+  if(status){
+    status.textContent = 'сохранено';
+    status.classList.add('active');
+    if(status._hideTimer) clearTimeout(status._hideTimer);
+    status._hideTimer = setTimeout(()=>{
+      status.classList.remove('active');
+      status.textContent = '';
+      status._hideTimer = null;
+    }, duration);
+  }
   
   setTimeout(() => {
     button[textProp] = originalText;
@@ -343,6 +354,7 @@ function bindControls(){
     ['humgr_night','inp_humgr_night'],
     ['humair_day','inp_humair_day'],
     ['humair_night','inp_humair_night']
+    ,['vent_interval','inp_vent_interval']
   ];
   ranged.forEach(([key,id])=>{
     const el = document.getElementById(id);
