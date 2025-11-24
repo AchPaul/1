@@ -67,6 +67,17 @@ const formCfg = {
   clear: document.getElementById('cfg-clear')
 };
 
+// Raw URL parameter dump (long & short forms) for diagnostics
+function extractUrlRaw(){
+  const sp = new URLSearchParams(window.location.search);
+  const raw = {
+    host: sp.get('host'), port: sp.get('port'), user: sp.get('user'), pass: sp.get('pass'), topic: sp.get('topic'),
+    h: sp.get('h'), p: sp.get('p'), u: sp.get('u'), pw: sp.get('pw'), b: sp.get('b')
+  };
+  console.log('[GrowHub:PWA] URL params raw:', raw);
+  return raw;
+}
+
 const ackBox = document.getElementById('service-acks');
 const ackButtons = {
   water: document.getElementById('btn_ack_water'),
@@ -437,8 +448,26 @@ function periodic(){
 }
 
 function init(){
+  const rawParams = extractUrlRaw();
   const cfg = loadConfig();
-  fillConfigForm(cfg);
+  // Force fill from URL (prefer long names) before merging display
+  if(formCfg.host && (rawParams.host || rawParams.h)) formCfg.host.value = rawParams.host || rawParams.h || '';
+  if(formCfg.port && (rawParams.port || rawParams.p)) formCfg.port.value = rawParams.port || rawParams.p || '';
+  if(formCfg.user && (rawParams.user || rawParams.u)) formCfg.user.value = rawParams.user || rawParams.u || '';
+  if(formCfg.pass && (rawParams.pass || rawParams.pw)) formCfg.pass.value = rawParams.pass || rawParams.pw || '';
+  if(formCfg.base && (rawParams.topic || rawParams.b)) formCfg.base.value = (rawParams.topic || rawParams.b || '');
+  // Now overwrite with merged cfg only for fields still empty (avoid clobbering URL intention)
+  if(formCfg.host && !formCfg.host.value) formCfg.host.value = cfg.host || '';
+  if(formCfg.port && !formCfg.port.value) formCfg.port.value = cfg.port || '';
+  if(formCfg.user && !formCfg.user.value) formCfg.user.value = cfg.user || '';
+  if(formCfg.pass && !formCfg.pass.value) formCfg.pass.value = cfg.pass || '';
+  if(formCfg.base && !formCfg.base.value) formCfg.base.value = cfg.base || '';
+  // Reflect final cfg object for connection logic
+  cfg.host = formCfg.host.value.trim();
+  cfg.port = formCfg.port.value.trim();
+  cfg.user = formCfg.user.value.trim();
+  cfg.pass = formCfg.pass.value.trim();
+  cfg.base = formCfg.base.value.trim();
   if(configFromUrl){
     saveConfig(cfg);
     if(cfgBox) cfgBox.classList.remove('show');
@@ -462,6 +491,7 @@ function init(){
     if(cfgBox) cfgBox.classList.add('show');
     if(statusLine) statusLine.textContent = 'Введите настройки подключения';
   } else {
+    if(statusLine) statusLine.textContent = 'Автозагрузка конфигурации...';
     connect(cfg);
   }
   bindControls();
