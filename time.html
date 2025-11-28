@@ -117,8 +117,6 @@ document.addEventListener('DOMContentLoaded', function(){
     setBase = base + 'set/';
     
     const url = 'wss://' + cfg.host + ':' + cfg.port + '/mqtt';
-    statusBox.textContent = 'Подключение к MQTT...';
-    statusBox.style.color = '#fff';
     
     client = mqtt.connect(url, {
       clientId: 'gh-time-' + Math.random().toString(16).slice(2),
@@ -130,8 +128,6 @@ document.addEventListener('DOMContentLoaded', function(){
     
     client.on('connect', ()=>{
       connected = true;
-      statusBox.textContent = '✅ MQTT подключен';
-      statusBox.style.color = '#b9e29a';
     });
     
     client.on('error', (e)=>{
@@ -207,3 +203,4 @@ document.addEventListener('DOMContentLoaded', function(){
 </script>
 </body>
 </html>
+
