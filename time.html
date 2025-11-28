@@ -81,7 +81,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </section>
 <a class="neon-buttom icon" href="service.html">Выйти<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M21 11H6.414l5.293-5.293-1.414-1.414L2.586 12l7.707 7.707 1.414-1.414L6.414 13H21z"/></svg></div></a>
 </main>
-<script src="app.js"></script>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   const statusBox = document.getElementById('status-box');
@@ -91,6 +91,68 @@ document.addEventListener('DOMContentLoaded', function(){
   const currentTimeVal = document.getElementById('current-time-val');
   const form = document.getElementById('time-form');
   const btnSave = document.getElementById('btn-save');
+  
+  // MQTT клиент для этой страницы
+  let client = null;
+  let connected = false;
+  let setBase = '';
+  
+  // Загрузка конфигурации из localStorage
+  function loadConfig(){
+    const stored = localStorage.getItem('gh_remote_cfg_v1');
+    if(stored){ try { return JSON.parse(stored); } catch(_){} }
+    return null;
+  }
+  
+  function connectMqtt(){
+    const cfg = loadConfig();
+    if(!cfg || !cfg.host || !cfg.port || !cfg.base){
+      statusBox.textContent = '❌ Нет сохранённых настроек MQTT. Сначала откройте главную страницу.';
+      statusBox.style.color = '#ef9aa0';
+      return;
+    }
+    
+    let base = cfg.base;
+    if(!base.endsWith('/')) base += '/';
+    setBase = base + 'set/';
+    
+    const url = 'wss://' + cfg.host + ':' + cfg.port + '/mqtt';
+    statusBox.textContent = 'Подключение к MQTT...';
+    statusBox.style.color = '#fff';
+    
+    client = mqtt.connect(url, {
+      clientId: 'gh-time-' + Math.random().toString(16).slice(2),
+      username: cfg.user || undefined,
+      password: cfg.pass || undefined,
+      reconnectPeriod: 4000,
+      connectTimeout: 8000
+    });
+    
+    client.on('connect', ()=>{
+      connected = true;
+      statusBox.textContent = '✅ MQTT подключен';
+      statusBox.style.color = '#b9e29a';
+    });
+    
+    client.on('error', (e)=>{
+      statusBox.textContent = '❌ Ошибка MQTT: ' + e.message;
+      statusBox.style.color = '#ef9aa0';
+    });
+    
+    client.on('close', ()=>{
+      connected = false;
+    });
+  }
+  
+  function publish(key, val){
+    if(!connected || !client){
+      statusBox.textContent = '❌ MQTT не подключен';
+      statusBox.style.color = '#ef9aa0';
+      return false;
+    }
+    client.publish(setBase + key, String(val));
+    return true;
+  }
   
   // Инициализация текущего времени
   const now = new Date();
@@ -115,17 +177,12 @@ document.addEventListener('DOMContentLoaded', function(){
     // Публикация через MQTT: формат "light_on:current_hour"
     const payload = lightOn + ':' + currentHour;
     
-    if(typeof window.ghPublish === 'function'){
-      window.ghPublish('set_time', payload);
-      statusBox.textContent = '✅ Время установлено: ' + lightOn + ':00 → ' + currentHour + ':00';
+    if(publish('set_time', payload)){
+      statusBox.textContent = '✅ Время установлено: ' + lightOn + ':00, текущее: ' + currentHour + ':00';
       statusBox.style.color = '#b9e29a';
-      
-      if(typeof window.ghShowSaved === 'function'){
-        window.ghShowSaved(btnSave, 'Сохранено ✓', 'Сохранить');
-      }
-    } else {
-      statusBox.textContent = '❌ MQTT не подключен';
-      statusBox.style.color = '#ef9aa0';
+      btnSave.value = 'Сохранено ✓';
+      btnSave.disabled = true;
+      setTimeout(()=>{ btnSave.value = 'Сохранить'; btnSave.disabled = false; }, 2000);
     }
   });
   
@@ -143,6 +200,9 @@ document.addEventListener('DOMContentLoaded', function(){
       isShown = false;
     }
   });
+  
+  // Подключение к MQTT при загрузке страницы
+  connectMqtt();
 });
 </script>
 </body>
