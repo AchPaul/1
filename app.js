@@ -24,6 +24,7 @@ let lastStateTs = 0;
 let configFromUrl = false;
 
 const ALERT_KEYS = [
+  'rebooted',
   'alert_water',
   'alert_humid',
   'alert_high_temp',
@@ -211,7 +212,14 @@ function bindMqttEvents(){
 
 function renderState(js){
   const alertStates = {};
-  ALERT_KEYS.forEach(key=>{ alertStates[key] = isFlagActive(js[key]); });
+  ALERT_KEYS.forEach(key=>{
+    // rebooted имеет инвертированную логику: показываем алерт когда rebooted=0 (т.е. после перезагрузки)
+    if(key === 'rebooted'){
+      alertStates[key] = !isFlagActive(js[key]);
+    } else {
+      alertStates[key] = isFlagActive(js[key]);
+    }
+  });
   // Debug alerts (uncomment if needed)
   // console.log('Alerts state:', {
   //   alert_water: alertStates.alert_water, alert_humid: alertStates.alert_humid,

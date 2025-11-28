@@ -96,6 +96,7 @@ document.addEventListener('DOMContentLoaded', function(){
   let client = null;
   let connected = false;
   let setBase = '';
+  let stateTopic = '';
   
   // Загрузка конфигурации из localStorage
   function loadConfig(){
@@ -115,6 +116,7 @@ document.addEventListener('DOMContentLoaded', function(){
     let base = cfg.base;
     if(!base.endsWith('/')) base += '/';
     setBase = base + 'set/';
+    stateTopic = base + 'state/json';
     
     const url = 'wss://' + cfg.host + ':' + cfg.port + '/mqtt';
     
@@ -128,6 +130,23 @@ document.addEventListener('DOMContentLoaded', function(){
     
     client.on('connect', ()=>{
       connected = true;
+      statusBox.textContent = '✅ Подключено';
+      statusBox.style.color = '#b9e29a';
+      // Подписываемся на состояние для получения light_on_hour
+      client.subscribe(stateTopic);
+    });
+    
+    client.on('message', (topic, message)=>{
+      if(topic === stateTopic){
+        try {
+          const js = JSON.parse(message.toString());
+          // Устанавливаем сохранённое значение включения света
+          if(js.light_on_hour !== undefined){
+            lightOnSlider.value = js.light_on_hour;
+            lightOnVal.textContent = js.light_on_hour;
+          }
+        } catch(e){ console.warn('State parse error', e); }
+      }
     });
     
     client.on('error', (e)=>{
@@ -203,4 +222,3 @@ document.addEventListener('DOMContentLoaded', function(){
 </script>
 </body>
 </html>
-
