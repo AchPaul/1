@@ -130,8 +130,6 @@ document.addEventListener('DOMContentLoaded', function(){
     
     client.on('connect', ()=>{
       connected = true;
-      statusBox.textContent = '✅ Подключено';
-      statusBox.style.color = '#b9e29a';
       // Подписываемся на состояние для получения light_on_hour
       client.subscribe(stateTopic);
     });
@@ -222,3 +220,4 @@ document.addEventListener('DOMContentLoaded', function(){
 </script>
 </body>
 </html>
+
