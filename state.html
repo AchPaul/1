@@ -41,6 +41,9 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <div class="logo"><span class="grow">Grow</span><span class="hub">Hub</span></div>
 </header>
 <div class="header-transition"></div>
+<div id="mqtt-not-configured" style="display:none;text-align:center;padding:12px;margin:0 15px 10px;background:#5a0000;border:2px solid #ff4444;border-radius:10px;color:#ef9aa0">
+⚠️ MQTT не настроен. <a href="index.html" style="color:#fff;text-decoration:underline">Настройте на главной странице</a>
+</div>
 <div id="status-line">Подключение...</div>
 <main class="main">
 <h2 style="margin-bottom:15px">Состояние гроукэпа</h2>
@@ -51,11 +54,8 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <section class="state">
 <h1>☀️Освещение</h1>
 <div class="state_info">
+<div class="child-param">Режим <span data-field="day_night_mode">—</span></div>
 <div class="child-param">Время <span data-field="lig_hours">—</span>ч.</div>
-<div class="child-param">Яркость <span data-field="lig_pwm">—</span>%</div>
-</div>
-<div class="state_info" style="margin-top:-25px">
-<div class="child-param">Тип <span data-field="lig_type_name">—</span></div>
 </div>
 </section>
 <section class="state">

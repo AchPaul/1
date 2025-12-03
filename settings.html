@@ -11,7 +11,7 @@
 body{background:#000;color:#fff;font-family:'Courier New',monospace}
 h2,h3{text-align:center;padding:0 5px}
 h3{margin-bottom:20px}
-.neon-buttom{background:#000;font-size:16px;text-decoration:none;color:#ebebeb;cursor:pointer;border:var(--clr-neon) .125em solid;padding:.35em 2em;border-radius:.25em;width:260px;text-align:center;box-shadow:inset 0 0 .5em 0 var(--clr-neon),0 0 .5em 0 var(--clr-neon);position:relative}
+.neon-buttom{background:#000;font-size:16px;text-decoration:none;color:#ebebeb;cursor:pointer;border:var(--clr-neon) .125em solid;padding:.35em 2em;border-radius:.25em;width:210px;text-align:center;box-shadow:inset 0 0 .5em 0 var(--clr-neon),0 0 .5em 0 var(--clr-neon);position:relative}
 .neon-buttom:disabled{background:#3d3b3d;color:#fff;cursor:wait}
 .neon-buttom::before{content:"";position:absolute;background:var(--clr-neon);top:120%;left:0;width:100%;height:100%;transform:perspective(3em)rotateX(40deg)scale(1,.35);filter:blur(1em);opacity:.7}
 .neon-buttom::after{content:"";position:absolute;background:var(--clr-neon);top:0;left:0;bottom:0;right:0;box-shadow:0 0 2em .5em var(--clr-neon);opacity:0;z-index:-1;transition:opacity 100ms}
@@ -20,7 +20,7 @@ h3{margin-bottom:20px}
 .icon{position:relative}
 .icon_btn{position:absolute;top:3px;left:10px}
 .main{display:flex;margin:20px 0;justify-content:center;align-items:center;flex-direction:column;gap:25px}
-.group_input{color:#fff;width:300px;padding:10px;border:2px solid var(--clr-neon);border-radius:8px;background:0 0;font-size:16px;transition:box-shadow .3s}
+.group_input{color:#fff;width:250px;padding:10px;border:2px solid var(--clr-neon);border-radius:8px;background:0 0;font-size:16px;transition:box-shadow .3s}
 .group_input::placeholder{color:#fedbff;opacity:.5}
 .group_input:focus{outline:0;box-shadow:0 0 10px var(--clr-neon);background:#812c82;clear:#fff}
 .bord{padding:15px;border:2px solid var(--clr-neon);border-radius:12px;background:0 0;font-size:16px;text-align:center;margin-bottom:-15px}
@@ -49,6 +49,9 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <div class="logo"><span class="grow">Grow</span><span class="hub">Hub</span></div>
 </header>
 <div class="header-transition"></div>
+<div id="mqtt-not-configured" style="display:none;text-align:center;padding:12px;margin:0 15px 10px;background:#5a0000;border:2px solid #ff4444;border-radius:10px;color:#ef9aa0">
+⚠️ MQTT не настроен. <a href="index.html" style="color:#fff;text-decoration:underline">Настройте на главной странице</a>
+</div>
 <main class="main">
 <h2 style="margin-bottom:10px">Настройка гроукэпа</h2>
 <div><h3 class="bord"><span data-field="profile_name">—</span></h3></div>
@@ -56,31 +59,14 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <h3 style="margin-top:10px">Дневные параметры</h3>
 <div class="neon-divider-1"></div>
 <div class="slider-container">
-<div class="slider-title"><div><span style="margin-bottom:10px">Тип освещения:</span></div></div>
-<div class="select-dropdown">
-<select id="inp_lig_type" class="select-dropdown__button" style="margin-left:85px">
-<option value="0">Авто</option>
-<option value="1">Рост</option>
-<option value="2">Цветение</option>
-</select>
-</div>
-</div>
-<div class="neon-divider-1"></div>
-<div class="slider-container">
 <div class="slider-title"><div><span style="margin-bottom:20px">Время освещения:</span></div></div>
 <span class="slider-value" data-live="lig_hours">—</span> часов в сутки
 <input type="range" class="slider" min="0" max="24" id="inp_lig_hours">
 </div>
-<!-- <div class="neon-divider-1"></div>
-<div class="slider-container">
-<div class="slider-title"><div><span>Яркость:</span></div></div>
-<span class="slider-value" data-live="lig_pwm">—</span>%
-<input type="range" class="slider" min="0" max="100" id="inp_lig_pwm">
-</div> -->
 <div class="neon-divider-1"></div>
 <div class="slider-container">
 <div class="slider-title"><div><span>Температура:</span></div></div>
-<span class="slider-value" data-live="temp_day">—</span>°C
+<span class="slider-value" data-live="temp_day">—</spa>°C
 <input type="range" class="slider" min="0" max="30" id="inp_temp_day">
 </div>
 <div class="neon-divider-1"></div>

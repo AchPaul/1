@@ -31,6 +31,7 @@ const ALERT_KEYS = [
   'alert_low_temp',
   'err_sensor_temp',
   'err_sensor_hg',
+  'err_sensor_hg2',
   'err_sensor_dht'
 ];
 
@@ -214,8 +215,10 @@ function renderState(js){
   const alertStates = {};
   ALERT_KEYS.forEach(key=>{
     // rebooted имеет инвертированную логику: показываем алерт когда rebooted=0 (т.е. после перезагрузки)
+    // Но НЕ показываем если lig_hours=0 или 24 (освещение постоянно вкл/выкл)
     if(key === 'rebooted'){
-      alertStates[key] = !isFlagActive(js[key]);
+      const ligHours = Number(js.lig_hours);
+      alertStates[key] = !isFlagActive(js[key]) && ligHours !== 0 && ligHours !== 24;
     } else {
       alertStates[key] = isFlagActive(js[key]);
     }
@@ -265,6 +268,12 @@ function renderState(js){
   if(badgesEl){
     const badge = (txt, cls)=>{ const b=document.createElement('div'); b.className='badge '+cls; b.textContent=txt; badgesEl.appendChild(b); };
     badge(js.day_time? 'DAY':'NIGHT', js.day_time? 'day':'night');
+  }
+  // День/Ночь режим на странице состояния
+  const dayNightEls = document.querySelectorAll('[data-field="day_night_mode"]');
+  if(dayNightEls.length){
+    const modeText = js.day_time ? 'День' : 'Ночь';
+    dayNightEls.forEach(el=> el.textContent = modeText);
   }
   const typeEls = document.querySelectorAll('[data-field="lig_type_name"]');
   if(typeEls.length){
@@ -494,10 +503,22 @@ function init(){
     }
   }
   
-  // Если нет сохраненной конфигурации - показать форму
+  // Если нет сохраненной конфигурации - показать форму или предупреждение
+  const isMainPage = window.location.pathname.endsWith('index.html') || 
+                     window.location.pathname.endsWith('/') ||
+                     window.location.pathname === '';
   if(!ensureValidConfig(cfg)) {
-    if(cfgBox) cfgBox.classList.add('show');
-    if(statusLine) statusLine.textContent = 'Введите настройки подключения';
+    if(isMainPage) {
+      // На главной странице показать форму настроек
+      if(cfgBox) cfgBox.classList.add('show');
+      if(statusLine) statusLine.textContent = 'Введите настройки подключения';
+    } else {
+      // На остальных страницах показать предупреждение
+      const mqttWarning = document.getElementById('mqtt-not-configured');
+      if(mqttWarning) mqttWarning.style.display = 'block';
+      if(statusLine) statusLine.textContent = 'MQTT не настроен';
+      return; // не подключаемся
+    }
   } else {
     if(statusLine) statusLine.textContent = 'Автозагрузка конфигурации...';
     connect(cfg);
