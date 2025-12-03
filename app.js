@@ -479,12 +479,12 @@ function init(){
   if(formCfg.user && !formCfg.user.value) formCfg.user.value = cfg.user || '';
   if(formCfg.pass && !formCfg.pass.value) formCfg.pass.value = cfg.pass || '';
   if(formCfg.base && !formCfg.base.value) formCfg.base.value = cfg.base || '';
-  // Reflect final cfg object for connection logic
-  cfg.host = formCfg.host.value.trim();
-  cfg.port = formCfg.port.value.trim();
-  cfg.user = formCfg.user.value.trim();
-  cfg.pass = formCfg.pass.value.trim();
-  cfg.base = formCfg.base.value.trim();
+  // Reflect final cfg object for connection logic (safely handle null elements)
+  if(formCfg.host) cfg.host = formCfg.host.value.trim();
+  if(formCfg.port) cfg.port = formCfg.port.value.trim();
+  if(formCfg.user) cfg.user = formCfg.user.value.trim();
+  if(formCfg.pass) cfg.pass = formCfg.pass.value.trim();
+  if(formCfg.base) cfg.base = formCfg.base.value.trim();
   if(configFromUrl){
     saveConfig(cfg);
     if(cfgBox) cfgBox.classList.remove('show');
