@@ -31,6 +31,10 @@ input[type=range]:hover{opacity:1}
 .slider-title div{display:flex;justify-content:space-evenly;margin-bottom:5px}
 .slider-value{font-weight:700;transition:all .3s}
 .slider{transition:all .3s}
+.slider.locked{opacity:.5;pointer-events:none}
+.toggle-option{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:12px}
+.toggle-option input{width:18px;height:18px}
+.toggle-option span{font-size:16px}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:30px;height:30px;border-radius:50%;background:#bd65e5;cursor:pointer}
 input[type=range]::-moz-range-thumb{width:30px;height:30px;border-radius:50%;background:#4CAF50;cursor:pointer}
 header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.5);position:relative;z-index:100}
@@ -84,8 +88,12 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <div class="neon-divider-1"></div>
 <div class="slider-container">
 <div class="slider-title"><div><span>Проветривание (мин):</span></div></div>
+<label class="toggle-option">
+<input type="checkbox" id="chk_vent_day_always" data-slider="inp_vent_day">
+<span>Всегда включено</span>
+</label>
 <span class="slider-value" data-live="vent_day">—</span>
-<input type="range" class="slider" min="0" max="180" id="inp_vent_day">
+<input type="range" class="slider" min="0" max="180" id="inp_vent_day" data-always-id="chk_vent_day_always">
 </div>
 <div class="neon-divider-1"></div>
 <div style="text-align:center;margin-top:20px">
@@ -131,8 +139,12 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <div class="neon-divider-1"></div>
 <div class="slider-container">
 <div class="slider-title"><div><span>Проветривание (мин):</span></div></div>
+<label class="toggle-option">
+<input type="checkbox" id="chk_vent_night_always" data-slider="inp_vent_night">
+<span>Всегда включено</span>
+</label>
 <span class="slider-value" data-live="vent_night">—</span>
-<input type="range" class="slider" min="0" max="180" id="inp_vent_night">
+<input type="range" class="slider" min="0" max="180" id="inp_vent_night" data-always-id="chk_vent_night_always">
 </div>
 <div class="neon-divider-1"></div>
 <div style="text-align:center;margin-top:20px">
@@ -149,12 +161,30 @@ function updateSliderValue(sl){
   const container = sl.closest('.slider-container');
   if(!container) return;
   const span = container.querySelector('.slider-value');
-  if(span) span.textContent = sl.value;
+  if(!span) return;
+  const alwaysId = sl.getAttribute('data-always-id');
+  const checkbox = alwaysId ? document.getElementById(alwaysId) : null;
+  const isAlways = checkbox ? checkbox.checked : false;
+  span.textContent = isAlways ? '-' : sl.value;
+  sl.classList.toggle('locked', isAlways);
+  sl.tabIndex = isAlways ? -1 : 0;
 }
 document.addEventListener('DOMContentLoaded', function(){
   document.querySelectorAll('.slider').forEach(function(sl){
-    sl.addEventListener('input', function(){ updateSliderValue(sl); });
+    sl.addEventListener('input', function(){ updateSliderValue(this); });
     updateSliderValue(sl);
+  });
+  document.querySelectorAll('.toggle-option input[type="checkbox"]').forEach(function(cb){
+    const sliderId = cb.getAttribute('data-slider');
+    const slider = sliderId ? document.getElementById(sliderId) : null;
+    cb.addEventListener('change', function(){
+      if(slider) updateSliderValue(slider);
+      if(window.ghPublish){
+        const key = cb.id === 'chk_vent_day_always' ? 'vent_day_always' : 'vent_night_always';
+        window.ghPublish(key, cb.checked ? 1 : 0);
+      }
+    });
+    if(slider) updateSliderValue(slider);
   });
   // Остальной код сохранения параметров
   // Функция для отправки дневных параметров
@@ -168,13 +198,15 @@ document.addEventListener('DOMContentLoaded', function(){
       ['temp_day', 'inp_temp_day'],
       ['humgr_day', 'inp_humgr_day'],
       ['humair_day', 'inp_humair_day'],
-      ['vent_day', 'inp_vent_day']
+      ['vent_day', 'inp_vent_day'],
+      ['vent_day_always', 'chk_vent_day_always']
     ];
     
     dayParams.forEach(([key, id]) => {
       const el = document.getElementById(id);
       if(el) {
-        window.ghPublish(key, el.value);
+        const payload = el.type === 'checkbox' ? (el.checked ? 1 : 0) : el.value;
+        window.ghPublish(key, payload);
       }
     });
   }
@@ -187,13 +219,15 @@ document.addEventListener('DOMContentLoaded', function(){
       ['temp_night', 'inp_temp_night'],
       ['humgr_night', 'inp_humgr_night'],
       ['humair_night', 'inp_humair_night'],
-      ['vent_night', 'inp_vent_night']
+      ['vent_night', 'inp_vent_night'],
+      ['vent_night_always', 'chk_vent_night_always']
     ];
     
     nightParams.forEach(([key, id]) => {
       const el = document.getElementById(id);
       if(el) {
-        window.ghPublish(key, el.value);
+        const payload = el.type === 'checkbox' ? (el.checked ? 1 : 0) : el.value;
+        window.ghPublish(key, payload);
       }
     });
   }

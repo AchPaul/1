@@ -98,7 +98,9 @@ const inputs = {
   humair_day: document.getElementById('inp_humair_day'),
   humair_night: document.getElementById('inp_humair_night'),
   vent_day: document.getElementById('inp_vent_day'),
+  vent_day_always: document.getElementById('chk_vent_day_always'),
   vent_night: document.getElementById('inp_vent_night'),
+  vent_night_always: document.getElementById('chk_vent_night_always'),
   vent_interval: document.getElementById('inp_vent_interval'),
   profile: document.getElementById('inp_profile'),
   btn_profile: document.getElementById('btn_profile'),
@@ -223,6 +225,8 @@ function renderState(js){
       alertStates[key] = isFlagActive(js[key]);
     }
   });
+  const ventDayAlways = isFlagActive(js.vent_day_always);
+  const ventNightAlways = isFlagActive(js.vent_night_always);
   // Debug alerts (uncomment if needed)
   // console.log('Alerts state:', {
   //   alert_water: alertStates.alert_water, alert_humid: alertStates.alert_humid,
@@ -241,7 +245,30 @@ function renderState(js){
   // Live slider labels
   document.querySelectorAll('[data-live]').forEach(el=>{
     const k = el.getAttribute('data-live');
-    if(k in js) el.textContent = js[k];
+    if(k in js){
+      if ((k === 'vent_day' && ventDayAlways) || (k === 'vent_night' && ventNightAlways)) {
+        el.textContent = '-';
+      } else {
+        el.textContent = js[k];
+      }
+    }
+  });
+  document.querySelectorAll('[data-field="vent_day_unit"]').forEach(el=>{
+    el.textContent = ventDayAlways ? '' : ' мин';
+  });
+  document.querySelectorAll('[data-field="vent_night_unit"]').forEach(el=>{
+    el.textContent = ventNightAlways ? '' : ' мин';
+  });
+  // Вентиляция display: "выкл" при 0, "-" при always, иначе "X мин"
+  document.querySelectorAll('[data-field="vent_day_display"]').forEach(el=>{
+    if(ventDayAlways) el.textContent = '-';
+    else if(js.vent_day === 0 || js.vent_day === '0') el.textContent = 'выкл';
+    else el.textContent = js.vent_day + ' мин';
+  });
+  document.querySelectorAll('[data-field="vent_night_display"]').forEach(el=>{
+    if(ventNightAlways) el.textContent = '-';
+    else if(js.vent_night === 0 || js.vent_night === '0') el.textContent = 'выкл';
+    else el.textContent = js.vent_night + ' мин';
   });
   // Update control values if user not dragging
   syncInputIfIdle(inputs.lig_type, js.lig_type);
@@ -256,6 +283,12 @@ function renderState(js){
   syncInputIfIdle(inputs.vent_day, js.vent_day);
   syncInputIfIdle(inputs.vent_night, js.vent_night);
   syncInputIfIdle(inputs.vent_interval, js.vent_interval);
+  syncCheckbox(inputs.vent_day_always, js.vent_day_always, inputs.vent_day);
+  syncCheckbox(inputs.vent_night_always, js.vent_night_always, inputs.vent_night);
+  if(typeof updateSliderValue === 'function'){
+    if(inputs.vent_day) updateSliderValue(inputs.vent_day);
+    if(inputs.vent_night) updateSliderValue(inputs.vent_night);
+  }
   // Sync AP mode select
   if(js.ap_mode !== undefined){
     const apSelect = document.querySelector('select[name="ap_mode"]');
@@ -339,6 +372,13 @@ function syncInputIfIdle(input, value){
   if(String(input.value) !== String(value)) input.value = value;
   const live = document.querySelector(`[data-live="${input.id.replace('inp_','')}"]`);
   if(live) live.textContent = value;
+}
+
+function syncCheckbox(input, value, slider){
+  if(!input) return;
+  const desired = isFlagActive(value);
+  if(input.checked !== desired) input.checked = desired;
+  if(slider && typeof updateSliderValue === 'function') updateSliderValue(slider);
 }
 
 function publish(key, val){

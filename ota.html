@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GrowHub OTA</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#28003c">
+<style>
+:root{--clr-neon:hsl(288,52%,35%);--clr-bg:hsl(295,14%,67%)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Courier New',monospace}
+h2{text-align:center;padding:0 5px}
+.neon-buttom{background:#000;font-size:16px;text-decoration:none;color:#ebebeb;cursor:pointer;border:var(--clr-neon) .125em solid;padding:.35em 2em;border-radius:.25em;width:260px;text-align:center;box-shadow:inset 0 0 .5em 0 var(--clr-neon),0 0 .5em 0 var(--clr-neon);position:relative}
+.neon-buttom:disabled{background:#3d3b3d;color:#fff;cursor:wait}
+.neon-buttom::before{content:"";position:absolute;background:var(--clr-neon);top:120%;left:0;width:100%;height:100%;transform:perspective(3em)rotateX(40deg)scale(1,.35);filter:blur(1em);opacity:.7}
+.neon-buttom::after{content:"";position:absolute;background:var(--clr-neon);top:0;left:0;bottom:0;right:0;box-shadow:0 0 2em .5em var(--clr-neon);opacity:0;z-index:-1;transition:opacity 100ms}
+.neon-buttom:hover,.neon-buttom:focus{color:var(--clr-bg);text-shadow:none}
+.neon-buttom:hover::before,.neon-buttom:focus::before,.neon-buttom:hover::after,.neon-buttom:focus::after{opacity:1}
+.icon{position:relative}
+.icon_btn{position:absolute;top:3px;left:10px}
+.main{display:flex;margin:20px 0;justify-content:center;align-items:center;flex-direction:column;gap:25px}
+.input-file{pointer-events:all;position:relative;display:inline-block}
+.input-file span{position:relative;display:block;background:var(--clr-neon);text-shadow:0 0 .125em hsl(0 0% 100%/.5),0 0 .45em currentColor;box-shadow:inset 0 0 .5em 0 var(--clr-neon),0 0 .5em 0 var(--clr-neon);text-decoration:none;border-radius:12px;font-weight:500;text-align:center;color:#fff;cursor:pointer;padding:15px 10px;transition:200ms;width:270px;border:0;font-size:16px;user-select:none;touch-action:manipulation}
+.input-file input[type=file]{position:absolute;z-index:-1;opacity:0;display:block;width:0;height:0}
+.input-file input[type=file]:focus+span{box-shadow:0 0 0 .2rem var(--clr-neon)}
+.input-file:hover span,.input-file:active span{background:#472142}
+.input-file input[type=file]:disabled+span{background:#eee}
+.input-file-text{text-align:center;margin-top:14px;border:1px solid #5d5454;padding:6px;border-radius:12px}
+header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.5);position:relative;z-index:100}
+.header-transition{height:40px;background:linear-gradient(#370053, #000);margin-top:-10px;margin-bottom:15px}
+.logo{margin-top:2px;display:inline-block}
+.grow{font-size:35px;color:#fff;font-weight:700;letter-spacing:5px}
+.hub{font-size:35px;color:#c900cc;font-weight:700;letter-spacing:5px;border:7px solid #c900cc;border-radius:13px;padding:2px 2px 2px 8px}
+.progress-container{width:270px;display:none}
+.progress-bar-bg{background:#333;border-radius:10px;overflow:hidden;height:24px}
+.progress-bar{background:linear-gradient(90deg,#c900cc,#500078);height:100%;width:0%;transition:width 0.3s}
+.progress-text{text-align:center;margin-top:8px}
+.status-msg{max-width:280px;text-align:center;font-size:14px;color:#fedbff;min-height:20px}
+.status-msg.success{color:#00ff00}
+.status-msg.error{color:#ff4444}
+.version-info{font-size:14px;color:#aaa}
+.warning-box{text-align:center;padding:12px;margin:0 15px 10px;background:#5a0000;border:2px solid #ff4444;border-radius:10px;color:#ef9aa0;display:none}
+.info-box{text-align:center;padding:12px;margin:0 15px 10px;background:#1a1a2e;border:2px solid #c900cc;border-radius:10px}
+.mqtt-status{font-size:12px;color:#888;margin-top:5px}
+.mqtt-status.connected{color:#00ff00}
+.mqtt-status.disconnected{color:#ff4444}
+</style>
+</head>
+<body>
+<header>
+<div class="logo"><span class="grow">Grow</span><span class="hub">Hub</span></div>
+</header>
+<div class="header-transition"></div>
+
+<div id="warning-box" class="warning-box">
+⚠️ MQTT не настроен. <a href="index.html" style="color:#fff">Настройте подключение</a>
+</div>
+
+<div class="info-box">
+<p>OTA обновление через MQTT</p>
+<p id="mqttStatus" class="mqtt-status disconnected">Не подключено</p>
+</div>
+
+<main class="main">
+<h2>Обновление прошивки</h2>
+
+<label class="input-file" for="file_update">
+<input type="file" id="file_update" name="update" accept=".bin">
+<span class="input-file-btn">Выберите файл</span>
+<p class="input-file-text">Файл не выбран</p>
+</label>
+
+<div id="progressContainer" class="progress-container">
+<div class="progress-bar-bg">
+<div id="progressBar" class="progress-bar"></div>
+</div>
+<p id="progressText" class="progress-text">0%</p>
+</div>
+
+<button id="submitBtn" class="neon-buttom" style="color:#fff">Обновить</button>
+<button id="abortBtn" class="neon-buttom" style="color:#fff;display:none">Отменить</button>
+<p id="statusMsg" class="status-msg"></p>
+<p id="versionInfo" class="version-info">Версия: <span id="deviceVersion">—</span></p>
+
+<a class="neon-buttom icon" href="service.html">Назад<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M21 11H6.414l5.293-5.293-1.414-1.414L2.586 12l7.707 7.707 1.414-1.414L6.414 13H21z"/></svg></div></a>
+</main>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script>
+(function(){
+  const LS_KEY = 'gh_remote_cfg_v1';
+  const CHUNK_SIZE = 4096; // 4KB чанки
+  
+  const fileInput = document.getElementById('file_update');
+  const submitBtn = document.getElementById('submitBtn');
+  const abortBtn = document.getElementById('abortBtn');
+  const progressContainer = document.getElementById('progressContainer');
+  const progressBar = document.getElementById('progressBar');
+  const progressText = document.getElementById('progressText');
+  const statusMsg = document.getElementById('statusMsg');
+  const mqttStatus = document.getElementById('mqttStatus');
+  const warningBox = document.getElementById('warning-box');
+  const deviceVersion = document.getElementById('deviceVersion');
+  
+  let client = null;
+  let baseTopic = '';
+  let otaInProgress = false;
+  let fileData = null;
+  let sentBytes = 0;
+  let totalBytes = 0;
+  
+  // Загрузка конфигурации
+  function loadConfig() {
+    try {
+      return JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+    } catch(e) { return {}; }
+  }
+  
+  const cfg = loadConfig();
+  if (!cfg.host || !cfg.port || !cfg.base) {
+    warningBox.style.display = 'block';
+    submitBtn.disabled = true;
+  } else {
+    connectMqtt(cfg);
+  }
+  
+  function connectMqtt(cfg) {
+    const url = `wss://${cfg.host}:${cfg.port}/mqtt`;
+    baseTopic = cfg.base;
+    if (!baseTopic.endsWith('/')) baseTopic += '/';
+    
+    client = mqtt.connect(url, {
+      clientId: 'gh-ota-' + Math.random().toString(16).slice(2),
+      username: cfg.user || undefined,
+      password: cfg.pass || undefined,
+      connectTimeout: 10000,
+      reconnectPeriod: 5000,
+      clean: true
+    });
+    
+    client.on('connect', () => {
+      mqttStatus.textContent = 'Подключено';
+      mqttStatus.className = 'mqtt-status connected';
+      
+      // Подписка на статус OTA и state
+      client.subscribe(baseTopic + 'ota/status');
+      client.subscribe(baseTopic + 'state/json');
+    });
+    
+    client.on('close', () => {
+      mqttStatus.textContent = 'Отключено';
+      mqttStatus.className = 'mqtt-status disconnected';
+    });
+    
+    client.on('error', (err) => {
+      mqttStatus.textContent = 'Ошибка: ' + err.message;
+      mqttStatus.className = 'mqtt-status disconnected';
+    });
+    
+    client.on('message', (topic, msg) => {
+      const payload = msg.toString();
+      
+      // Обработка state/json для версии
+      if (topic.endsWith('state/json')) {
+        try {
+          const data = JSON.parse(payload);
+          if (data.version) deviceVersion.textContent = data.version;
+        } catch(e) {}
+        return;
+      }
+      
+      // Обработка ota/status
+      if (topic.endsWith('ota/status')) {
+        try {
+          const data = JSON.parse(payload);
+          handleOtaStatus(data);
+        } catch(e) {
+          console.error('OTA status parse error:', e);
+        }
+      }
+    });
+  }
+  
+  function handleOtaStatus(data) {
+    console.log('OTA Status:', data);
+    
+    switch(data.status) {
+      case 'started':
+        statusMsg.textContent = 'OTA начато, отправка данных...';
+        statusMsg.className = 'status-msg';
+        sendNextChunk();
+        break;
+        
+      case 'progress':
+        const pct = data.progress || 0;
+        progressBar.style.width = pct + '%';
+        progressText.textContent = pct + '%';
+        statusMsg.textContent = `Записано: ${data.received || 0} / ${data.total || 0} байт`;
+        break;
+        
+      case 'success':
+        otaInProgress = false;
+        progressBar.style.width = '100%';
+        progressText.textContent = '100%';
+        statusMsg.textContent = 'Успешно! Устройство перезагружается...';
+        statusMsg.className = 'status-msg success';
+        submitBtn.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Обновить';
+        abortBtn.style.display = 'none';
+        break;
+        
+      case 'aborted':
+        otaInProgress = false;
+        statusMsg.textContent = 'OTA отменено';
+        statusMsg.className = 'status-msg';
+        resetUI();
+        break;
+        
+      case 'error_size':
+        handleOtaError('Неверный размер файла');
+        break;
+      case 'error_init':
+        handleOtaError('Ошибка инициализации OTA');
+        break;
+      case 'error_write':
+        handleOtaError('Ошибка записи');
+        break;
+      case 'error_incomplete':
+        handleOtaError('Файл получен не полностью');
+        break;
+      case 'error_finish':
+        handleOtaError('Ошибка завершения OTA');
+        break;
+      case 'error_verify':
+        handleOtaError('Ошибка верификации');
+        break;
+      case 'error_timeout':
+        handleOtaError('Таймаут - нет данных');
+        break;
+      case 'error_not_started':
+        handleOtaError('OTA не запущено');
+        break;
+    }
+  }
+  
+  function handleOtaError(msg) {
+    otaInProgress = false;
+    statusMsg.textContent = 'Ошибка: ' + msg;
+    statusMsg.className = 'status-msg error';
+    resetUI();
+  }
+  
+  function resetUI() {
+    submitBtn.style.display = 'block';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Обновить';
+    abortBtn.style.display = 'none';
+  }
+  
+  function sendNextChunk() {
+    if (!otaInProgress || !fileData || !client || !client.connected) return;
+    
+    if (sentBytes >= totalBytes) {
+      // Все данные отправлены, отправляем end
+      client.publish(baseTopic + 'ota/end', '1');
+      statusMsg.textContent = 'Данные отправлены, ожидание верификации...';
+      return;
+    }
+    
+    const chunk = fileData.slice(sentBytes, sentBytes + CHUNK_SIZE);
+    client.publish(baseTopic + 'ota/data', chunk, {}, (err) => {
+      if (err) {
+        handleOtaError('Ошибка отправки: ' + err.message);
+        return;
+      }
+      
+      sentBytes += chunk.byteLength;
+      const pct = Math.round((sentBytes / totalBytes) * 100);
+      progressBar.style.width = pct + '%';
+      progressText.textContent = pct + '% (отправлено)';
+      
+      // Небольшая задержка между чанками для стабильности
+      setTimeout(sendNextChunk, 50);
+    });
+  }
+  
+  // File selection handler
+  fileInput.addEventListener('change', function() {
+    const textEl = this.closest('.input-file').querySelector('.input-file-text');
+    if (this.files.length > 0) {
+      textEl.textContent = this.files[0].name + ' (' + Math.round(this.files[0].size/1024) + ' KB)';
+    } else {
+      textEl.textContent = 'Файл не выбран';
+    }
+    statusMsg.textContent = '';
+    statusMsg.className = 'status-msg';
+  });
+  
+  // Upload handler
+  submitBtn.addEventListener('click', async function() {
+    const file = fileInput.files[0];
+    if (!file) {
+      statusMsg.textContent = 'Выберите файл прошивки';
+      statusMsg.className = 'status-msg error';
+      return;
+    }
+    
+    if (!client || !client.connected) {
+      statusMsg.textContent = 'MQTT не подключен';
+      statusMsg.className = 'status-msg error';
+      return;
+    }
+    
+    // Читаем файл
+    try {
+      fileData = await file.arrayBuffer();
+      totalBytes = fileData.byteLength;
+      sentBytes = 0;
+    } catch(e) {
+      statusMsg.textContent = 'Ошибка чтения файла';
+      statusMsg.className = 'status-msg error';
+      return;
+    }
+    
+    otaInProgress = true;
+    progressContainer.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressText.textContent = '0%';
+    submitBtn.style.display = 'none';
+    abortBtn.style.display = 'block';
+    statusMsg.textContent = 'Запуск OTA...';
+    statusMsg.className = 'status-msg';
+    
+    // Отправляем start с размером файла
+    client.publish(baseTopic + 'ota/start', String(totalBytes));
+  });
+  
+  // Abort handler
+  abortBtn.addEventListener('click', function() {
+    if (client && client.connected) {
+      client.publish(baseTopic + 'ota/abort', '1');
+    }
+    otaInProgress = false;
+    statusMsg.textContent = 'Отменено';
+    statusMsg.className = 'status-msg';
+    resetUI();
+  });
+})();
+</script>
+</body>
+</html>

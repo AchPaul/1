@@ -191,8 +191,6 @@ document.addEventListener('DOMContentLoaded', function(){
     const payload = lightOn + ':' + currentHour;
     
     if(publish('set_time', payload)){
-      statusBox.textContent = '✅ Время установлено: ' + lightOn + ':00, текущее: ' + currentHour + ':00';
-      statusBox.style.color = '#b9e29a';
       btnSave.value = 'Сохранено ✓';
       btnSave.disabled = true;
       setTimeout(()=>{ btnSave.value = 'Сохранить'; btnSave.disabled = false; }, 2000);
