@@ -247,7 +247,7 @@ function renderState(js){
     const k = el.getAttribute('data-live');
     if(k in js){
       if ((k === 'vent_day' && ventDayAlways) || (k === 'vent_night' && ventNightAlways)) {
-        el.textContent = '-';
+        el.textContent = 'вкл';
       } else {
         el.textContent = js[k];
       }
@@ -261,14 +261,35 @@ function renderState(js){
   });
   // Вентиляция display: "выкл" при 0, "-" при always, иначе "X мин"
   document.querySelectorAll('[data-field="vent_day_display"]').forEach(el=>{
-    if(ventDayAlways) el.textContent = '-';
+    if(ventDayAlways) el.textContent = 'вкл';
     else if(js.vent_day === 0 || js.vent_day === '0') el.textContent = 'выкл';
     else el.textContent = js.vent_day + ' мин';
   });
   document.querySelectorAll('[data-field="vent_night_display"]').forEach(el=>{
-    if(ventNightAlways) el.textContent = '-';
+    if(ventNightAlways) el.textContent = 'вкл';
     else if(js.vent_night === 0 || js.vent_night === '0') el.textContent = 'выкл';
     else el.textContent = js.vent_night + ' мин';
+  });
+  // Температура display: "выкл" при 0, иначе "X°C"
+  document.querySelectorAll('[data-field="temp_day_display"]').forEach(el=>{
+    el.textContent = (js.temp_day === 0 || js.temp_day === '0') ? 'выкл' : js.temp_day + '°C';
+  });
+  document.querySelectorAll('[data-field="temp_night_display"]').forEach(el=>{
+    el.textContent = (js.temp_night === 0 || js.temp_night === '0') ? 'выкл' : js.temp_night + '°C';
+  });
+  // Влажность почвы display: "выкл" при 0, иначе "X%"
+  document.querySelectorAll('[data-field="humgr_day_display"]').forEach(el=>{
+    el.textContent = (js.humgr_day === 0 || js.humgr_day === '0') ? 'выкл' : js.humgr_day + '%';
+  });
+  document.querySelectorAll('[data-field="humgr_night_display"]').forEach(el=>{
+    el.textContent = (js.humgr_night === 0 || js.humgr_night === '0') ? 'выкл' : js.humgr_night + '%';
+  });
+  // Влажность воздуха display: "выкл" при 0, иначе "X%"
+  document.querySelectorAll('[data-field="humair_day_display"]').forEach(el=>{
+    el.textContent = (js.humair_day === 0 || js.humair_day === '0') ? 'выкл' : js.humair_day + '%';
+  });
+  document.querySelectorAll('[data-field="humair_night_display"]').forEach(el=>{
+    el.textContent = (js.humair_night === 0 || js.humair_night === '0') ? 'выкл' : js.humair_night + '%';
   });
   // Update control values if user not dragging
   syncInputIfIdle(inputs.lig_type, js.lig_type);
