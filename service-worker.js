@@ -1,17 +1,23 @@
 // Basic cache for static assets; MQTT data is real-time and not cached.
-const CACHE = 'gh-remote-v5';
+const CACHE = 'gh-remote-v7';
 const ASSETS = [
   './',
   './index.html',
+  './state.html',
+  './settings.html',
+  './profile.html',
+  './service.html',
   './app.js',
   './manifest.json'
 ];
 self.addEventListener('install', e => {
+  self.skipWaiting(); // Немедленно активировать новый SW
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
+      .then(() => self.clients.claim()) // Немедленно контролировать все открытые вкладки
   );
 });
 self.addEventListener('fetch', e => {

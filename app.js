@@ -242,14 +242,22 @@ function renderState(js){
   });
   // Device name special case
   if(js.name && deviceNameEls.length){ deviceNameEls.forEach(el=> el.textContent = js.name); }
-  // Live slider labels
+  // Live slider labels (used in settings.html and state.html)
   document.querySelectorAll('[data-live]').forEach(el=>{
     const k = el.getAttribute('data-live');
     if(k in js){
+      const suffix = el.getAttribute('data-suffix') || '';
+      const val = js[k];
       if ((k === 'vent_day' && ventDayAlways) || (k === 'vent_night' && ventNightAlways)) {
         el.textContent = 'вкл';
+      } else if (suffix && (val === 0 || val === '0')) {
+        // Для state.html: показываем "выкл" вместо "0" когда есть суффикс
+        el.textContent = 'выкл';
+      } else if (suffix) {
+        // Для state.html: добавляем суффикс (°C, %, мин)
+        el.textContent = val + suffix;
       } else {
-        el.textContent = js[k];
+        el.textContent = val;
       }
     }
   });
@@ -270,24 +278,24 @@ function renderState(js){
   });
   // Температура display: "выкл" при 0, иначе "X°C"
   document.querySelectorAll('[data-field="temp_day_display"]').forEach(el=>{
-    if(js.temp_day !== undefined) el.textContent = (js.temp_day === 0 || js.temp_day === '0') ? 'выкл' : js.temp_day + '°C';
+    if('temp_day' in js) el.textContent = (js.temp_day === 0 || js.temp_day === '0') ? 'выкл' : js.temp_day + '°C';
   });
   document.querySelectorAll('[data-field="temp_night_display"]').forEach(el=>{
-    if(js.temp_night !== undefined) el.textContent = (js.temp_night === 0 || js.temp_night === '0') ? 'выкл' : js.temp_night + '°C';
+    if('temp_night' in js) el.textContent = (js.temp_night === 0 || js.temp_night === '0') ? 'выкл' : js.temp_night + '°C';
   });
   // Влажность почвы display: "выкл" при 0, иначе "X%"
   document.querySelectorAll('[data-field="humgr_day_display"]').forEach(el=>{
-    if(js.humgr_day !== undefined) el.textContent = (js.humgr_day === 0 || js.humgr_day === '0') ? 'выкл' : js.humgr_day + '%';
+    if('humgr_day' in js) el.textContent = (js.humgr_day === 0 || js.humgr_day === '0') ? 'выкл' : js.humgr_day + '%';
   });
   document.querySelectorAll('[data-field="humgr_night_display"]').forEach(el=>{
-    if(js.humgr_night !== undefined) el.textContent = (js.humgr_night === 0 || js.humgr_night === '0') ? 'выкл' : js.humgr_night + '%';
+    if('humgr_night' in js) el.textContent = (js.humgr_night === 0 || js.humgr_night === '0') ? 'выкл' : js.humgr_night + '%';
   });
   // Влажность воздуха display: "выкл" при 0, иначе "X%"
   document.querySelectorAll('[data-field="humair_day_display"]').forEach(el=>{
-    if(js.humair_day !== undefined) el.textContent = (js.humair_day === 0 || js.humair_day === '0') ? 'выкл' : js.humair_day + '%';
+    if('humair_day' in js) el.textContent = (js.humair_day === 0 || js.humair_day === '0') ? 'выкл' : js.humair_day + '%';
   });
   document.querySelectorAll('[data-field="humair_night_display"]').forEach(el=>{
-    if(js.humair_night !== undefined) el.textContent = (js.humair_night === 0 || js.humair_night === '0') ? 'выкл' : js.humair_night + '%';
+    if('humair_night' in js) el.textContent = (js.humair_night === 0 || js.humair_night === '0') ? 'выкл' : js.humair_night + '%';
   });
   // Update control values if user not dragging
   syncInputIfIdle(inputs.lig_type, js.lig_type);
