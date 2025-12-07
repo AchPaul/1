@@ -18,7 +18,7 @@ let reconnectTimer = null;
 let lastState = null;
 let lastPubMap = {}; // key -> timestamp
 const PUB_THROTTLE_MS = 400; // minimal interval per key
-const FORCE_STATE_INTERVAL = 20000; // if no state for this long -> show stale
+const FORCE_STATE_INTERVAL = 35000; // if no state for this long -> show stale (должен быть > STATE_INTERVAL на ESP32)
 let lastStateTs = 0;
 
 let configFromUrl = false;
@@ -173,6 +173,7 @@ function connect(cfg){
     return; 
   }
   saveConfig(cfg);
+  currentConfig = cfg; // Сохраняем для автоматического переподключения
   baseTopic = cfg.base;
   stateTopic = baseTopic + 'state/json';
   setBase = baseTopic + 'set/';
@@ -182,24 +183,28 @@ function connect(cfg){
     clientId: 'gh-web-' + Math.random().toString(16).slice(2),
     username: cfg.user || undefined,
     password: cfg.pass || undefined,
-    reconnectPeriod: 4000,
-    connectTimeout: 8000,
-    keepalive: 30,
+    reconnectPeriod: 2000,
+    connectTimeout: 5000,
+    keepalive: 20,
     clean: true
   });
   bindMqttEvents();
 }
+
+let currentConfig = null; // Сохраняем конфиг для переподключения
 
 function bindMqttEvents(){
   if(!client) return;
   client.on('connect', ()=>{
     connected = true;
     logStatus('Подключено');
-    client.subscribe(stateTopic, (err)=>{ if(err){ logStatus('Ошибка подписки'); } });
-    requestSyncHint();
+    client.subscribe(stateTopic, {qos: 0}, (err)=>{ if(err){ logStatus('Ошибка подписки'); } });
+    // Запросить retained сообщение сразу после подключения
+    setTimeout(requestSyncHint, 500);
   });
   client.on('reconnect', ()=> logStatus('Переподключение...'));
   client.on('close', ()=>{ connected=false; logStatus('Отключено'); });
+  client.on('offline', ()=>{ connected=false; logStatus('Нет сети'); });
   client.on('error', (e)=> logStatus('Ошибка: '+ e.message));
   client.on('message', (topic,payload)=>{
     if(topic === stateTopic){
@@ -213,6 +218,30 @@ function bindMqttEvents(){
   });
 }
 
+// Обработка событий браузера online/offline
+window.addEventListener('online', ()=>{
+  console.log('[GrowHub:PWA] Browser online');
+  if(!connected && currentConfig){
+    logStatus('Восстановление связи...');
+    setTimeout(()=> connect(currentConfig), 1000);
+  }
+});
+window.addEventListener('offline', ()=>{
+  console.log('[GrowHub:PWA] Browser offline');
+  logStatus('Нет интернета');
+});
+// Обработка возврата на вкладку (visibility change)
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible' && currentConfig){
+    if(!connected){
+      logStatus('Восстановление связи...');
+      connect(currentConfig);
+    } else {
+      // Запросить свежие данные при возврате на вкладку
+      requestSyncHint();
+    }
+  }
+});
 function renderState(js){
   const alertStates = {};
   ALERT_KEYS.forEach(key=>{
