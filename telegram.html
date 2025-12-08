@@ -124,11 +124,19 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
       };
       
       client.onMessageArrived = function(msg) {
-        // Telegram config is not published in state/json for security
-        // Just update connection status
         if (msg.destinationName === baseTopic + '/state/json') {
-          document.getElementById('tg-status').textContent = 'Подключено';
-          document.getElementById('tg-status').className = 'status-value status-ok';
+          try {
+            const data = JSON.parse(msg.payloadString);
+            // Update Telegram enabled status
+            const tgEnabled = data.tg_enabled === 1;
+            const statusEl = document.getElementById('tg-status');
+            statusEl.textContent = tgEnabled ? 'Включено' : 'Выключено';
+            statusEl.className = 'status-value ' + (tgEnabled ? 'status-ok' : 'status-off');
+            // Update checkbox to reflect current state
+            document.getElementById('tg_enabled').checked = tgEnabled;
+          } catch(e) {
+            console.error('[MQTT] Parse error:', e);
+          }
         }
       };
       
@@ -139,8 +147,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
           console.log('[MQTT] Connected');
           connected = true;
           client.subscribe(baseTopic + '/state/json');
-          document.getElementById('tg-status').textContent = 'Подключено';
-          document.getElementById('tg-status').className = 'status-value status-ok';
+          // Status will be updated when state/json message arrives
         },
         onFailure: function(e) {
           console.log('[MQTT] Connect failed:', e.errorMessage);
