@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GrowHub - Telegram</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#28003c">
+<style>
+:root{--clr-neon:hsl(288,52%,35%);--clr-bg:hsl(295,14%,67%)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Courier New',monospace}
+h2{text-align:center;padding:0 5px}
+.neon-buttom{background:#000;font-size:16px;text-decoration:none;color:#ebebeb;cursor:pointer;border:var(--clr-neon) .125em solid;padding:.35em 2em;border-radius:.25em;width:260px;text-align:center;box-shadow:inset 0 0 .5em 0 var(--clr-neon),0 0 .5em 0 var(--clr-neon);position:relative}
+.neon-buttom:disabled{background:#3d3b3d;color:#fff;cursor:wait}
+.neon-buttom::before{content:"";position:absolute;background:var(--clr-neon);top:120%;left:0;width:100%;height:100%;transform:perspective(3em)rotateX(40deg)scale(1,.35);filter:blur(1em);opacity:.7}
+.neon-buttom::after{content:"";position:absolute;background:var(--clr-neon);top:0;left:0;bottom:0;right:0;box-shadow:0 0 2em .5em var(--clr-neon);opacity:0;z-index:-1;transition:opacity 100ms}
+.neon-buttom:hover,.neon-buttom:focus{color:var(--clr-bg);text-shadow:none}
+.neon-buttom:hover::before,.neon-buttom:focus::before,.neon-buttom:hover::after,.neon-buttom:focus::after{opacity:1}
+.icon{position:relative}
+.icon_btn{position:absolute;top:3px;left:10px}
+.main{display:flex;margin:20px 0;justify-content:center;align-items:center;flex-direction:column;gap:25px}
+.group{text-align:center;width:300px;margin:0 auto}
+.group h1{color:#fff;font-size:18px;text-align:left;margin-left:0}
+.group_input{color:#fff;width:300px;padding:10px;border:2px solid var(--clr-neon);border-radius:8px;background:transparent;font-size:16px;transition:box-shadow .3s}
+.group_input::placeholder{color:#fedaff;opacity:.5}
+.group_input:focus{outline:0;box-shadow:0 0 10px var(--clr-neon);background:#812c82}
+.checkbox-wrapper{display:flex;align-items:center;justify-content:center;margin:15px 0}
+.checkbox-wrapper input[type="checkbox"]{width:20px;height:20px;margin-right:10px;accent-color:var(--clr-neon)}
+.checkbox-wrapper label{font-size:16px;color:#fff}
+.container_clue{width:300px;padding:10px;font-size:16px;margin:0 auto}
+.trigger_clue{cursor:pointer;display:block;background:#000;font-size:16px;text-decoration:none;color:#ebebeb;border:var(--clr-neon) .125em solid;padding:.35em 2em;border-radius:.25em;width:260px;text-align:center;box-shadow:inset 0 0 .5em 0 var(--clr-neon),0 0 .5em 0 var(--clr-neon);position:relative;margin:0 auto}
+.content_clue{margin-top:10px;width:300px;padding:10px;border:2px solid var(--clr-neon);border-radius:8px;background:transparent;color:#fedaff;font-size:16px;display:none}
+header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.5);position:relative;z-index:100}
+.header-transition{height:40px;background:linear-gradient(#370053, #000);margin-top:-10px;margin-bottom:15px}
+.logo{margin-top:2px;display:inline-block}
+.grow{font-size:35px;color:#fff;font-weight:700;letter-spacing:5px}
+.hub{font-size:35px;color:#c900cc;font-weight:700;letter-spacing:5px;border:7px solid #c900cc;border-radius:13px;padding:2px 2px 2px 8px}
+.status-line{text-align:center;margin:10px 0;font-size:14px;color:#c4a1c7}
+.status-value{font-weight:bold;font-size:16px}
+.status-ok{color:rgb(185,226,154)}
+.status-off{color:#c4a1c7}
+.save-status{text-align:center;margin:10px 0;font-size:14px;padding:8px;border-radius:8px;display:none}
+.save-ok{display:block;background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.5);color:rgb(185,226,154)}
+.save-err{display:block;background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.5);color:#ef9aa0}
+</style>
+</head>
+<body>
+<header>
+<div class="logo"><span class="grow">Grow</span><span class="hub">Hub</span></div>
+</header>
+<div class="header-transition"></div>
+<div id="mqtt-not-configured" style="display:none;text-align:center;padding:12px;margin:0 15px 10px;background:#5a0000;border:2px solid #ff4444;border-radius:10px;color:#ef9aa0">
+⚠️ MQTT не настроен. <a href="index.html" style="color:#fff;text-decoration:underline">Настройте на главной странице</a>
+</div>
+<main class="main">
+<h2>Настройка Telegram</h2>
+<div class="status-line">Статус: <span id="tg-status" class="status-value status-off">Загрузка...</span></div>
+<div id="save-status" class="save-status"></div>
+<div class="container_clue">
+<p class="trigger_clue">Как настроить?</p>
+<div class="content_clue">
+<p>1) Создайте бота в Telegram через @BotFather, получите токен.</p><br>
+<p>2) Узнайте свой Chat ID, написав /start боту @myidbot.</p><br>
+<p>3) Введите токен и Chat ID ниже, включите уведомления.</p><br>
+<p>4) Напишите /start вашему боту для активации.</p>
+</div>
+</div>
+<form id="tg-form">
+<div class="group"><h1>Токен бота</h1><input class="group_input" type="text" id="tg_token" placeholder="введите токен" minlength="30" maxlength="46"></div>
+<div class="group"><h1>Chat ID</h1><input class="group_input" type="text" id="tg_chat_id" placeholder="введите Chat ID" maxlength="12"></div>
+<div class="checkbox-wrapper"><input type="checkbox" id="tg_enabled"><label for="tg_enabled">Включить уведомления</label></div>
+<div style="text-align:center;margin-top:20px"><button type="submit" class="neon-buttom icon" id="save-btn">Сохранить</button></div>
+</form>
+<a class="neon-buttom icon" href="service.html">Выйти<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M21 11H6.414l5.293-5.293-1.414-1.414L2.586 12l7.707 7.707 1.414-1.414L6.414 13H21z"/></svg></div></a>
+</main>
+<script src="app.js"></script>
+<script>
+(function(){
+  const trigger = document.querySelector('.trigger_clue');
+  const content = document.querySelector('.content_clue');
+  let isShown = false;
+  trigger.addEventListener('click', () => {
+    isShown = !isShown;
+    content.style.display = isShown ? 'block' : 'none';
+  });
+
+  // Check MQTT config
+  let cfg = {};
+  try {
+    cfg = JSON.parse(localStorage.getItem('gh_remote_cfg_v1') || '{}');
+    if(!cfg.host || !cfg.port || !cfg.base){
+      document.getElementById('mqtt-not-configured').style.display = 'block';
+    }
+  } catch(e){}
+
+  // MQTT handling
+  let client = null;
+  let baseTopic = '';
+  let connected = false;
+
+  function showSaveStatus(ok, msg) {
+    const el = document.getElementById('save-status');
+    el.textContent = msg;
+    el.className = 'save-status ' + (ok ? 'save-ok' : 'save-err');
+    setTimeout(() => { el.className = 'save-status'; }, 3000);
+  }
+
+  function connectMQTT() {
+    try {
+      if (!cfg.host || !cfg.port || !cfg.base) return;
+      
+      baseTopic = cfg.base;
+      const clientId = 'gh_tg_' + Math.random().toString(16).substr(2, 8);
+      
+      client = new Paho.MQTT.Client(cfg.host, Number(cfg.port), '/mqtt', clientId);
+      
+      client.onConnectionLost = function(resp) {
+        console.log('[MQTT] Connection lost:', resp.errorMessage);
+        connected = false;
+        document.getElementById('tg-status').textContent = 'Отключено';
+        document.getElementById('tg-status').className = 'status-value status-off';
+        setTimeout(connectMQTT, 5000);
+      };
+      
+      client.onMessageArrived = function(msg) {
+        // Telegram config is not published in state/json for security
+        // Just update connection status
+        if (msg.destinationName === baseTopic + '/state/json') {
+          document.getElementById('tg-status').textContent = 'Подключено';
+          document.getElementById('tg-status').className = 'status-value status-ok';
+        }
+      };
+      
+      const opts = {
+        useSSL: true,
+        timeout: 10,
+        onSuccess: function() {
+          console.log('[MQTT] Connected');
+          connected = true;
+          client.subscribe(baseTopic + '/state/json');
+          document.getElementById('tg-status').textContent = 'Подключено';
+          document.getElementById('tg-status').className = 'status-value status-ok';
+        },
+        onFailure: function(e) {
+          console.log('[MQTT] Connect failed:', e.errorMessage);
+          setTimeout(connectMQTT, 5000);
+        }
+      };
+      
+      if (cfg.user) opts.userName = cfg.user;
+      if (cfg.pass) opts.password = cfg.pass;
+      
+      client.connect(opts);
+    } catch(e) {
+      console.error('[MQTT] Error:', e);
+    }
+  }
+
+  function publish(topic, value) {
+    if (!client || !connected) {
+      showSaveStatus(false, 'Нет подключения к устройству');
+      return false;
+    }
+    const msg = new Paho.MQTT.Message(String(value));
+    msg.destinationName = baseTopic + '/set/' + topic;
+    client.send(msg);
+    return true;
+  }
+
+  // Form submit
+  document.getElementById('tg-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const token = document.getElementById('tg_token').value.trim();
+    const chatId = document.getElementById('tg_chat_id').value.trim();
+    const enabled = document.getElementById('tg_enabled').checked;
+    
+    let sent = 0;
+    let total = 0;
+    
+    // Send token if provided
+    if (token.length >= 30) {
+      total++;
+      if (publish('tg_token', token)) sent++;
+    }
+    
+    // Send chat_id if provided
+    if (chatId.length > 0) {
+      total++;
+      if (publish('tg_chat_id', chatId)) sent++;
+    }
+    
+    // Send enabled state
+    total++;
+    if (publish('tg_enabled', enabled ? '1' : '0')) sent++;
+    
+    if (sent === total && total > 0) {
+      showSaveStatus(true, 'Настройки отправлены ✓');
+      // Clear fields after successful send
+      document.getElementById('tg_token').value = '';
+    } else if (sent > 0) {
+      showSaveStatus(false, 'Частично отправлено');
+    }
+  });
+
+  connectMQTT();
+})();
+</script>
+</body>
+</html>
