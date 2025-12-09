@@ -1,5 +1,5 @@
 // Basic cache for static assets; MQTT data is real-time and not cached.
-const CACHE = 'gh-remote-v24';
+const CACHE = 'gh-remote-v25';
 const ASSETS = [
   './',
   './index.html',
@@ -8,10 +8,8 @@ const ASSETS = [
   './profile.html',
   './service.html',
   './telegram.html',
-  './mqtt-worker.js',
-  './mqtt-manager.js',
-  './mqtt-direct.js',
-  './app_optimized.js',
+  './mqtt-simple.js',
+  './app.js',
   './favicon-plant.svg',
   './manifest.json'
 ];
