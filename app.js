@@ -108,8 +108,11 @@ const inputs = {
   disconnect: document.getElementById('btn_disconnect')
 };
 
-function logStatus(msg){
-  if(statusLine) statusLine.textContent = msg;
+function logStatus(msg, warn=false){
+  if(statusLine){
+    statusLine.textContent = msg;
+    statusLine.classList.toggle('warn', !!warn);
+  }
 }
 
 function loadConfig(){
@@ -176,8 +179,8 @@ function ensureValidConfig(cfg){
 
 function connect(cfg){
   if(!ensureValidConfig(cfg)) { 
-    logStatus('Заполните настройки подключения'); 
-    if(cfgBox) cfgBox.classList.add('show'); 
+    logStatus('MQTT не настроен', true); 
+    if(cfgBox) cfgBox.classList.add('visible'); 
     return; 
   }
   saveConfig(cfg);
@@ -192,7 +195,7 @@ function connect(cfg){
   logStatus('Подключение...');
   manager.connect(cfg).catch(err=>{
     console.error('[GrowHub:PWA] connect error', err);
-    logStatus('Ошибка подключения: ' + (err && err.message ? err.message : 'неизвестно'));
+    logStatus('Ошибка подключения: ' + (err && err.message ? err.message : 'неизвестно'), true);
   });
 }
 let currentConfig = null; // Сохраняем конфиг для переподключения
@@ -207,9 +210,9 @@ function attachManagerEvents(){
     } else if(st === 'reconnecting'){
       logStatus('Переподключение...');
     } else if(st === 'offline'){
-      logStatus('Нет сети');
+      logStatus('Нет сети', true);
     } else if(st === 'disconnected'){
-      logStatus('Отключено');
+      logStatus('Отключено', true);
     }
   });
   manager.on('state', (js)=>{
@@ -534,7 +537,7 @@ function requestSyncHint(){
 // Config toggle
 if(cfgToggle && cfgBox){
   cfgToggle.addEventListener('click', ()=>{
-    cfgBox.classList.toggle('show');
+    cfgBox.classList.toggle('visible');
   });
 }
 
@@ -547,7 +550,7 @@ if(formCfg.save){
       pass: formCfg.pass.value.trim(),
       base: formCfg.base.value.trim()
     };
-    if(cfgBox) cfgBox.classList.remove('show');
+    if(cfgBox) cfgBox.classList.remove('visible');
     connect(cfg);
     showSavedState(formCfg.save);
   });
@@ -592,7 +595,7 @@ function init(){
   if(formCfg.base) cfg.base = formCfg.base.value.trim();
   if(configFromUrl){
     saveConfig(cfg);
-    if(cfgBox) cfgBox.classList.remove('show');
+    if(cfgBox) cfgBox.classList.remove('visible');
   }
   
   // Initialize alerts section as hidden on page load
@@ -615,17 +618,15 @@ function init(){
   if(!ensureValidConfig(cfg)) {
     if(isMainPage) {
       // На главной странице показать форму настроек
-      if(cfgBox) cfgBox.classList.add('show');
-      if(statusLine) statusLine.textContent = 'Введите настройки подключения';
+      if(cfgBox) cfgBox.classList.add('visible');
+      logStatus('MQTT не настроен', true);
     } else {
-      // На остальных страницах показать предупреждение
-      const mqttWarning = document.getElementById('mqtt-not-configured');
-      if(mqttWarning) mqttWarning.style.display = 'block';
-      if(statusLine) statusLine.textContent = 'MQTT не настроен';
+      // На остальных страницах просто показать статус
+      logStatus('MQTT не настроен', true);
       return; // не подключаемся
     }
   } else {
-    if(statusLine) statusLine.textContent = 'Автозагрузка конфигурации...';
+    logStatus('Автозагрузка конфигурации...');
     connect(cfg);
   }
   bindControls();

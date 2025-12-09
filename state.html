@@ -34,7 +34,8 @@ h3{margin-bottom:20px}
 .hub{font-size:35px;color:#c900cc;font-weight:700;letter-spacing:5px;border:7px solid #c900cc;border-radius:13px;padding:2px 2px 2px 8px}
 header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.5);position:relative;z-index:100}
 .header-transition{height:40px;background:linear-gradient(180deg,#28003c 0%,#1a0026 50%,#000 100%);margin-top:-5px;margin-bottom:15px}
-#status-line{font-size:12px;opacity:.75;text-align:center;margin-bottom:10px}
+#status-line{font-size:12px;opacity:.85;text-align:center;margin-bottom:10px;color:#e6d8f5}
+#status-line.warn{color:#ff9aa0}
 </style>
 </head>
 <body>
@@ -42,9 +43,6 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <div class="logo"><span class="grow">Grow</span><span class="hub">Hub</span></div>
 </header>
 <div class="header-transition"></div>
-<div id="mqtt-not-configured" style="display:none;text-align:center;padding:12px;margin:0 15px 10px;background:#5a0000;border:2px solid #ff4444;border-radius:10px;color:#ef9aa0">
-⚠️ MQTT не настроен. <a href="index.html" style="color:#fff;text-decoration:underline">Настройте на главной странице</a>
-</div>
 <div id="status-line">Подключение...</div>
 <main class="main">
 <h2 style="margin-bottom:15px">Состояние теплицы</h2>

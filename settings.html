@@ -47,6 +47,8 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 .select-dropdown__button{padding:10px 10px 10px 10px;background:#3f005c;color:#fff;border:3px solid #3f005c;border-radius:15px;text-align:center}
 .select-dropdown__button:focus{outline:0}
 .neon-divider-1{height:2px;margin:1rem 0;background:linear-gradient(90deg,transparent 10%,var(--clr-neon) 50%,transparent 90%);box-shadow:0 0 8px hsla(288,52%,35%,.4),0 0 16px hsla(288,52%,35%,.2)}
+.status-line{font-size:12px;text-align:center;opacity:.85;margin:0 0 10px;color:#e6d8f5}
+.status-line.warn{color:#ff9aa0}
 </style>
 </head>
 <body>
@@ -54,9 +56,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <div class="logo"><span class="grow">Grow</span><span class="hub">Hub</span></div>
 </header>
 <div class="header-transition"></div>
-<div id="mqtt-not-configured" style="display:none;text-align:center;padding:12px;margin:0 15px 10px;background:#5a0000;border:2px solid #ff4444;border-radius:10px;color:#ef9aa0">
-⚠️ MQTT не настроен. <a href="index.html" style="color:#fff;text-decoration:underline">Настройте на главной странице</a>
-</div>
+<div class="status-line" id="status-line">Подключение...</div>
 <main class="main">
 <h2 style="margin-bottom:10px">Настройка теплицы</h2>
 <div><h3 class="bord"><span data-field="profile_name">—</span></h3></div>
