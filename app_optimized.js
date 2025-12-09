@@ -471,11 +471,24 @@ function connect(cfg){
     console.log('[GrowHub] Creating new MQTTManager');
     mqttManager = new MQTTManager();
     bindMqttEvents();
+    
+    // Ждём готовности (для fallback клиента)
+    mqttManager.on('status', (status) => {
+      if (status === 'ready') {
+        console.log('[GrowHub] MQTT Manager ready, connecting...');
+        mqttManager.connect(cfg);
+      }
+    });
+    
+    // Для SharedWorker подключаемся сразу (событие 'ready' не будет)
+    // Fallback сам вызовет connect когда загрузится
+    if (!mqttManager.usingFallback) {
+      mqttManager.connect(cfg);
+    }
   } else {
     console.log('[GrowHub] Reusing existing MQTTManager');
+    mqttManager.connect(cfg);
   }
-  
-  mqttManager.connect(cfg);
 }
 
 function bindMqttEvents(){
@@ -485,6 +498,9 @@ function bindMqttEvents(){
   
   // Обработка изменения статуса подключения
   mqttManager.on('status', (status) => {
+    // Игнорируем 'ready' - это только для fallback загрузки
+    if (status === 'ready') return;
+    
     connected = (status === 'connected');
     
     const statusMessages = {

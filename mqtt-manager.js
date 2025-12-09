@@ -254,13 +254,23 @@ class MQTTManager extends EventTarget {
   // Fallback методы
   _initFallback() {
     console.log('[MQTT Manager] Loading direct client fallback...');
+    this.fallbackReady = false;
+    this.pendingConnect = null;
     
     // Динамически загружаем fallback клиент
     const script = document.createElement('script');
     script.src = 'mqtt-direct.js';
     script.onload = () => {
       console.log('[MQTT Manager] Fallback client loaded');
+      this.fallbackReady = true;
       this._dispatchEvent('status', 'ready');
+      
+      // Если был отложенный connect - выполняем
+      if (this.pendingConnect) {
+        console.log('[MQTT Manager] Executing pending connect');
+        this._connectFallback(this.pendingConnect);
+        this.pendingConnect = null;
+      }
     };
     script.onerror = () => {
       console.error('[MQTT Manager] Failed to load fallback client');
@@ -271,9 +281,9 @@ class MQTTManager extends EventTarget {
   }
 
   _connectFallback(config) {
-    if (!window.MQTTDirectClient) {
-      console.error('[MQTT Manager] Fallback client not loaded yet');
-      setTimeout(() => this._connectFallback(config), 500);
+    if (!this.fallbackReady || !window.MQTTDirectClient) {
+      console.warn('[MQTT Manager] Fallback not ready, deferring connect');
+      this.pendingConnect = config;
       return;
     }
 
@@ -321,6 +331,20 @@ class MQTTManager extends EventTarget {
     }
     
     return this.directClient.publish(key, value);
+  }
+
+  getLastState() {
+    if (this.usingFallback && this.directClient) {
+      return this.directClient.getLastState();
+    }
+    return this.lastState ? this.lastState.data : null;
+  }
+
+  isConnected() {
+    if (this.usingFallback && this.directClient) {
+      return this.directClient.isConnected();
+    }
+    return this.connected;
   }
 
   // Convenience методы для подписки на события
