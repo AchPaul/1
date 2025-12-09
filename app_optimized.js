@@ -449,6 +449,8 @@ function connect(cfg){
     return; 
   }
   
+  console.log('[GrowHub] Connecting with config:', { host: cfg.host, port: cfg.port, base: cfg.base });
+  
   saveConfig(cfg);
   baseTopic = cfg.base;
   
@@ -456,8 +458,11 @@ function connect(cfg){
   
   // Создаём MQTT manager с Shared Worker
   if (!mqttManager) {
+    console.log('[GrowHub] Creating new MQTTManager');
     mqttManager = new MQTTManager();
     bindMqttEvents();
+  } else {
+    console.log('[GrowHub] Reusing existing MQTTManager');
   }
   
   mqttManager.connect(cfg);
@@ -465,6 +470,8 @@ function connect(cfg){
 
 function bindMqttEvents(){
   if(!mqttManager) return;
+  
+  console.log('[GrowHub] Binding MQTT events');
   
   // Обработка изменения статуса подключения
   mqttManager.on('status', (status) => {

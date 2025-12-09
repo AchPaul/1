@@ -36,7 +36,7 @@ class MQTTManager extends EventTarget {
   _initWorker() {
     try {
       // Используем Shared Worker для постоянного соединения
-      this.worker = new SharedWorker('mqtt-worker.js', { type: 'module' });
+      this.worker = new SharedWorker('mqtt-worker.js');
       
       this.worker.port.addEventListener('message', (event) => {
         const { type, status, state, key, value } = event.data;
@@ -69,14 +69,21 @@ class MQTTManager extends EventTarget {
 
       this.worker.port.start();
       
+      // Обработка ошибок worker
+      this.worker.addEventListener('error', (e) => {
+        console.error('[MQTT Manager] Worker error:', e);
+        this._dispatchEvent('error', e);
+      });
+      
       // Запрашиваем текущее состояние при инициализации
-      this._requestState();
+      setTimeout(() => this._requestState(), 100);
       
       // Пытаемся загрузить кэшированное состояние для мгновенного отображения
       this._loadCachedState();
       
     } catch (error) {
       console.error('[MQTT Manager] Failed to initialize Shared Worker:', error);
+      this._dispatchEvent('status', 'error');
       this._dispatchEvent('error', error);
     }
   }

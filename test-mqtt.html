@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MQTT Test</title>
+<style>
+body{background:#000;color:#0f0;font-family:monospace;padding:20px}
+#log{white-space:pre-wrap;border:1px solid #0f0;padding:10px;margin-top:10px;max-height:500px;overflow-y:auto}
+button{background:#0f0;color:#000;border:none;padding:10px 20px;margin:5px;cursor:pointer;font-family:monospace}
+input{background:#111;color:#0f0;border:1px solid #0f0;padding:8px;margin:5px;font-family:monospace}
+</style>
+</head>
+<body>
+<h1>MQTT Connection Test</h1>
+<div>
+  <input type="text" id="host" placeholder="host" value="mqtt.growhub.ru">
+  <input type="text" id="port" placeholder="port" value="8884">
+  <input type="text" id="user" placeholder="user" value="">
+  <input type="text" id="pass" placeholder="pass" value="">
+  <input type="text" id="base" placeholder="base topic" value="growhub/test/">
+  <button onclick="testConnect()">Connect</button>
+  <button onclick="clearLog()">Clear Log</button>
+</div>
+<div id="status">Status: Not connected</div>
+<div id="log"></div>
+
+<script src="mqtt-manager.js"></script>
+<script>
+const logEl = document.getElementById('log');
+const statusEl = document.getElementById('status');
+let mqttManager = null;
+
+function log(msg) {
+  const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
+  logEl.textContent += `[${timestamp}] ${msg}\n`;
+  logEl.scrollTop = logEl.scrollHeight;
+  console.log(msg);
+}
+
+function clearLog() {
+  logEl.textContent = '';
+}
+
+function testConnect() {
+  log('=== Starting connection test ===');
+  
+  const config = {
+    host: document.getElementById('host').value,
+    port: document.getElementById('port').value,
+    user: document.getElementById('user').value,
+    pass: document.getElementById('pass').value,
+    base: document.getElementById('base').value
+  };
+  
+  log('Config: ' + JSON.stringify(config));
+  
+  try {
+    log('Creating MQTTManager...');
+    mqttManager = new MQTTManager();
+    log('MQTTManager created successfully');
+    
+    mqttManager.on('status', (status) => {
+      log('Status changed: ' + status);
+      statusEl.textContent = 'Status: ' + status;
+    });
+    
+    mqttManager.on('state', (state) => {
+      log('State received: ' + JSON.stringify(state).substring(0, 100) + '...');
+    });
+    
+    mqttManager.on('error', (error) => {
+      log('ERROR: ' + error);
+    });
+    
+    log('Calling connect()...');
+    mqttManager.connect(config);
+    log('Connect() called');
+    
+  } catch (e) {
+    log('EXCEPTION: ' + e.message);
+    log('Stack: ' + e.stack);
+  }
+}
+
+log('Test page loaded');
+log('MQTTManager available: ' + (typeof MQTTManager !== 'undefined'));
+</script>
+</body>
+</html>

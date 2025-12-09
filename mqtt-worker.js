@@ -9,7 +9,14 @@
  * - Кэширование последнего состояния для мгновенной загрузки
  */
 
-importScripts('https://unpkg.com/mqtt@5.3.5/dist/mqtt.min.js');
+console.log('[MQTT Worker] Loading...');
+
+try {
+  importScripts('https://unpkg.com/mqtt@5.3.5/dist/mqtt.min.js');
+  console.log('[MQTT Worker] MQTT library loaded, version:', typeof mqtt !== 'undefined' ? 'OK' : 'FAILED');
+} catch (e) {
+  console.error('[MQTT Worker] Failed to load MQTT library:', e);
+}
 
 let mqttClient = null;
 let connectedPorts = [];
@@ -36,6 +43,14 @@ function updateStatus(status) {
 
 // Подключение к MQTT брокеру
 function connect(config) {
+  console.log('[MQTT Worker] connect() called with config:', { host: config.host, port: config.port, base: config.base });
+  
+  if (typeof mqtt === 'undefined') {
+    console.error('[MQTT Worker] MQTT library not loaded!');
+    updateStatus('error');
+    return;
+  }
+  
   if (mqttClient) {
     try {
       mqttClient.end(true);
@@ -48,8 +63,11 @@ function connect(config) {
   currentConfig = config;
   const url = `wss://${config.host}:${config.port}/mqtt`;
   
-  updateStatus('connecting');
+  console.log('[MQTT Worker] Connecting to:', url);
+  console.log('[MQTT Worker] Base topic:', config.base);
   
+  updateStatus('connecting');
+
   mqttClient = mqtt.connect(url, {
     clientId: 'gh-shared-' + Math.random().toString(16).slice(2),
     username: config.user || undefined,
@@ -121,13 +139,25 @@ function publish(key, value) {
     return false;
   }
 
+  if (!mqttClient._setBase) {
+    console.error('[MQTT Worker] setBase not configured');
+    return false;
+  }
+
   const topic = mqttClient._setBase + key;
-  mqttClient.publish(topic, String(value));
+  console.log('[MQTT Worker] Publishing:', topic, '=', value);
   
-  broadcastToAll({
-    type: 'published',
-    key,
-    value
+  mqttClient.publish(topic, String(value), { qos: 0 }, (err) => {
+    if (err) {
+      console.error('[MQTT Worker] Publish error:', err);
+    } else {
+      console.log('[MQTT Worker] Published successfully');
+      broadcastToAll({
+        type: 'published',
+        key,
+        value
+      });
+    }
   });
   
   return true;
