@@ -64,6 +64,10 @@ class MQTTManager extends EventTarget {
           case 'published':
             this._dispatchEvent('published', { key, value });
             break;
+            
+          case 'queued':
+            this._dispatchEvent('queued', { key, value });
+            break;
         }
       });
 

@@ -83,14 +83,40 @@ function connect(config) {
   const setBase = config.base + 'set/';
 
   mqttClient.on('connect', () => {
+    console.log('[MQTT Worker] Connected to broker');
     updateStatus('connected');
+    
     mqttClient.subscribe(stateTopic, { qos: 0 }, (err) => {
       if (err) {
         console.error('[MQTT Worker] Subscribe error:', err);
         updateStatus('error');
+      } else {
+        console.log('[MQTT Worker] Subscribed to:', stateTopic);
+        
+        // Обрабатываем очередь накопленных команд
+        if (publishQueue.length > 0) {
+          console.log('[MQTT Worker] Processing queued publishes:', publishQueue.length);
+          const queue = [...publishQueue];
+          publishQueue = [];
+          
+          queue.forEach(({ key, value }) => {
+            const topic = setBase + key;
+            console.log('[MQTT Worker] Publishing queued:', topic, '=', value);
+            mqttClient.publish(topic, String(value), { qos: 0 }, (err) => {
+              if (err) {
+                console.error('[MQTT Worker] Queued publish error:', err);
+              } else {
+                broadcastToAll({ type: 'published', key, value });
+              }
+            });
+          });
+        }
       }
     });
   });
+  
+  // Сохраняем setBase для функции publish
+  currentConfig.setBase = setBase;
 
   mqttClient.on('reconnect', () => {
     updateStatus('reconnecting');
@@ -135,17 +161,32 @@ function connect(config) {
 
 // Публикация команды
 function publish(key, value) {
+  if (!currentConfig || !currentConfig.setBase) {
+    console.error('[MQTT Worker] Cannot publish - no config');
+    return false;
+  }
+  
+  // Если не подключены - добавляем в очередь
   if (!mqttClient || !mqttClient.connected) {
-    console.warn('[MQTT Worker] Not connected, cannot publish');
+    console.warn('[MQTT Worker] Not connected, queueing publish:', key, '=', value);
+    publishQueue.push({ key, value });
+    
+    // Ограничиваем размер очереди
+    if (publishQueue.length > 100) {
+      publishQueue.shift();
+    }
+    
+    // Сообщаем что команда в очереди
+    broadcastToAll({
+      type: 'queued',
+      key,
+      value
+    });
+    
     return false;
   }
-
-  if (!mqttClient._setBase) {
-    console.error('[MQTT Worker] setBase not configured');
-    return false;
-  }
-
-  const topic = mqttClient._setBase + key;
+  
+  const topic = currentConfig.setBase + key;
   console.log('[MQTT Worker] Publishing:', topic, '=', value);
   
   mqttClient.publish(topic, String(value), { qos: 0 }, (err) => {

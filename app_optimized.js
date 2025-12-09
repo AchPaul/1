@@ -49,15 +49,10 @@ function publish(key, val){
   }
   
   lastPubMap[key] = now;
-  const success = mqttManager.publish(key, String(val));
+  mqttManager.publish(key, String(val));
   
-  if (success) {
-    flashPub(`${key}=${val}`);
-  } else if (!connected) {
-    flashPub(`${key}=${val} (в очереди)`);
-  }
-  
-  return success;
+  // Визуальный фидбек придёт через события 'published' или 'queued'
+  return true;
 }
 
 function syncInputIfIdle(input, value){
@@ -520,6 +515,11 @@ function bindMqttEvents(){
   // Обработка подтверждения публикации
   mqttManager.on('published', ({ key, value }) => {
     flashPub(`${key}=${value}`);
+  });
+  
+  // Обработка команд в очереди
+  mqttManager.on('queued', ({ key, value }) => {
+    flashPub(`${key}=${value} (в очереди)`);
   });
 }
 

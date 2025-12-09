@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Тест Publish - GrowHub</title>
+<style>
+body{background:#000;color:#fff;font-family:monospace;padding:20px}
+h1{color:#c900cc;text-align:center}
+.test-box{background:#1a001a;border:2px solid #500078;border-radius:10px;padding:15px;margin:15px 0}
+button{background:#500078;color:#fff;border:2px solid #c900cc;padding:10px 20px;border-radius:5px;cursor:pointer;margin:5px;font-size:16px}
+button:active{background:#c900cc}
+#log{background:#000;border:1px solid #500078;padding:10px;border-radius:5px;max-height:400px;overflow-y:auto;font-size:13px}
+.log-entry{margin-bottom:5px}
+.success{color:#4CAF50}
+.error{color:#EF5350}
+.info{color:#2196F3}
+input{background:#1a001a;color:#fff;border:2px solid #500078;padding:8px;margin:5px;border-radius:5px;width:150px}
+</style>
+</head>
+<body>
+<h1>🧪 Тест MQTT Publish</h1>
+
+<div class="test-box">
+  <h3>Статус: <span id="status">—</span></h3>
+  <p>Config: <span id="config">—</span></p>
+</div>
+
+<div class="test-box">
+  <h3>Быстрый тест</h3>
+  <button onclick="test('lig_pwm', 50)">Свет 50%</button>
+  <button onclick="test('lig_pwm', 100)">Свет 100%</button>
+  <button onclick="test('temp_day', 22)">Температура 22°C</button>
+  <button onclick="test('humgr_day', 60)">Влажность 60%</button>
+</div>
+
+<div class="test-box">
+  <h3>Кастомная команда</h3>
+  <input id="key" placeholder="ключ" value="lig_pwm">
+  <input id="value" placeholder="значение" value="75">
+  <button onclick="customTest()">Отправить</button>
+</div>
+
+<div class="test-box">
+  <h3>Журнал</h3>
+  <button onclick="document.getElementById('log').innerHTML=''">Очистить</button>
+  <div id="log"></div>
+</div>
+
+<script type="module">
+import MQTTManager from './mqtt-manager.js';
+
+const statusEl = document.getElementById('status');
+const configEl = document.getElementById('config');
+const logEl = document.getElementById('log');
+
+let mqttManager = null;
+let testCount = 0;
+
+function log(msg, type = 'info') {
+  const time = new Date().toLocaleTimeString();
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${type}`;
+  entry.textContent = `[${time}] ${msg}`;
+  logEl.insertBefore(entry, logEl.firstChild);
+  console.log(msg);
+}
+
+const cfg = (() => {
+  try {
+    const stored = localStorage.getItem('gh_remote_cfg_v1');
+    return stored ? JSON.parse(stored) : null;
+  } catch (e) {
+    return null;
+  }
+})();
+
+if (!cfg || !cfg.host || !cfg.port || !cfg.base) {
+  statusEl.textContent = '❌ Не настроено';
+  configEl.innerHTML = '<a href="index.html" style="color:#c900cc">Настроить</a>';
+  log('❌ Конфигурация не найдена', 'error');
+} else {
+  statusEl.textContent = '🔄 Инициализация...';
+  configEl.textContent = `${cfg.host}:${cfg.port}/${cfg.base}`;
+  
+  mqttManager = new MQTTManager();
+  
+  mqttManager.on('status', (status) => {
+    statusEl.textContent = status === 'connected' ? '✅ Подключено' : 
+                          status === 'connecting' ? '🔄 Подключение...' : 
+                          '❌ ' + status;
+    log(`Статус: ${status}`, status === 'connected' ? 'success' : 'info');
+  });
+  
+  mqttManager.on('published', ({ key, value }) => {
+    log(`✅ Опубликовано: ${key}=${value}`, 'success');
+  });
+  
+  mqttManager.on('queued', ({ key, value }) => {
+    log(`⏳ В очереди: ${key}=${value}`, 'info');
+  });
+  
+  mqttManager.on('error', (error) => {
+    log(`❌ Ошибка: ${error.message || error}`, 'error');
+  });
+  
+  log('🚀 Инициализация MQTT...', 'info');
+  mqttManager.connect(cfg);
+}
+
+window.test = function(key, value) {
+  if (!mqttManager) {
+    log('❌ MQTT не инициализирован', 'error');
+    return;
+  }
+  
+  testCount++;
+  log(`📤 Тест #${testCount}: ${key}=${value}`, 'info');
+  
+  const success = mqttManager.publish(key, value);
+  if (!success) {
+    log(`⚠️ publish() вернул false`, 'error');
+  }
+};
+
+window.customTest = function() {
+  const key = document.getElementById('key').value.trim();
+  const value = document.getElementById('value').value.trim();
+  
+  if (!key || !value) {
+    log('❌ Заполните ключ и значение', 'error');
+    return;
+  }
+  
+  window.test(key, value);
+};
+</script>
+</body>
+</html>
