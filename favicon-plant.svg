@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c900cc"/>
+      <stop offset="100%" stop-color="#500078"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#66BB6A"/>
+      <stop offset="100%" stop-color="#B2FF59"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Background: Modern Squircle -->
+  <rect width="512" height="512" rx="120" fill="url(#bg)"/>
+  
+  <!-- Plant Icon -->
+  <g filter="url(#shadow)">
+    <!-- Stem -->
+    <path d="M256 410 Q256 330 256 260" stroke="#fff" stroke-width="28" stroke-linecap="round" fill="none"/>
+    
+    <!-- Right Leaf (Larger, higher) -->
+    <path d="M256 260 Q360 260 410 150 Q300 120 256 260 Z" fill="url(#leaf)"/>
+    
+    <!-- Left Leaf (Smaller, lower) -->
+    <path d="M256 330 Q160 330 120 230 Q220 200 256 330 Z" fill="url(#leaf)"/>
+  </g>
+</svg>
