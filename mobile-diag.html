@@ -9,9 +9,9 @@ body{background:#000;color:#fff;font-family:monospace;padding:10px;font-size:14p
 h1{color:#c900cc;text-align:center;font-size:20px;margin-bottom:15px}
 .box{background:#1a001a;border:2px solid #500078;border-radius:8px;padding:12px;margin-bottom:12px}
 .box h3{color:#b65ee5;font-size:16px;margin-bottom:8px}
-.info{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;font-size:13px}
-.info dt{color:#c4a1c7}
-.info dd{color:#fff;font-weight:bold;word-break:break-all}
+.grid-info{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;font-size:13px}
+.grid-info dt{color:#c4a1c7}
+.grid-info dd{color:#fff;font-weight:bold;word-break:break-all}
 .status{padding:10px;border-radius:5px;margin-bottom:10px;text-align:center;font-weight:bold;font-size:16px}
 .ok{background:#1B5E20;border:2px solid #4CAF50}
 .err{background:#B71C1C;border:2px solid #F44336}
@@ -32,7 +32,7 @@ button:active{background:#c900cc}
 
 <div class="box">
   <h3>Устройство</h3>
-  <div class="info">
+  <div class="grid-info">
     <dt>UserAgent:</dt><dd id="ua" style="font-size:11px">—</dd>
     <dt>Платформа:</dt><dd id="platform">—</dd>
     <dt>Online:</dt><dd id="online">—</dd>
@@ -41,7 +41,7 @@ button:active{background:#c900cc}
 
 <div class="box">
   <h3>Поддержка технологий</h3>
-  <div class="info">
+  <div class="grid-info">
     <dt>SharedWorker:</dt><dd id="sw">—</dd>
     <dt>WebSocket:</dt><dd id="ws">—</dd>
     <dt>ServiceWorker:</dt><dd id="serv">—</dd>
@@ -51,7 +51,7 @@ button:active{background:#c900cc}
 
 <div class="box">
   <h3>MQTT конфигурация</h3>
-  <div class="info">
+  <div class="grid-info">
     <dt>Хост:</dt><dd id="host">—</dd>
     <dt>Порт:</dt><dd id="port">—</dd>
     <dt>Протокол:</dt><dd id="proto">—</dd>
@@ -72,13 +72,13 @@ button:active{background:#c900cc}
   <div id="log" class="log"></div>
 </div>
 
-<script type="module">
-import MQTTManager from './mqtt-manager.js';
-
+<script>
+// ВАЖНО: НЕ используем type="module" т.к. на мобильных может не работать
 const mainStatus = document.getElementById('main-status');
 const logEl = document.getElementById('log');
 let logCount = 0;
 let mqttManager = null;
+let MQTTManager = null;
 
 function log(msg, type = 'info') {
   logCount++;
@@ -90,39 +90,57 @@ function log(msg, type = 'info') {
   console.log(`[Mobile] ${msg}`);
 }
 
-// Информация об устройстве
-document.getElementById('ua').textContent = navigator.userAgent;
-document.getElementById('platform').textContent = navigator.platform;
-document.getElementById('online').textContent = navigator.onLine ? '✅ Онлайн' : '❌ Офлайн';
-
-// Проверка технологий
-document.getElementById('sw').textContent = typeof SharedWorker !== 'undefined' ? '✅' : '❌ НЕ ПОДДЕРЖИВАЕТСЯ';
-document.getElementById('ws').textContent = typeof WebSocket !== 'undefined' ? '✅' : '❌';
-document.getElementById('serv').textContent = 'serviceWorker' in navigator ? '✅' : '❌';
-document.getElementById('ls').textContent = typeof localStorage !== 'undefined' ? '✅' : '❌';
-
-if (typeof SharedWorker === 'undefined') {
-  mainStatus.className = 'status err';
-  mainStatus.textContent = '❌ SharedWorker не поддерживается';
-  log('SharedWorker НЕ поддерживается на этом устройстве', 'error');
-  log('Требуется Chrome 120+ или другой браузер', 'error');
+// Загружаем модуль динамически
+async function loadMQTTManager() {
+  try {
+    const module = await import('./mqtt-manager.js');
+    MQTTManager = module.default || module.MQTTManager;
+    log('MQTTManager модуль загружен', 'success');
+    return true;
+  } catch (e) {
+    log('Ошибка загрузки модуля: ' + e.message, 'error');
+    return false;
+  }
 }
 
-// Загрузка конфигурации
-let cfg = null;
-try {
-  const stored = localStorage.getItem('gh_remote_cfg_v1');
-  cfg = stored ? JSON.parse(stored) : null;
-} catch (e) {
-  log('Ошибка загрузки конфигурации: ' + e.message, 'error');
-}
+// Инициализация после загрузки DOM
+function init() {
+  // Информация об устройстве
+  document.getElementById('ua').textContent = navigator.userAgent;
+  document.getElementById('platform').textContent = navigator.platform;
+  document.getElementById('online').textContent = navigator.onLine ? '✅ Онлайн' : '❌ Офлайн';
 
-if (!cfg || !cfg.host || !cfg.port) {
-  mainStatus.className = 'status err';
-  mainStatus.textContent = '❌ Нет конфигурации';
-  log('MQTT не настроен', 'error');
-  document.getElementById('host').innerHTML = '<a href="index.html" style="color:#c900cc">Настроить</a>';
-} else {
+  // Проверка технологий
+  document.getElementById('sw').textContent = typeof SharedWorker !== 'undefined' ? '✅' : '❌ НЕ ПОДДЕРЖИВАЕТСЯ';
+  document.getElementById('ws').textContent = typeof WebSocket !== 'undefined' ? '✅' : '❌';
+  document.getElementById('serv').textContent = 'serviceWorker' in navigator ? '✅' : '❌';
+  document.getElementById('ls').textContent = typeof localStorage !== 'undefined' ? '✅' : '❌';
+
+  if (typeof SharedWorker === 'undefined') {
+    mainStatus.className = 'status err';
+    mainStatus.textContent = '❌ SharedWorker не поддерживается';
+    log('SharedWorker НЕ поддерживается на этом устройстве', 'error');
+    log('Требуется Chrome 120+ или другой браузер', 'error');
+    return;
+  }
+
+  // Загрузка конфигурации
+  let cfg = null;
+  try {
+    const stored = localStorage.getItem('gh_remote_cfg_v1');
+    cfg = stored ? JSON.parse(stored) : null;
+  } catch (e) {
+    log('Ошибка загрузки конфигурации: ' + e.message, 'error');
+  }
+
+  if (!cfg || !cfg.host || !cfg.port) {
+    mainStatus.className = 'status err';
+    mainStatus.textContent = '❌ Нет конфигурации';
+    log('MQTT не настроен', 'error');
+    document.getElementById('host').innerHTML = '<a href="index.html" style="color:#c900cc">Настроить</a>';
+    return;
+  }
+  
   document.getElementById('host').textContent = cfg.host;
   document.getElementById('port').textContent = cfg.port;
   
@@ -137,13 +155,23 @@ if (!cfg || !cfg.host || !cfg.port) {
   log('Конфигурация загружена', 'success');
   log(`Протокол: ${proto}://`, 'info');
   
-  if (typeof SharedWorker !== 'undefined') {
-    initMQTT();
-  }
+  // Загружаем и инициализируем MQTT
+  loadMQTTManager().then(loaded => {
+    if (loaded) {
+      initMQTT(cfg);
+    }
+  });
 }
 
-function initMQTT() {
-  if (!cfg) return;
+// Вызываем init при загрузке
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
+function initMQTT(cfg) {
+  if (!cfg || !MQTTManager) return;
   
   log('Создание MQTTManager...', 'info');
   mainStatus.className = 'status warn';
@@ -196,11 +224,17 @@ function initMQTT() {
 
 window.testConnection = function() {
   log('Переподключение...', 'info');
-  if (mqttManager) {
-    mqttManager.disconnect();
-    setTimeout(() => initMQTT(), 1000);
-  } else {
-    initMQTT();
+  try {
+    const stored = localStorage.getItem('gh_remote_cfg_v1');
+    const cfg = stored ? JSON.parse(stored) : null;
+    if (mqttManager) {
+      mqttManager.disconnect();
+      setTimeout(() => initMQTT(cfg), 1000);
+    } else {
+      loadMQTTManager().then(() => initMQTT(cfg));
+    }
+  } catch (e) {
+    log('Ошибка: ' + e.message, 'error');
   }
 };
 

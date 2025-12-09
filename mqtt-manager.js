@@ -28,6 +28,8 @@ class MQTTManager extends EventTarget {
     this.lastState = null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
+    this.usingFallback = false;
+    this.directClient = null;
     
     this._initWorker();
     this._setupVisibilityHandling();
@@ -36,11 +38,13 @@ class MQTTManager extends EventTarget {
   _initWorker() {
     // Проверка поддержки SharedWorker
     if (typeof SharedWorker === 'undefined') {
-      console.error('[MQTT Manager] SharedWorker not supported in this browser!');
+      console.warn('[MQTT Manager] SharedWorker not supported - using fallback');
       console.log('[MQTT Manager] User Agent:', navigator.userAgent);
       console.log('[MQTT Manager] Platform:', navigator.platform);
-      this._dispatchEvent('status', 'error');
-      this._dispatchEvent('error', new Error('SharedWorker not supported. Please use Chrome 120+ or another browser.'));
+      
+      // Используем fallback - прямое подключение
+      this.usingFallback = true;
+      this._initFallback();
       return;
     }
     
@@ -188,6 +192,10 @@ class MQTTManager extends EventTarget {
   }
 
   connect(config) {
+    if (this.usingFallback) {
+      return this._connectFallback(config);
+    }
+    
     if (!config || !config.host || !config.port || !config.base) {
       throw new Error('Invalid MQTT configuration');
     }
@@ -205,6 +213,10 @@ class MQTTManager extends EventTarget {
   }
 
   publish(key, value) {
+    if (this.usingFallback) {
+      return this._publishFallback(key, value);
+    }
+    
     if (!this.worker || !this.worker.port) {
       console.error('[MQTT Manager] Worker not initialized');
       return false;
@@ -212,7 +224,6 @@ class MQTTManager extends EventTarget {
 
     if (!this.connected) {
       console.warn('[MQTT Manager] Not connected yet, attempting to publish anyway');
-      // Worker сам обработает очередь или выведет ошибку
     }
 
     try {
@@ -228,7 +239,88 @@ class MQTTManager extends EventTarget {
   }
 
   disconnect() {
-    this.worker.port.postMessage({ type: 'disconnect' });
+    if (this.usingFallback) {
+      if (this.directClient) {
+        this.directClient.disconnect();
+      }
+      return;
+    }
+    
+    if (this.worker && this.worker.port) {
+      this.worker.port.postMessage({ type: 'disconnect' });
+    }
+  }
+
+  // Fallback методы
+  _initFallback() {
+    console.log('[MQTT Manager] Loading direct client fallback...');
+    
+    // Динамически загружаем fallback клиент
+    const script = document.createElement('script');
+    script.src = 'mqtt-direct.js';
+    script.onload = () => {
+      console.log('[MQTT Manager] Fallback client loaded');
+      this._dispatchEvent('status', 'ready');
+    };
+    script.onerror = () => {
+      console.error('[MQTT Manager] Failed to load fallback client');
+      this._dispatchEvent('status', 'error');
+      this._dispatchEvent('error', new Error('Failed to load MQTT fallback'));
+    };
+    document.head.appendChild(script);
+  }
+
+  _connectFallback(config) {
+    if (!window.MQTTDirectClient) {
+      console.error('[MQTT Manager] Fallback client not loaded yet');
+      setTimeout(() => this._connectFallback(config), 500);
+      return;
+    }
+
+    if (!config || !config.host || !config.port || !config.base) {
+      throw new Error('Invalid MQTT configuration');
+    }
+
+    if (!config.base.endsWith('/')) {
+      config.base += '/';
+    }
+
+    console.log('[MQTT Manager] Using fallback client');
+    
+    this.directClient = new window.MQTTDirectClient();
+    
+    this.directClient.on('status', (status) => {
+      this.connected = (status === 'connected');
+      this._dispatchEvent('status', status);
+    });
+    
+    this.directClient.on('state', (state) => {
+      this.lastState = { data: state, timestamp: Date.now() };
+      this._dispatchEvent('state', state);
+    });
+    
+    this.directClient.on('published', ({ key, value }) => {
+      this._dispatchEvent('published', { key, value });
+    });
+    
+    this.directClient.on('queued', ({ key, value }) => {
+      this._dispatchEvent('queued', { key, value });
+    });
+    
+    this.directClient.on('error', (error) => {
+      this._dispatchEvent('error', error);
+    });
+    
+    this.directClient.connect(config);
+  }
+
+  _publishFallback(key, value) {
+    if (!this.directClient) {
+      console.error('[MQTT Manager] Direct client not initialized');
+      return false;
+    }
+    
+    return this.directClient.publish(key, value);
   }
 
   // Convenience методы для подписки на события
