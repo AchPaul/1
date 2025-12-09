@@ -34,9 +34,23 @@ class MQTTManager extends EventTarget {
   }
 
   _initWorker() {
+    // Проверка поддержки SharedWorker
+    if (typeof SharedWorker === 'undefined') {
+      console.error('[MQTT Manager] SharedWorker not supported in this browser!');
+      console.log('[MQTT Manager] User Agent:', navigator.userAgent);
+      console.log('[MQTT Manager] Platform:', navigator.platform);
+      this._dispatchEvent('status', 'error');
+      this._dispatchEvent('error', new Error('SharedWorker not supported. Please use Chrome 120+ or another browser.'));
+      return;
+    }
+    
     try {
+      console.log('[MQTT Manager] Initializing SharedWorker...');
+      
       // Используем Shared Worker для постоянного соединения
       this.worker = new SharedWorker('mqtt-worker.js');
+      
+      console.log('[MQTT Manager] SharedWorker created successfully');
       
       this.worker.port.addEventListener('message', (event) => {
         const { type, status, state, key, value } = event.data;
@@ -72,11 +86,18 @@ class MQTTManager extends EventTarget {
       });
 
       this.worker.port.start();
+      console.log('[MQTT Manager] Port started');
       
       // Обработка ошибок worker
       this.worker.addEventListener('error', (e) => {
         console.error('[MQTT Manager] Worker error:', e);
+        console.error('[MQTT Manager] Error details:', e.message, e.filename, e.lineno);
         this._dispatchEvent('error', e);
+      });
+      
+      // Обработка ошибок порта
+      this.worker.port.addEventListener('messageerror', (e) => {
+        console.error('[MQTT Manager] Port message error:', e);
       });
       
       // Запрашиваем текущее состояние при инициализации
@@ -87,6 +108,7 @@ class MQTTManager extends EventTarget {
       
     } catch (error) {
       console.error('[MQTT Manager] Failed to initialize Shared Worker:', error);
+      console.error('[MQTT Manager] Error stack:', error.stack);
       this._dispatchEvent('status', 'error');
       this._dispatchEvent('error', error);
     }

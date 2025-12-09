@@ -9,13 +9,23 @@
  * - Кэширование последнего состояния для мгновенной загрузки
  */
 
-console.log('[MQTT Worker] Loading...');
+console.log('[MQTT Worker] Loading... UserAgent:', self.navigator?.userAgent || 'unknown');
+
+let mqttLibLoaded = false;
 
 try {
+  console.log('[MQTT Worker] Attempting to load MQTT library from CDN...');
   importScripts('https://unpkg.com/mqtt@5.3.5/dist/mqtt.min.js');
-  console.log('[MQTT Worker] MQTT library loaded, version:', typeof mqtt !== 'undefined' ? 'OK' : 'FAILED');
+  
+  if (typeof mqtt !== 'undefined') {
+    mqttLibLoaded = true;
+    console.log('[MQTT Worker] ✅ MQTT library loaded successfully');
+  } else {
+    console.error('[MQTT Worker] ❌ MQTT library loaded but mqtt object is undefined');
+  }
 } catch (e) {
-  console.error('[MQTT Worker] Failed to load MQTT library:', e);
+  console.error('[MQTT Worker] ❌ Failed to load MQTT library:', e);
+  console.error('[MQTT Worker] Error details:', e.message, e.stack);
 }
 
 let mqttClient = null;
@@ -44,15 +54,25 @@ function updateStatus(status) {
 
 // Подключение к MQTT брокеру
 function connect(config) {
-  console.log('[MQTT Worker] connect() called with config:', { host: config.host, port: config.port, base: config.base });
+  console.log('[MQTT Worker] connect() called');
+  console.log('[MQTT Worker] Config:', { host: config.host, port: config.port, base: config.base });
   
-  if (typeof mqtt === 'undefined') {
-    console.error('[MQTT Worker] MQTT library not loaded!');
+  if (!mqttLibLoaded || typeof mqtt === 'undefined') {
+    console.error('[MQTT Worker] ❌ MQTT library not loaded!');
+    console.error('[MQTT Worker] mqttLibLoaded:', mqttLibLoaded);
+    console.error('[MQTT Worker] typeof mqtt:', typeof mqtt);
     updateStatus('error');
+    broadcastToAll({ 
+      type: 'error', 
+      error: 'MQTT library failed to load. Check network connection.' 
+    });
     return;
   }
   
+  console.log('[MQTT Worker] MQTT library available, proceeding with connection...');
+  
   if (mqttClient) {
+    console.log('[MQTT Worker] Closing existing client...');
     try {
       mqttClient.end(true);
     } catch (e) {
@@ -71,21 +91,32 @@ function connect(config) {
   const protocol = tlsPorts.includes(port) ? 'wss' : 'ws';
   const url = `${protocol}://${config.host}:${config.port}/mqtt`;
   
-  console.log('[MQTT Worker] Connecting to:', url);
+  console.log('[MQTT Worker] Protocol:', protocol);
+  console.log('[MQTT Worker] URL:', url);
   console.log('[MQTT Worker] Base topic:', config.base);
   
   updateStatus('connecting');
 
-  mqttClient = mqtt.connect(url, {
-    clientId: 'gh-shared-' + Math.random().toString(16).slice(2),
-    username: config.user || undefined,
-    password: config.pass || undefined,
-    reconnectPeriod: 2000,
-    connectTimeout: 10000, // Увеличиваем таймаут до 10 секунд
-    keepalive: 30, // Увеличиваем keepalive для нестабильных соединений
-    clean: true,
-    rejectUnauthorized: false // Для самоподписанных сертификатов
-  });
+  console.log('[MQTT Worker] Calling mqtt.connect()...');
+  
+  try {
+    mqttClient = mqtt.connect(url, {
+      clientId: 'gh-shared-' + Math.random().toString(16).slice(2),
+      username: config.user || undefined,
+      password: config.pass || undefined,
+      reconnectPeriod: 2000,
+      connectTimeout: 10000, // Увеличиваем таймаут до 10 секунд
+      keepalive: 30, // Увеличиваем keepalive для нестабильных соединений
+      clean: true,
+      rejectUnauthorized: false // Для самоподписанных сертификатов
+    });
+    
+    console.log('[MQTT Worker] mqtt.connect() returned, client created');
+  } catch (e) {
+    console.error('[MQTT Worker] Exception in mqtt.connect():', e);
+    updateStatus('error');
+    return;
+  }
 
   const stateTopic = config.base + 'state/json';
   const setBase = config.base + 'set/';
