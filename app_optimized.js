@@ -37,12 +37,27 @@ const ALERT_KEYS = [
 ];
 
 function publish(key, val){
-  if(!connected || !mqttManager) return;
+  if(!mqttManager) {
+    console.warn('[GrowHub] MQTT Manager not initialized');
+    return false;
+  }
+  
   const now = Date.now();
-  if(lastPubMap[key] && (now - lastPubMap[key] < PUB_THROTTLE_MS)) return; // throttle
+  if(lastPubMap[key] && (now - lastPubMap[key] < PUB_THROTTLE_MS)) {
+    console.log('[GrowHub] Throttling publish for', key);
+    return false; // throttle
+  }
+  
   lastPubMap[key] = now;
-  mqttManager.publish(key, String(val));
-  flashPub(`${key}=${val}`);
+  const success = mqttManager.publish(key, String(val));
+  
+  if (success) {
+    flashPub(`${key}=${val}`);
+  } else if (!connected) {
+    flashPub(`${key}=${val} (в очереди)`);
+  }
+  
+  return success;
 }
 
 function syncInputIfIdle(input, value){

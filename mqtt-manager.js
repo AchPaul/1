@@ -179,15 +179,26 @@ class MQTTManager extends EventTarget {
   }
 
   publish(key, value) {
-    if (!this.connected) {
-      console.warn('[MQTT Manager] Not connected, queueing publish');
-      // Можно добавить очередь для отложенной публикации
+    if (!this.worker || !this.worker.port) {
+      console.error('[MQTT Manager] Worker not initialized');
+      return false;
     }
 
-    this.worker.port.postMessage({
-      type: 'publish',
-      data: { key, value }
-    });
+    if (!this.connected) {
+      console.warn('[MQTT Manager] Not connected yet, attempting to publish anyway');
+      // Worker сам обработает очередь или выведет ошибку
+    }
+
+    try {
+      this.worker.port.postMessage({
+        type: 'publish',
+        data: { key, value }
+      });
+      return true;
+    } catch (error) {
+      console.error('[MQTT Manager] Failed to send publish message:', error);
+      return false;
+    }
   }
 
   disconnect() {

@@ -23,6 +23,7 @@ let connectedPorts = [];
 let currentConfig = null;
 let lastState = null;
 let connectionStatus = 'disconnected';
+let publishQueue = []; // Очередь публикаций до установки соединения
 
 // Broadcast сообщения всем подключённым вкладкам
 function broadcastToAll(message) {

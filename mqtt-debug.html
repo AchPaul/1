@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MQTT Debug - GrowHub</title>
+<link rel="icon" type="image/svg+xml" href="favicon-plant.svg">
+<style>
+:root{--clr-neon:hsl(288,52%,35%);--clr-bg:hsl(295,14%,67%)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Courier New',monospace;padding:15px}
+h1{text-align:center;color:#c900cc;margin-bottom:20px;font-size:24px}
+.section{background:#1a001a;border:2px solid var(--clr-neon);border-radius:10px;padding:15px;margin-bottom:15px}
+.section h2{color:#c900cc;font-size:18px;margin-bottom:10px}
+.log{background:#000;border:1px solid #500078;border-radius:5px;padding:10px;max-height:300px;overflow-y:auto;font-size:12px;line-height:1.4}
+.log-entry{margin-bottom:5px;word-break:break-all}
+.log-entry.info{color:#4CAF50}
+.log-entry.warn{color:#FFA726}
+.log-entry.error{color:#EF5350}
+.status{padding:10px;border-radius:5px;margin-bottom:10px;text-align:center;font-weight:bold}
+.status.connected{background:#1B5E20;border:2px solid #4CAF50}
+.status.connecting{background:#E65100;border:2px solid #FF9800}
+.status.disconnected{background:#B71C1C;border:2px solid #F44336}
+button{background:#500078;color:#fff;border:2px solid #c900cc;padding:10px 20px;border-radius:5px;cursor:pointer;margin:5px;font-size:14px}
+button:active{background:#c900cc}
+input{background:#1a001a;color:#fff;border:2px solid var(--clr-neon);padding:8px;border-radius:5px;width:100%;margin-bottom:10px;font-family:'Courier New',monospace}
+.info-grid{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;font-size:14px}
+.info-grid dt{color:#c4a1c7}
+.info-grid dd{color:#fff;font-weight:bold}
+</style>
+</head>
+<body>
+<h1>🔬 MQTT Диагностика</h1>
+
+<div class="section">
+  <h2>Статус соединения</h2>
+  <div id="status" class="status disconnected">Не подключено</div>
+  <div class="info-grid">
+    <dt>Браузер:</dt><dd id="browser">—</dd>
+    <dt>SharedWorker:</dt><dd id="sw-support">—</dd>
+    <dt>WebSocket:</dt><dd id="ws-support">—</dd>
+    <dt>Конфигурация:</dt><dd id="config-status">—</dd>
+    <dt>Последний publish:</dt><dd id="last-publish">—</dd>
+    <dt>Очередь:</dt><dd id="queue-size">—</dd>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Действия</h2>
+  <button onclick="testPublish()">📤 Тестовая публикация</button>
+  <button onclick="reconnect()">🔄 Переподключение</button>
+  <button onclick="clearLogs()">🗑️ Очистить логи</button>
+  <button onclick="clearConfig()">⚙️ Сброс конфигурации</button>
+</div>
+
+<div class="section">
+  <h2>Тест publish</h2>
+  <input id="test-key" placeholder="Ключ (например: lig_pwm)" value="lig_pwm">
+  <input id="test-value" placeholder="Значение (например: 75)" value="75">
+  <button onclick="customPublish()">Отправить</button>
+</div>
+
+<div class="section">
+  <h2>Журнал событий</h2>
+  <div id="log" class="log"></div>
+</div>
+
+<script type="module">
+import MQTTManager from './mqtt-manager.js';
+
+const statusEl = document.getElementById('status');
+const logEl = document.getElementById('log');
+const browserEl = document.getElementById('browser');
+const swSupportEl = document.getElementById('sw-support');
+const wsSupportEl = document.getElementById('ws-support');
+const configStatusEl = document.getElementById('config-status');
+const lastPublishEl = document.getElementById('last-publish');
+const queueSizeEl = document.getElementById('queue-size');
+
+let mqttManager = null;
+let publishCount = 0;
+
+// Определение браузера
+function detectBrowser() {
+  const ua = navigator.userAgent;
+  if (/Chrome/.test(ua) && /Google Inc/.test(navigator.vendor)) return 'Chrome';
+  if (/Safari/.test(ua) && /Apple/.test(navigator.vendor)) return 'Safari';
+  if (/Firefox/.test(ua)) return 'Firefox';
+  if (/Edg/.test(ua)) return 'Edge';
+  return 'Unknown';
+}
+
+// Проверка поддержки технологий
+function checkSupport() {
+  browserEl.textContent = detectBrowser() + ' ' + (navigator.userAgent.match(/Version\/(\d+)/) || [])[1] || '';
+  swSupportEl.textContent = typeof SharedWorker !== 'undefined' ? '✅ Поддерживается' : '❌ Не поддерживается';
+  wsSupportEl.textContent = typeof WebSocket !== 'undefined' ? '✅ Поддерживается' : '❌ Не поддерживается';
+}
+
+// Логирование
+function log(message, type = 'info') {
+  const time = new Date().toLocaleTimeString('ru-RU');
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${type}`;
+  entry.textContent = `[${time}] ${message}`;
+  logEl.insertBefore(entry, logEl.firstChild);
+  
+  // Ограничиваем количество записей
+  while (logEl.children.length > 100) {
+    logEl.removeChild(logEl.lastChild);
+  }
+  
+  console.log(`[MQTT Debug] ${message}`);
+}
+
+// Обновление статуса
+function updateStatus(status, message) {
+  statusEl.className = `status ${status}`;
+  statusEl.textContent = message || status;
+  
+  if (status === 'connected') {
+    log('✅ MQTT подключен', 'info');
+  } else if (status === 'connecting') {
+    log('🔄 Подключение к MQTT...', 'info');
+  } else if (status === 'disconnected') {
+    log('❌ MQTT отключен', 'error');
+  }
+}
+
+// Загрузка конфигурации
+function loadConfig() {
+  try {
+    const stored = localStorage.getItem('gh_remote_cfg_v1');
+    if (stored) {
+      const cfg = JSON.parse(stored);
+      configStatusEl.textContent = `✅ ${cfg.host}:${cfg.port}/${cfg.base}`;
+      return cfg;
+    } else {
+      configStatusEl.textContent = '❌ Не настроено';
+      return null;
+    }
+  } catch (e) {
+    log('Ошибка загрузки конфигурации: ' + e.message, 'error');
+    configStatusEl.textContent = '❌ Ошибка';
+    return null;
+  }
+}
+
+// Инициализация MQTT
+function initMQTT() {
+  const cfg = loadConfig();
+  if (!cfg || !cfg.host || !cfg.port || !cfg.base) {
+    log('❌ Конфигурация не найдена. Настройте на главной странице.', 'error');
+    return;
+  }
+  
+  log('📡 Инициализация MQTT Manager...', 'info');
+  
+  try {
+    mqttManager = new MQTTManager();
+    
+    mqttManager.on('status', (status) => {
+      updateStatus(status, status === 'connected' ? '✅ Подключено' : 
+                            status === 'connecting' ? '🔄 Подключение...' : 
+                            '❌ Отключено');
+    });
+    
+    mqttManager.on('state', (state) => {
+      log(`📥 Получено состояние: ${Object.keys(state).length} параметров`, 'info');
+    });
+    
+    mqttManager.on('published', ({ key, value }) => {
+      publishCount++;
+      lastPublishEl.textContent = `${key}=${value} (#${publishCount})`;
+      log(`📤 Опубликовано: ${key}=${value}`, 'info');
+    });
+    
+    mqttManager.on('error', (error) => {
+      log('❌ Ошибка MQTT: ' + (error.message || error), 'error');
+    });
+    
+    log('🔗 Подключение к брокеру...', 'info');
+    mqttManager.connect(cfg);
+    
+  } catch (error) {
+    log('❌ Ошибка инициализации: ' + error.message, 'error');
+  }
+}
+
+// Глобальные функции для кнопок
+window.testPublish = function() {
+  if (!mqttManager) {
+    log('❌ MQTT Manager не инициализирован', 'error');
+    return;
+  }
+  
+  const testKey = 'lig_pwm';
+  const testValue = Math.floor(Math.random() * 100);
+  
+  log(`📤 Отправка тестового publish: ${testKey}=${testValue}`, 'info');
+  const success = mqttManager.publish(testKey, testValue);
+  
+  if (!success) {
+    log('⚠️ Publish вернул false (возможно, в очереди)', 'warn');
+  }
+};
+
+window.customPublish = function() {
+  if (!mqttManager) {
+    log('❌ MQTT Manager не инициализирован', 'error');
+    return;
+  }
+  
+  const key = document.getElementById('test-key').value.trim();
+  const value = document.getElementById('test-value').value.trim();
+  
+  if (!key || !value) {
+    log('❌ Заполните ключ и значение', 'error');
+    return;
+  }
+  
+  log(`📤 Отправка: ${key}=${value}`, 'info');
+  const success = mqttManager.publish(key, value);
+  
+  if (!success) {
+    log('⚠️ Publish вернул false (возможно, в очереди)', 'warn');
+  }
+};
+
+window.reconnect = function() {
+  log('🔄 Переподключение...', 'info');
+  if (mqttManager) {
+    mqttManager.disconnect();
+  }
+  setTimeout(() => {
+    initMQTT();
+  }, 1000);
+};
+
+window.clearLogs = function() {
+  logEl.innerHTML = '';
+  log('🗑️ Логи очищены', 'info');
+};
+
+window.clearConfig = function() {
+  if (confirm('Удалить сохраненную конфигурацию MQTT?')) {
+    localStorage.removeItem('gh_remote_cfg_v1');
+    log('⚙️ Конфигурация удалена', 'info');
+    configStatusEl.textContent = '❌ Не настроено';
+    location.reload();
+  }
+};
+
+// Периодическая проверка очереди
+setInterval(() => {
+  // Эта информация недоступна напрямую, но можем отследить через логи
+  queueSizeEl.textContent = mqttManager && mqttManager.isConnected() ? '0 (подключено)' : '? (отключено)';
+}, 1000);
+
+// Инициализация при загрузке
+checkSupport();
+log('🚀 Страница диагностики загружена', 'info');
+log('📱 User Agent: ' + navigator.userAgent, 'info');
+
+// Проверяем наличие конфигурации
+const cfg = loadConfig();
+if (cfg) {
+  initMQTT();
+} else {
+  log('⚠️ MQTT не настроен. Перейдите на главную страницу для настройки.', 'warn');
+  statusEl.innerHTML = '⚠️ Не настроено<br><a href="index.html" style="color:#fff;text-decoration:underline">Настроить</a>';
+}
+</script>
+</body>
+</html>
