@@ -94,10 +94,8 @@ document.addEventListener('DOMContentLoaded', function(){
   const btnSave = document.getElementById('btn-save');
   
   // MQTT клиент для этой страницы
-  let client = null;
+  let mqttManager = null;
   let connected = false;
-  let setBase = '';
-  let stateTopic = '';
   
   // Загрузка конфигурации из localStorage
   function loadConfig(){
@@ -114,57 +112,48 @@ document.addEventListener('DOMContentLoaded', function(){
       return;
     }
     
-    let base = cfg.base;
-    if(!base.endsWith('/')) base += '/';
-    setBase = base + 'set/';
-    stateTopic = base + 'state/json';
-    
-    const url = 'wss://' + cfg.host + ':' + cfg.port + '/mqtt';
-    
-    client = mqtt.connect(url, {
-      clientId: 'gh-time-' + Math.random().toString(16).slice(2),
-      username: cfg.user || undefined,
-      password: cfg.pass || undefined,
-      reconnectPeriod: 4000,
-      connectTimeout: 8000
-    });
-    
-    client.on('connect', ()=>{
-      connected = true;
-      // Подписываемся на состояние для получения light_on_hour
-      client.subscribe(stateTopic);
-    });
-    
-    client.on('message', (topic, message)=>{
-      if(topic === stateTopic){
-        try {
-          const js = JSON.parse(message.toString());
-          // Устанавливаем сохранённое значение включения света
-          if(js.light_on_hour !== undefined){
-            lightOnSlider.value = js.light_on_hour;
-            lightOnVal.textContent = js.light_on_hour;
-          }
-        } catch(e){ console.warn('State parse error', e); }
-      }
-    });
-    
-    client.on('error', (e)=>{
-      statusBox.textContent = '❌ Ошибка MQTT: ' + e.message;
+    try {
+      console.log('[Time] Initializing MQTTManager');
+      mqttManager = new MQTTManager();
+      
+      mqttManager.on('status', (status) => {
+        connected = (status === 'connected');
+        console.log('[Time] MQTT status:', status);
+      });
+      
+      mqttManager.on('state', (state) => {
+        console.log('[Time] State received:', state);
+        // Устанавливаем сохранённое значение включения света
+        if(state.light_on_hour !== undefined){
+          lightOnSlider.value = state.light_on_hour;
+          lightOnVal.textContent = state.light_on_hour;
+        }
+      });
+      
+      mqttManager.on('error', (error) => {
+        console.error('[Time] MQTT error:', error);
+        statusBox.textContent = '❌ Ошибка MQTT: ' + error;
+        statusBox.style.color = '#ef9aa0';
+      });
+      
+      console.log('[Time] Connecting to MQTT...');
+      mqttManager.connect(cfg);
+      
+    } catch(e) {
+      console.error('[Time] Init error:', e);
+      statusBox.textContent = '❌ Ошибка инициализации: ' + e.message;
       statusBox.style.color = '#ef9aa0';
-    });
-    
-    client.on('close', ()=>{
-      connected = false;
-    });
+    }
   }
   
   function publish(key, val){
-    if(!connected || !client){
+    if(!connected || !mqttManager){
       statusBox.textContent = '❌ MQTT не подключен';
       statusBox.style.color = '#ef9aa0';
       return false;
     }
-    client.publish(setBase + key, String(val));
+    console.log('[Time] Publishing:', key, '=', val);
+    mqttManager.publish(key, String(val));
     return true;
   }
   
