@@ -39,7 +39,9 @@ input{background:#1a001a;color:#fff;border:2px solid var(--clr-neon);padding:8px
     <dt>Браузер:</dt><dd id="browser">—</dd>
     <dt>SharedWorker:</dt><dd id="sw-support">—</dd>
     <dt>WebSocket:</dt><dd id="ws-support">—</dd>
+    <dt>Протокол:</dt><dd id="ws-protocol">—</dd>
     <dt>Конфигурация:</dt><dd id="config-status">—</dd>
+    <dt>URL подключения:</dt><dd id="mqtt-url" style="word-break:break-all;font-size:12px">—</dd>
     <dt>Последний publish:</dt><dd id="last-publish">—</dd>
     <dt>Очередь:</dt><dd id="queue-size">—</dd>
   </div>
@@ -73,7 +75,9 @@ const logEl = document.getElementById('log');
 const browserEl = document.getElementById('browser');
 const swSupportEl = document.getElementById('sw-support');
 const wsSupportEl = document.getElementById('ws-support');
+const wsProtocolEl = document.getElementById('ws-protocol');
 const configStatusEl = document.getElementById('config-status');
+const mqttUrlEl = document.getElementById('mqtt-url');
 const lastPublishEl = document.getElementById('last-publish');
 const queueSizeEl = document.getElementById('queue-size');
 

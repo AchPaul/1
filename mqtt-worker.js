@@ -62,7 +62,14 @@ function connect(config) {
   }
 
   currentConfig = config;
-  const url = `wss://${config.host}:${config.port}/mqtt`;
+  
+  // Определяем протокол на основе порта
+  // Порты 8883, 8884, 443 - это TLS (wss://)
+  // Порт 1883 - незащищённый (ws://)
+  const tlsPorts = [8883, 8884, 8885, 443];
+  const port = parseInt(config.port);
+  const protocol = tlsPorts.includes(port) ? 'wss' : 'ws';
+  const url = `${protocol}://${config.host}:${config.port}/mqtt`;
   
   console.log('[MQTT Worker] Connecting to:', url);
   console.log('[MQTT Worker] Base topic:', config.base);
@@ -74,9 +81,10 @@ function connect(config) {
     username: config.user || undefined,
     password: config.pass || undefined,
     reconnectPeriod: 2000,
-    connectTimeout: 5000,
-    keepalive: 20,
-    clean: true
+    connectTimeout: 10000, // Увеличиваем таймаут до 10 секунд
+    keepalive: 30, // Увеличиваем keepalive для нестабильных соединений
+    clean: true,
+    rejectUnauthorized: false // Для самоподписанных сертификатов
   });
 
   const stateTopic = config.base + 'state/json';
@@ -119,19 +127,40 @@ function connect(config) {
   currentConfig.setBase = setBase;
 
   mqttClient.on('reconnect', () => {
+    console.log('[MQTT Worker] Reconnecting...');
     updateStatus('reconnecting');
   });
 
   mqttClient.on('close', () => {
+    console.log('[MQTT Worker] Connection closed');
     updateStatus('disconnected');
   });
 
   mqttClient.on('offline', () => {
+    console.log('[MQTT Worker] Client offline');
     updateStatus('offline');
   });
 
   mqttClient.on('error', (err) => {
     console.error('[MQTT Worker] MQTT error:', err);
+    console.error('[MQTT Worker] Error details:', {
+      message: err.message,
+      code: err.code,
+      errno: err.errno,
+      syscall: err.syscall
+    });
+    
+    // Специфичные ошибки для диагностики
+    if (err.message && err.message.includes('ECONNREFUSED')) {
+      console.error('[MQTT Worker] Connection refused - check broker is running');
+    } else if (err.message && err.message.includes('ETIMEDOUT')) {
+      console.error('[MQTT Worker] Connection timeout - check firewall/network');
+    } else if (err.message && err.message.includes('WebSocket')) {
+      console.error('[MQTT Worker] WebSocket error - check protocol (ws vs wss)');
+    } else if (err.message && err.message.includes('SSL') || err.message && err.message.includes('TLS')) {
+      console.error('[MQTT Worker] TLS/SSL error - check certificate or use ws://');
+    }
+    
     updateStatus('error');
   });
 
