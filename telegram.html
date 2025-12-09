@@ -87,14 +87,20 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
     content.style.display = isShown ? 'block' : 'none';
   });
 
-  // Check MQTT config
-  let cfg = {};
-  try {
-    cfg = JSON.parse(localStorage.getItem('gh_remote_cfg_v1') || '{}');
-    if(!cfg.host || !cfg.port || !cfg.base){
-      document.getElementById('mqtt-not-configured').style.display = 'block';
+  function showMqttWarningFromStorage(){
+    try {
+      const stored = JSON.parse(localStorage.getItem('gh_remote_cfg_v1') || '{}');
+      if(!stored.host || !stored.port || !stored.base){
+        const warn = document.getElementById('mqtt-not-configured');
+        if(warn) warn.style.display = 'block';
+      }
+      return stored;
+    } catch(e){
+      return {};
     }
-  } catch(e){}
+  }
+
+  const cfg = showMqttWarningFromStorage();
 
   // MQTT handling using new MQTTManager
   let mqttManager = null;

@@ -39,7 +39,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 .container_clue{width:300px;padding:10px;font-size:16px;margin-left:20px}
 .trigger_clue{cursor:pointer;display:block;background:#000;font-size:16px;text-decoration:none;color:#ebebeb;border:var(--clr-neon) .125em solid;padding:.35em 2em;border-radius:.25em;width:260px;text-align:center;box-shadow:inset 0 0 .5em 0 var(--clr-neon),0 0 .5em 0 var(--clr-neon);position:relative}
 .content_clue{margin-top:10px;margin-left:-20px;width:300px;padding:10px;border:2px solid var(--clr-neon);border-radius:8px;background:transparent;color:#fedbff;font-size:16px;display:none}
-#status-box{padding:10px;margin-bottom:10px;text-align:center;font-size:14px}
+/* MQTT warning is handled via the shared banner */
 </style>
 </head>
 <body>
@@ -47,8 +47,10 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <div class="logo"><span class="grow">Grow</span><span class="hub">Hub</span></div>
 </header>
 <div class="header-transition"></div>
+<div id="mqtt-not-configured" style="display:none;text-align:center;padding:12px;margin:0 15px 10px;background:#5a0000;border:2px solid #ff4444;border-radius:10px;color:#ef9aa0">
+⚠️ MQTT не настроен. <a href="index.html" style="color:#fff;text-decoration:underline">Настройте на главной странице</a>
+</div>
 <main class="main">
-<div id="status-box"></div>
 <h2 style="margin-bottom:10px;margin-top:0">Настройка времени включения освещения</h2>
 <div class="container_clue">
 <p class="trigger_clue">Как настроить?</p>
@@ -86,7 +88,6 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <script src="app_optimized.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
-  const statusBox = document.getElementById('status-box');
   const lightOnSlider = document.getElementById('light-on');
   const currentTimeSlider = document.getElementById('current-time');
   const lightOnVal = document.getElementById('light-on-val');
@@ -108,8 +109,8 @@ document.addEventListener('DOMContentLoaded', function(){
   function connectMqtt(){
     const cfg = loadConfig();
     if(!cfg || !cfg.host || !cfg.port || !cfg.base){
-      statusBox.textContent = '❌ Нет сохранённых настроек MQTT. Сначала откройте главную страницу.';
-      statusBox.style.color = '#ef9aa0';
+      const warn = document.getElementById('mqtt-not-configured');
+      if(warn) warn.style.display = 'block';
       return;
     }
     
@@ -133,8 +134,6 @@ document.addEventListener('DOMContentLoaded', function(){
       
       mqttManager.on('error', (error) => {
         console.error('[Time] MQTT error:', error);
-        statusBox.textContent = '❌ Ошибка MQTT: ' + error;
-        statusBox.style.color = '#ef9aa0';
       });
       
       console.log('[Time] Connecting to MQTT...');
@@ -142,15 +141,11 @@ document.addEventListener('DOMContentLoaded', function(){
       
     } catch(e) {
       console.error('[Time] Init error:', e);
-      statusBox.textContent = '❌ Ошибка инициализации: ' + e.message;
-      statusBox.style.color = '#ef9aa0';
     }
   }
   
   function publish(key, val){
     if(!connected || !mqttManager){
-      statusBox.textContent = '❌ MQTT не подключен';
-      statusBox.style.color = '#ef9aa0';
       return false;
     }
     console.log('[Time] Publishing:', key, '=', val);
