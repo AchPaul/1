@@ -9,12 +9,11 @@
  */
 
 const LS_KEY = 'gh_remote_cfg_v1';
-let client = null;
+let manager = null;
 let connected = false;
 let baseTopic = '';
 let stateTopic = '';
 let setBase = '';
-let reconnectTimer = null;
 let lastState = null;
 let lastPubMap = {}; // key -> timestamp
 const PUB_THROTTLE_MS = 400; // minimal interval per key
@@ -74,7 +73,8 @@ function extractUrlRaw(){
   const sp = new URLSearchParams(window.location.search);
   const raw = {
     host: sp.get('host'), port: sp.get('port'), user: sp.get('user'), pass: sp.get('pass'), topic: sp.get('topic'),
-    h: sp.get('h'), p: sp.get('p'), u: sp.get('u'), pw: sp.get('pw'), b: sp.get('b')
+    path: sp.get('path'), proto: sp.get('proto'),
+    h: sp.get('h'), p: sp.get('p'), u: sp.get('u'), pw: sp.get('pw'), b: sp.get('b'), pt: sp.get('pt'), pr: sp.get('pr')
   };
   console.log('[GrowHub:PWA] URL params raw:', raw);
   return raw;
@@ -124,23 +124,28 @@ function loadConfig(){
     port: p('port'),
     user: p('user'),
     pass: p('pass'),
-    base: p('topic')
+    base: p('topic'),
+    path: p('path'),
+    proto: p('proto')
   };
   const shortParams = {
     host: p('h'),
     port: p('p'),
     user: p('u'),
     pass: p('pw'),
-    base: p('b')
+    base: p('b'),
+    path: p('pt'),
+    proto: p('pr')
   };
   // Prefer long params when provided, else fall back to short
   const chosen = {};
-  ['host','port','user','pass','base'].forEach(k=>{
+  ['host','port','user','pass','base','path','proto'].forEach(k=>{
     if(longParams[k]) chosen[k] = longParams[k]; else if(shortParams[k]) chosen[k] = shortParams[k];
   });
   configFromUrl = Object.values(chosen).some(Boolean);
   // Normalize base topic trailing slash
   if(chosen.base && !chosen.base.endsWith('/')) chosen.base += '/';
+  if(chosen.path && !chosen.path.startsWith('/')) chosen.path = '/' + chosen.path;
   // Merge with stored config (URL params override stored when non-empty)
   const merged = Object.assign({}, cfg||{}, Object.fromEntries(Object.entries(chosen).filter(([,v])=>v)));
   return merged;
@@ -161,12 +166,15 @@ function fillConfigForm(cfg){
 
 function ensureValidConfig(cfg){
   if(!cfg.host || !cfg.port || !cfg.base) return false;
+  const portNum = Number(cfg.port);
+  if(Number.isNaN(portNum) || portNum <= 0) return false;
+  cfg.port = String(portNum);
   if(!cfg.base.endsWith('/')) cfg.base += '/';
+  if(cfg.path && !cfg.path.startsWith('/')) cfg.path = '/' + cfg.path;
   return true;
 }
 
 function connect(cfg){
-  if(client){ try{ client.end(true); }catch(_){} client=null; }
   if(!ensureValidConfig(cfg)) { 
     logStatus('Заполните настройки подключения'); 
     if(cfgBox) cfgBox.classList.add('show'); 
@@ -177,44 +185,44 @@ function connect(cfg){
   baseTopic = cfg.base;
   stateTopic = baseTopic + 'state/json';
   setBase = baseTopic + 'set/';
-  const url = `wss://${cfg.host}:${cfg.port}/mqtt`;
+  if(!manager){
+    manager = new MQTTManager();
+    attachManagerEvents();
+  }
   logStatus('Подключение...');
-  client = mqtt.connect(url, {
-    clientId: 'gh-web-' + Math.random().toString(16).slice(2),
-    username: cfg.user || undefined,
-    password: cfg.pass || undefined,
-    reconnectPeriod: 2000,
-    connectTimeout: 5000,
-    keepalive: 20,
-    clean: true
+  manager.connect(cfg).catch(err=>{
+    console.error('[GrowHub:PWA] connect error', err);
+    logStatus('Ошибка подключения: ' + (err && err.message ? err.message : 'неизвестно'));
   });
-  bindMqttEvents();
 }
-
 let currentConfig = null; // Сохраняем конфиг для переподключения
 
-function bindMqttEvents(){
-  if(!client) return;
-  client.on('connect', ()=>{
-    connected = true;
-    logStatus('Подключено');
-    client.subscribe(stateTopic, {qos: 0}, (err)=>{ if(err){ logStatus('Ошибка подписки'); } });
-    // Запросить retained сообщение сразу после подключения
-    setTimeout(requestSyncHint, 500);
-  });
-  client.on('reconnect', ()=> logStatus('Переподключение...'));
-  client.on('close', ()=>{ connected=false; logStatus('Отключено'); });
-  client.on('offline', ()=>{ connected=false; logStatus('Нет сети'); });
-  client.on('error', (e)=> logStatus('Ошибка: '+ e.message));
-  client.on('message', (topic,payload)=>{
-    if(topic === stateTopic){
-      try{
-        const js = JSON.parse(payload.toString());
-        lastState = js;
-        lastStateTs = Date.now();
-        renderState(js);
-      }catch(e){ console.warn('State parse error', e); }
+function attachManagerEvents(){
+  if(!manager) return;
+  manager.on('status', (st)=>{
+    connected = (st === 'connected');
+    if(st === 'connected'){
+      logStatus('Подключено');
+      setTimeout(requestSyncHint, 300);
+    } else if(st === 'reconnecting'){
+      logStatus('Переподключение...');
+    } else if(st === 'offline'){
+      logStatus('Нет сети');
+    } else if(st === 'disconnected'){
+      logStatus('Отключено');
     }
+  });
+  manager.on('state', (js)=>{
+    lastState = js;
+    lastStateTs = Date.now();
+    renderState(js);
+  });
+  manager.on('cached', ()=>{
+    // already handled in state event
+  });
+  manager.on('error', (err)=>{
+    console.error('[GrowHub:PWA] MQTT error', err);
+    logStatus('Ошибка: ' + (err && err.message ? err.message : 'MQTT'));
   });
 }
 
@@ -438,11 +446,11 @@ function syncCheckbox(input, value, slider){
 }
 
 function publish(key, val){
-  if(!connected || !client) return;
+  if(!manager) return;
   const now = Date.now();
   if(lastPubMap[key] && (now - lastPubMap[key] < PUB_THROTTLE_MS)) return; // throttle
   lastPubMap[key] = now;
-  client.publish(setBase + key, String(val));
+  manager.publish(key, String(val));
   flashPub(`${key}=${val}`);
 }
 // Expose for inline forms on other pages
@@ -511,7 +519,7 @@ function bindControls(){
   if(inputs.lig_type) inputs.lig_type.addEventListener('change', ()=> publish('lig_type', inputs.lig_type.value));
   if(inputs.btn_profile) inputs.btn_profile.addEventListener('click', ()=>{ const v = inputs.profile.value.trim(); if(v) publish('profile', v); });
   if(inputs.sync_now) inputs.sync_now.addEventListener('click', requestSyncHint);
-  if(inputs.disconnect) inputs.disconnect.addEventListener('click', ()=>{ if(client){ client.end(true); } });
+  if(inputs.disconnect) inputs.disconnect.addEventListener('click', ()=>{ if(manager){ manager.disconnect(); } });
   if(ackButtons.water) ackButtons.water.addEventListener('click', ()=> publish('refill','water'));
   if(ackButtons.humid) ackButtons.humid.addEventListener('click', ()=> publish('refill','humid'));
 }
@@ -519,7 +527,7 @@ function bindControls(){
 function requestSyncHint(){
   // There is no explicit sync topic; rely on retained state and firmware periodic publish.
   // We can force re-subscribe to provoke broker to resend retained message.
-  if(client && connected){ client.unsubscribe(stateTopic, ()=>{ client.subscribe(stateTopic); }); }
+  if(manager && connected){ manager.resubscribe(); }
 }
 
 // Config UI toggle
@@ -555,7 +563,8 @@ if(formCfg.clear){
 function periodic(){
   const now = Date.now();
   if(statusLine && lastStateTs && now - lastStateTs > FORCE_STATE_INTERVAL){
-    statusLine.textContent = connected ? 'Подключено (старая телеметрия)' : statusLine.textContent;
+    statusLine.textContent = connected ? 'Подключено (старая телеметрия, запрос обновления...)' : statusLine.textContent;
+    if(connected) requestSyncHint();
   }
   requestAnimationFrame(()=> setTimeout(periodic, 3000));
 }

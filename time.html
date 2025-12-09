@@ -113,6 +113,8 @@ document.addEventListener('DOMContentLoaded', function(){
       if(warn) warn.style.display = 'block';
       return;
     }
+    if(!cfg.base.endsWith('/')) cfg.base += '/';
+    if(cfg.path && !cfg.path.startsWith('/')) cfg.path = '/' + cfg.path;
     
     try {
       console.log('[Time] Initializing MQTTManager');

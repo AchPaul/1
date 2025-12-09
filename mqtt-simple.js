@@ -1,228 +1,176 @@
-/**
- * Simple MQTT Client - прямое подключение БЕЗ Worker
- * Простое и надёжное решение для всех браузеров
- */
+// Lightweight MQTT bootstrap + shared MQTTManager wrapper for the GrowHub PWA
+// Loads mqtt.js from CDN if not already present and exposes window.MQTTManager
+(function(){
+  const MQTT_CDN = 'https://unpkg.com/mqtt/dist/mqtt.min.js';
+  const LS_LAST_STATE = 'gh_last_state';
 
-class SimpleMQTTClient {
-  constructor() {
-    this.client = null;
-    this.connected = false;
-    this.config = null;
-    this.lastState = null;
-    this.publishQueue = [];
-    this.eventHandlers = {};
-    this.mqttLoaded = false;
-    
-    console.log('[MQTT Simple] Initialized');
-  }
-
-  _loadMQTTLib() {
-    if (this.mqttLoaded || typeof mqtt !== 'undefined') {
-      this.mqttLoaded = true;
-      return Promise.resolve();
-    }
-
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/mqtt@5.3.5/dist/mqtt.min.js';
-      script.onload = () => {
-        console.log('[MQTT Simple] Library loaded');
-        this.mqttLoaded = true;
-        resolve();
-      };
-      script.onerror = () => reject(new Error('Failed to load MQTT library'));
-      document.head.appendChild(script);
+  let mqttReady;
+  if (window.mqtt) {
+    mqttReady = Promise.resolve(window.mqtt);
+  } else {
+    mqttReady = new Promise((resolve, reject)=>{
+      const s = document.createElement('script');
+      s.src = MQTT_CDN;
+      s.async = true;
+      s.onload = ()=> window.mqtt ? resolve(window.mqtt) : reject(new Error('mqtt.js not loaded'));
+      s.onerror = ()=> reject(new Error('Failed to load mqtt.js'));
+      document.head.appendChild(s);
     });
   }
 
-  async connect(cfg) {
-    this.config = cfg;
-    
-    try {
-      await this._loadMQTTLib();
-    } catch (e) {
-      console.error('[MQTT Simple] Failed to load library:', e);
-      this._emit('status', 'error');
-      return;
-    }
-
-    const tlsPorts = [8883, 8884, 8885, 443];
-    const port = parseInt(cfg.port);
-    const protocol = tlsPorts.includes(port) ? 'wss' : 'ws';
-    const url = `${protocol}://${cfg.host}:${cfg.port}/mqtt`;
-
-    console.log('[MQTT Simple] Connecting:', url);
-    this._emit('status', 'connecting');
-
-    if (this.client) {
-      try {
-        this.client.end(true);
-      } catch (e) {}
-    }
-
-    this.client = mqtt.connect(url, {
-      clientId: 'gh-' + Math.random().toString(16).slice(2, 10),
-      username: cfg.user || undefined,
-      password: cfg.pass || undefined,
-      reconnectPeriod: 2000,
-      connectTimeout: 10000,
-      keepalive: 30,
-      clean: true,
-      rejectUnauthorized: false
-    });
-
-    const stateTopic = cfg.base.endsWith('/') ? cfg.base + 'state/json' : cfg.base + '/state/json';
-
-    this.client.on('connect', () => {
-      console.log('[MQTT Simple] Connected');
-      this.connected = true;
-      this._emit('status', 'connected');
-
-      this.client.subscribe(stateTopic, { qos: 0 }, (err) => {
-        if (err) {
-          console.error('[MQTT Simple] Subscribe error:', err);
-        } else {
-          console.log('[MQTT Simple] Subscribed:', stateTopic);
-          
-          // Обрабатываем очередь
-          if (this.publishQueue.length > 0) {
-            console.log('[MQTT Simple] Processing queue:', this.publishQueue.length);
-            const queue = [...this.publishQueue];
-            this.publishQueue = [];
-            queue.forEach(({ key, value }) => this.publish(key, value));
-          }
-        }
-      });
-    });
-
-    this.client.on('message', (topic, payload) => {
-      if (topic === stateTopic) {
-        try {
-          const state = JSON.parse(payload.toString());
-          this.lastState = {
-            data: state,
-            timestamp: Date.now()
-          };
-          
-          this._emit('state', state);
-          this._cacheState(this.lastState);
-        } catch (e) {
-          console.error('[MQTT Simple] Parse error:', e);
-        }
-      }
-    });
-
-    this.client.on('error', (err) => {
-      console.error('[MQTT Simple] Error:', err);
-      this._emit('status', 'error');
-    });
-
-    this.client.on('close', () => {
-      console.log('[MQTT Simple] Disconnected');
-      this.connected = false;
-      this._emit('status', 'disconnected');
-    });
-
-    this.client.on('reconnect', () => {
-      console.log('[MQTT Simple] Reconnecting...');
-      this._emit('status', 'reconnecting');
-    });
+  function ensureSlash(path){
+    if(!path.startsWith('/')) return '/' + path;
+    return path;
   }
 
-  publish(key, value) {
-    if (!this.config) {
-      console.error('[MQTT Simple] No config');
-      return false;
+  function deriveProto(cfg){
+    if(cfg.proto){
+      const p = cfg.proto.toLowerCase();
+      if(p === 'ws' || p === 'wss') return p;
     }
-
-    if (!this.client || !this.connected) {
-      console.warn('[MQTT Simple] Not connected, queueing:', key, '=', value);
-      this.publishQueue.push({ key, value });
-      this._emit('queued', { key, value });
-      return false;
-    }
-
-    const base = this.config.base.endsWith('/') ? this.config.base : this.config.base + '/';
-    const topic = base + 'set/' + key;
-    
-    console.log('[MQTT Simple] Publishing:', topic, '=', value);
-
-    this.client.publish(topic, String(value), { qos: 0 }, (err) => {
-      if (err) {
-        console.error('[MQTT Simple] Publish error:', err);
-      } else {
-        this._emit('published', { key, value });
-      }
-    });
-
-    return true;
+    if(cfg.ssl === false) return 'ws';
+    if(cfg.port === '443' || cfg.port === 443 || cfg.port === '8883' || cfg.port === 8883 || cfg.port === '8884' || cfg.port === 8884) return 'wss';
+    if(window.location.protocol === 'https:') return 'wss';
+    return 'ws';
   }
 
-  disconnect() {
-    if (this.client) {
-      this.client.end(true);
+  class MQTTManager {
+    constructor(){
       this.client = null;
+      this.cfg = null;
+      this.events = {status: [], state: [], error: [], cached: []};
+      this.baseTopic = '';
+      this.stateTopic = '';
+      this.queue = [];
+      this.maxQueue = 10;
+      this.reconnectMs = 2000;
+      this.reconnectMax = 15000;
+      this.lastState = null;
+      this.connected = false;
     }
-    this.connected = false;
-  }
 
-  on(event, handler) {
-    if (!this.eventHandlers[event]) {
-      this.eventHandlers[event] = [];
+    on(evt, cb){ if(this.events[evt]) this.events[evt].push(cb); }
+    emit(evt, payload){ (this.events[evt]||[]).forEach(cb=>{ try{ cb(payload); }catch(e){ console.error('[MQTTManager] handler error', e); } }); }
+
+    async connect(cfg){
+      this.cfg = cfg || {};
+      const mqtt = await mqttReady;
+      if(this.client){ try{ this.client.end(true); }catch(_e){} this.client = null; }
+
+      if(!cfg || !cfg.host || !cfg.port || !cfg.base) throw new Error('Incomplete MQTT config');
+      const proto = deriveProto(cfg);
+      const path = ensureSlash(cfg.path || '/mqtt');
+      const base = cfg.base.endsWith('/') ? cfg.base : cfg.base + '/';
+      this.baseTopic = base;
+      this.stateTopic = base + 'state/json';
+
+      const url = `${proto}://${cfg.host}:${cfg.port}${path}`;
+      const opts = {
+        clientId: 'gh-web-' + Math.random().toString(16).slice(2),
+        username: cfg.user || undefined,
+        password: cfg.pass || undefined,
+        keepalive: 30,
+        reconnectPeriod: this.reconnectMs,
+        connectTimeout: 8000,
+        clean: true,
+      };
+
+      this.client = mqtt.connect(url, opts);
+      this._bind();
+      // emit cached state immediately if present
+      this._emitCachedState();
     }
-    this.eventHandlers[event].push(handler);
-  }
 
-  off(event, handler) {
-    if (!this.eventHandlers[event]) return;
-    this.eventHandlers[event] = this.eventHandlers[event].filter(h => h !== handler);
-  }
-
-  _emit(event, data) {
-    if (this.eventHandlers[event]) {
-      this.eventHandlers[event].forEach(handler => {
-        try {
-          handler(data);
-        } catch (e) {
-          console.error('[MQTT Simple] Handler error:', e);
-        }
+    _bind(){
+      if(!this.client) return;
+      this.client.on('connect', ()=>{
+        this.connected = true;
+        this.reconnectMs = 2000;
+        this.client.subscribe(this.stateTopic, {qos:0});
+        this.emit('status','connected');
+        this._flushQueue();
+      });
+      this.client.on('reconnect', ()=>{
+        this.connected = false;
+        this.emit('status','reconnecting');
+        // backoff for next attempt (capped)
+        this.reconnectMs = Math.min(this.reconnectMax, Math.round(this.reconnectMs * 1.7));
+        if(this.client) this.client.options.reconnectPeriod = this.reconnectMs;
+      });
+      this.client.on('close', ()=>{
+        this.connected = false;
+        this.emit('status','disconnected');
+      });
+      this.client.on('offline', ()=>{
+        this.connected = false;
+        this.emit('status','offline');
+      });
+      this.client.on('error', (err)=>{
+        this.connected = false;
+        this.emit('error', err);
+      });
+      this.client.on('message', (topic, payload)=>{
+        if(topic !== this.stateTopic) return;
+        try{
+          const js = JSON.parse(payload.toString());
+          this.lastState = js;
+          try{ localStorage.setItem(LS_LAST_STATE, JSON.stringify(js)); }catch(_e){}
+          this.emit('state', js);
+        }catch(e){ console.warn('[MQTTManager] state parse error', e); }
       });
     }
-  }
 
-  getLastState() {
-    return this.lastState ? this.lastState.data : null;
-  }
+    _emitCachedState(){
+      try{
+        const cached = localStorage.getItem(LS_LAST_STATE);
+        if(cached){
+          const js = JSON.parse(cached);
+          this.lastState = js;
+          this.emit('cached', true);
+          this.emit('state', js);
+        }
+      }catch(_e){}
+    }
 
-  isConnected() {
-    return this.connected;
-  }
+    _flushQueue(){
+      if(!this.connected || !this.client) return;
+      while(this.queue.length){
+        const {key, val} = this.queue.shift();
+        this.publish(key, val);
+      }
+    }
 
-  _cacheState(state) {
-    try {
-      localStorage.setItem('gh_mqtt_state_cache', JSON.stringify(state));
-    } catch (e) {
-      console.warn('[MQTT Simple] Cache failed:', e);
+    publish(key, val){
+      const topic = this.baseTopic ? this.baseTopic + 'set/' + key : null;
+      if(!topic) return false;
+      const payload = String(val);
+      if(!this.connected || !this.client){
+        if(this.queue.length < this.maxQueue) this.queue.push({key, val});
+        return false;
+      }
+      try{
+        this.client.publish(topic, payload);
+        return true;
+      }catch(e){
+        this.emit('error', e);
+        return false;
+      }
+    }
+
+    resubscribe(){
+      if(this.client && this.connected){
+        try { this.client.unsubscribe(this.stateTopic, ()=>{ this.client.subscribe(this.stateTopic); }); } catch(_e) {}
+      }
+    }
+
+    disconnect(){
+      if(this.client){
+        try{ this.client.end(true); }catch(_e){}
+      }
+      this.connected = false;
+      this.emit('status','disconnected');
     }
   }
 
-  loadCachedState() {
-    try {
-      const cached = localStorage.getItem('gh_mqtt_state_cache');
-      if (cached) {
-        const state = JSON.parse(cached);
-        const age = Date.now() - state.timestamp;
-        if (age < 300000) { // 5 минут
-          this.lastState = state;
-          this._emit('state', state.data);
-          this._emit('cached', true);
-          console.log('[MQTT Simple] Loaded cache (age: ' + Math.round(age/1000) + 's)');
-        }
-      }
-    } catch (e) {}
-  }
-}
-
-if (typeof window !== 'undefined') {
-  window.SimpleMQTTClient = SimpleMQTTClient;
-}
+  window.MQTTManager = MQTTManager;
+})();
