@@ -220,6 +220,10 @@ function attachManagerEvents(){
     lastStateTs = Date.now();
     renderState(js);
   });
+  manager.on('alert', (alertData)=>{
+    // Критические уведомления от ESP32
+    handleBrowserAlert(alertData);
+  });
   manager.on('cached', ()=>{
     // already handled in state event
   });
@@ -563,6 +567,14 @@ if(formCfg.clear){
   });
 }
 
+// Test notification button
+const btnTestNotif = document.getElementById('btn_test_notif');
+if(btnTestNotif){
+  btnTestNotif.addEventListener('click', ()=>{
+    testNotificationSpam();
+  });
+}
+
 function periodic(){
   const now = Date.now();
   if(statusLine && lastStateTs && now - lastStateTs > FORCE_STATE_INTERVAL){
@@ -633,6 +645,77 @@ function init(){
   periodic();
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  }
+  
+  // Request notification permission on load if not already granted
+  if('Notification' in window && Notification.permission === 'default'){
+    Notification.requestPermission();
+  }
+}
+
+// Handle browser alerts from MQTT
+function handleBrowserAlert(alertData){
+  const {type, message, timestamp} = alertData;
+  console.log('[GrowHub:Alert]', type, message);
+  
+  // Show native notification if permission granted
+  if('Notification' in window && Notification.permission === 'granted'){
+    const notifOptions = {
+      body: message,
+      icon: '/favicon.ico',
+      badge: '/favicon.ico',
+      requireInteraction: true,
+      tag: type,
+      vibrate: [200, 100, 200]
+    };
+    
+    const notif = new Notification('GrowHub Alert', notifOptions);
+    notif.onclick = ()=>{
+      window.focus();
+      notif.close();
+    };
+  }
+  
+  // Log alert in console for debugging
+  logStatus(`⚠️ ${message}`, true);
+}
+
+// Test notification spam (generates 10 different alerts)
+function testNotificationSpam(){
+  if('Notification' in window && Notification.permission !== 'granted'){
+    Notification.requestPermission().then(permission => {
+      if(permission === 'granted'){
+        runSpam();
+      } else {
+        alert('Разрешите уведомления для теста');
+      }
+    });
+  } else if(Notification.permission === 'granted'){
+    runSpam();
+  }
+  
+  function runSpam(){
+    const alerts = [
+      {type: 'water', message: '🚨 Бак для воды пуст! Требуется дозаправка.'},
+      {type: 'humid', message: '🚨 Увлажнитель пуст! Требуется дозаправка.'},
+      {type: 'temp_high', message: '🔴 Температура ВЫШЕ нормы! Текущая: 32°C, цель: 24°C'},
+      {type: 'temp_low', message: '🔵 Температура НИЖЕ нормы! Текущая: 12°C, цель: 20°C'},
+      {type: 'sensor', message: '⚠️ Ошибка датчика DHT22'},
+      {type: 'water', message: '💧 Критический уровень воды в системе полива'},
+      {type: 'humid', message: '💨 Отсутствие воды в увлажнителе воздуха'},
+      {type: 'temp_high', message: '🌡️ АЛАРМ! Перегрев теплицы до 35°C'},
+      {type: 'sensor', message: '🔧 Датчик влажности почвы не отвечает'},
+      {type: 'test', message: '🧪 Тестовое уведомление №10'}
+    ];
+    
+    alerts.forEach((alert, idx) => {
+      setTimeout(() => {
+        handleBrowserAlert({...alert, timestamp: Date.now()});
+        logStatus(`Тест ${idx+1}/10: ${alert.type}`, false);
+      }, idx * 1500); // 1.5 секунды между уведомлениями
+    });
+    
+    logStatus('🧪 Запущен спам из 10 уведомлений', false);
   }
 }
 

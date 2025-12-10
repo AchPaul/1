@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrowHub - Тест уведомлений</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #1a1a2e; color: #eee; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { margin-bottom: 20px; color: #0f3; }
+        .status { padding: 15px; background: #2a2a3e; border-radius: 8px; margin-bottom: 20px; }
+        .connected { color: #0f3; }
+        .disconnected { color: #f33; }
+        .alert { padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid; animation: slideIn 0.3s; }
+        .alert.water { background: #1e3a5f; border-color: #4a90e2; }
+        .alert.humid { background: #1e5f3a; border-color: #4ae290; }
+        .alert.temp_high { background: #5f1e1e; border-color: #e24a4a; }
+        .alert.temp_low { background: #1e1e5f; border-color: #4a4ae2; }
+        .alert.sensor { background: #5f5f1e; border-color: #e2e24a; }
+        .alert-time { font-size: 0.8em; color: #999; margin-top: 5px; }
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        button { 
+            padding: 12px 24px; 
+            background: #0f3; 
+            border: none; 
+            border-radius: 8px; 
+            color: #000; 
+            font-weight: bold; 
+            cursor: pointer; 
+            margin: 5px;
+        }
+        button:hover { background: #0c2; }
+        .log { 
+            max-height: 400px; 
+            overflow-y: auto; 
+            background: #0a0a1a; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚨 GrowHub Alerts</h1>
+        
+        <div class="status">
+            <div>Статус SSE: <span id="status" class="disconnected">Отключено</span></div>
+            <div>Уведомления браузера: <span id="notif-status">Не запрошены</span></div>
+        </div>
+
+        <div>
+            <button onclick="requestNotifications()">🔔 Запросить разрешение на уведомления</button>
+            <button onclick="testNotification()">🧪 Тест нативного уведомления</button>
+            <button onclick="clearLog()">🗑️ Очистить лог</button>
+        </div>
+
+        <div id="alerts"></div>
+        
+        <h3 style="margin-top: 30px;">Лог событий:</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        let eventSource = null;
+        const alertsDiv = document.getElementById('alerts');
+        const logDiv = document.getElementById('log');
+        const statusSpan = document.getElementById('status');
+        const notifStatusSpan = document.getElementById('notif-status');
+
+        // Подключение к SSE
+        function connectSSE() {
+            // Читаем IP из URL params или используем текущий хост
+            const urlParams = new URLSearchParams(window.location.search);
+            const deviceIP = urlParams.get('ip') || window.location.hostname;
+            
+            const sseURL = `http://${deviceIP}/events`;
+            log(`Подключение к ${sseURL}...`);
+
+            eventSource = new EventSource(sseURL);
+
+            eventSource.onopen = () => {
+                statusSpan.textContent = 'Подключено';
+                statusSpan.className = 'connected';
+                log('✅ SSE подключен');
+            };
+
+            eventSource.onerror = (error) => {
+                statusSpan.textContent = 'Ошибка';
+                statusSpan.className = 'disconnected';
+                log('❌ Ошибка SSE, переподключение...');
+                eventSource.close();
+                setTimeout(connectSSE, 5000); // Переподключение через 5 сек
+            };
+
+            // Слушаем события типа "alert"
+            eventSource.addEventListener('alert', (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    log(`📨 Получено: ${data.type} - ${data.message}`);
+                    showAlert(data);
+                    showNativeNotification(data);
+                } catch (e) {
+                    log(`❌ Ошибка парсинга: ${e.message}`);
+                }
+            });
+        }
+
+        // Показать alert на странице
+        function showAlert(data) {
+            const alert = document.createElement('div');
+            alert.className = `alert ${data.type}`;
+            alert.innerHTML = `
+                <div>${data.message}</div>
+                <div class="alert-time">${new Date(data.timestamp).toLocaleTimeString('ru-RU')}</div>
+            `;
+            alertsDiv.insertBefore(alert, alertsDiv.firstChild);
+
+            // Удаляем старые алерты (оставляем последние 5)
+            while (alertsDiv.children.length > 5) {
+                alertsDiv.removeChild(alertsDiv.lastChild);
+            }
+        }
+
+        // Нативное уведомление браузера
+        function showNativeNotification(data) {
+            if (Notification.permission === 'granted') {
+                const options = {
+                    body: data.message,
+                    icon: '/favicon.ico',
+                    badge: '/favicon.ico',
+                    requireInteraction: true, // Уведомление не исчезнет автоматически
+                    tag: data.type // Группировка по типу
+                };
+
+                const notification = new Notification('GrowHub Alert', options);
+                
+                notification.onclick = () => {
+                    window.focus();
+                    notification.close();
+                };
+            }
+        }
+
+        // Запрос разрешения на уведомления
+        async function requestNotifications() {
+            if (!('Notification' in window)) {
+                alert('Ваш браузер не поддерживает уведомления');
+                return;
+            }
+
+            const permission = await Notification.requestPermission();
+            updateNotificationStatus(permission);
+            
+            if (permission === 'granted') {
+                log('✅ Разрешение на уведомления получено');
+            } else {
+                log('❌ Разрешение на уведомления отклонено');
+            }
+        }
+
+        // Обновить статус уведомлений
+        function updateNotificationStatus(permission) {
+            switch(permission) {
+                case 'granted':
+                    notifStatusSpan.textContent = '✅ Разрешены';
+                    notifStatusSpan.style.color = '#0f3';
+                    break;
+                case 'denied':
+                    notifStatusSpan.textContent = '❌ Заблокированы';
+                    notifStatusSpan.style.color = '#f33';
+                    break;
+                default:
+                    notifStatusSpan.textContent = '⏳ Не запрошены';
+                    notifStatusSpan.style.color = '#fa3';
+            }
+        }
+
+        // Тестовое уведомление
+        function testNotification() {
+            const testData = {
+                type: 'water',
+                message: '🧪 Тестовое уведомление GrowHub',
+                timestamp: Date.now()
+            };
+            showAlert(testData);
+            showNativeNotification(testData);
+            log('🧪 Отправлено тестовое уведомление');
+        }
+
+        // Логирование
+        function log(message) {
+            const entry = document.createElement('div');
+            entry.textContent = `[${new Date().toLocaleTimeString('ru-RU')}] ${message}`;
+            logDiv.insertBefore(entry, logDiv.firstChild);
+        }
+
+        // Очистка лога
+        function clearLog() {
+            logDiv.innerHTML = '';
+            alertsDiv.innerHTML = '';
+            log('🗑️ Лог очищен');
+        }
+
+        // Инициализация
+        window.onload = () => {
+            updateNotificationStatus(Notification.permission);
+            connectSSE();
+            log('🚀 Страница загружена');
+        };
+
+        // Закрытие SSE при уходе
+        window.onbeforeunload = () => {
+            if (eventSource) eventSource.close();
+        };
+    </script>
+</body>
+</html>

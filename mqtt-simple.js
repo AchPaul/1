@@ -38,9 +38,10 @@
     constructor(){
       this.client = null;
       this.cfg = null;
-      this.events = {status: [], state: [], error: [], cached: []};
+      this.events = {status: [], state: [], error: [], cached: [], alert: []};
       this.baseTopic = '';
       this.stateTopic = '';
+      this.alertTopic = '';
       this.queue = [];
       this.maxQueue = 10;
       this.reconnectMs = 2000;
@@ -63,6 +64,7 @@
       const base = cfg.base.endsWith('/') ? cfg.base : cfg.base + '/';
       this.baseTopic = base;
       this.stateTopic = base + 'state/json';
+      this.alertTopic = base + 'alert';
 
       const url = `${proto}://${cfg.host}:${cfg.port}${path}`;
       const opts = {
@@ -87,6 +89,7 @@
         this.connected = true;
         this.reconnectMs = 2000;
         this.client.subscribe(this.stateTopic, {qos:0});
+        this.client.subscribe(this.alertTopic, {qos:0});
         this.emit('status','connected');
         this._flushQueue();
       });
@@ -110,13 +113,19 @@
         this.emit('error', err);
       });
       this.client.on('message', (topic, payload)=>{
-        if(topic !== this.stateTopic) return;
-        try{
-          const js = JSON.parse(payload.toString());
-          this.lastState = js;
-          try{ localStorage.setItem(LS_LAST_STATE, JSON.stringify(js)); }catch(_e){}
-          this.emit('state', js);
-        }catch(e){ console.warn('[MQTTManager] state parse error', e); }
+        if(topic === this.stateTopic){
+          try{
+            const js = JSON.parse(payload.toString());
+            this.lastState = js;
+            try{ localStorage.setItem(LS_LAST_STATE, JSON.stringify(js)); }catch(_e){}
+            this.emit('state', js);
+          }catch(e){ console.warn('[MQTTManager] state parse error', e); }
+        } else if(topic === this.alertTopic){
+          try{
+            const alertData = JSON.parse(payload.toString());
+            this.emit('alert', alertData);
+          }catch(e){ console.warn('[MQTTManager] alert parse error', e); }
+        }
       });
     }
 
