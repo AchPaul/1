@@ -662,18 +662,31 @@ function handleBrowserAlert(alertData){
   if('Notification' in window && Notification.permission === 'granted'){
     const notifOptions = {
       body: message,
-      icon: '/favicon.ico',
-      badge: '/favicon.ico',
+      icon: '/favicon-plant.svg',
+      badge: '/favicon-plant.svg',
       requireInteraction: true,
       tag: type,
-      vibrate: [200, 100, 200]
+      vibrate: [200, 100, 200],
+      silent: false
     };
     
-    const notif = new Notification('GrowHub Alert', notifOptions);
-    notif.onclick = ()=>{
-      window.focus();
-      notif.close();
-    };
+    // Use Service Worker notification API for better mobile support
+    if('serviceWorker' in navigator && navigator.serviceWorker.controller){
+      navigator.serviceWorker.controller.postMessage({
+        type: 'SHOW_NOTIFICATION',
+        title: 'GrowHub Alert',
+        options: notifOptions
+      });
+      console.log('[GrowHub:Alert] Sent to SW:', type);
+    } else {
+      // Fallback to direct Notification API
+      const notif = new Notification('GrowHub Alert', notifOptions);
+      notif.onclick = ()=>{
+        window.focus();
+        notif.close();
+      };
+      console.log('[GrowHub:Alert] Direct notification:', type);
+    }
   }
   
   // Log alert in console for debugging
