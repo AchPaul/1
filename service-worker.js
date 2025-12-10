@@ -7,7 +7,6 @@ const ASSETS = [
   './settings.html',
   './profile.html',
   './service.html',
-  './telegram.html',
   './time.html',
   './ap.html',
   './name.html',
@@ -34,5 +33,6 @@ self.addEventListener('fetch', e => {
     caches.match(request).then(r => r || fetch(request).catch(()=> caches.match('./index.html')))
   );
 });
+
 
 
