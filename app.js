@@ -216,9 +216,12 @@ function attachManagerEvents(){
     }
   });
   manager.on('state', (js)=>{
+    const previousState = lastState;
     lastState = js;
     lastStateTs = Date.now();
     renderState(js);
+    // Проверяем алерты для push-уведомлений
+    checkAlertsForPush(js, previousState);
   });
   manager.on('alert', (alertData)=>{
     // Критические уведомления от ESP32
@@ -645,8 +648,98 @@ function handleBrowserAlert(alertData){
   const {type, message, timestamp} = alertData;
   console.log('[GrowHub:Alert]', type, message);
 
-  // Only log alerts inside the app; browser push popups are disabled
+  // Показываем push-уведомление если доступно
+  if(window.pushManager && window.pushManager.config && window.pushManager.config.enabled){
+    window.pushManager.showGrowHubAlert(type, alertData);
+  }
+
+  // Также показываем в статус-строке
   logStatus(`⚠️ ${message}`, true);
 }
+
+// Инициализация push-уведомлений при изменении состояния
+function checkAlertsForPush(state, previousState){
+  if(!window.pushManager || !window.pushManager.config || !window.pushManager.config.enabled) return;
+  if(!previousState) return; // Первый рендер - пропускаем
+  
+  const alertKeys = ['alert_water', 'alert_humid', 'alert_high_temp', 'alert_low_temp', 
+                     'err_sensor_temp', 'err_sensor_hg', 'err_sensor_hg2', 'err_sensor_dht'];
+  
+  alertKeys.forEach(key => {
+    const wasActive = isFlagActive(previousState[key]);
+    const isActive = isFlagActive(state[key]);
+    
+    // Отправляем уведомление только при переходе из неактивного в активное
+    if(!wasActive && isActive){
+      console.log('[GrowHub:Push] Alert activated:', key);
+      window.pushManager.showGrowHubAlert(key, {
+        temp: state.temp_now,
+        humgr: state.humgr_now,
+        humair: state.humair_now
+      });
+    }
+  });
+  
+  // Специальная обработка rebooted (инвертированная логика)
+  const wasRebooted = !isFlagActive(previousState.rebooted);
+  const isRebooted = !isFlagActive(state.rebooted);
+  const ligHours = Number(state.lig_hours);
+  
+  if(!wasRebooted && isRebooted && ligHours !== 0 && ligHours !== 24){
+    console.log('[GrowHub:Push] Reboot detected');
+    window.pushManager.showGrowHubAlert('rebooted', {});
+  }
+}
+
+// Обработка сообщений от Service Worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    const data = event.data;
+    
+    if(data.type === 'REFILL_ACTION'){
+      // Обработка нажатия кнопки "Залито" в уведомлении
+      const refillType = data.payload.refillType;
+      console.log('[GrowHub:SW] Refill action:', refillType);
+      if(window.ghPublish){
+        window.ghPublish('refill', refillType);
+      }
+    }
+    
+    if(data.type === 'NOTIFICATION_CLICKED'){
+      console.log('[GrowHub:SW] Notification clicked:', data.payload);
+      // Можно добавить навигацию к нужной странице
+    }
+  });
+}
+
+// Обновление индикатора кнопки уведомлений
+function updateNotificationButtonBadge(){
+  const btn = document.getElementById('btn-notifications');
+  if(!btn || !window.pushManager) return;
+  
+  const config = window.pushManager.loadConfig();
+  const caps = window.pushManager.getCapabilities();
+  
+  // Удаляем существующий badge
+  const existingBadge = btn.querySelector('.badge-dot');
+  if(existingBadge) existingBadge.remove();
+  
+  btn.classList.add('has-badge');
+  
+  if(config.enabled){
+    // Уведомления включены - зеленый индикатор
+    const badge = document.createElement('span');
+    badge.className = 'badge-dot';
+    btn.appendChild(badge);
+  } else if(caps.supported && caps.permission !== 'denied'){
+    // Уведомления доступны, но не включены - оранжевый индикатор
+    const badge = document.createElement('span');
+    badge.className = 'badge-dot pending';
+    btn.appendChild(badge);
+  }
+}
+
+// Вызываем обновление badge после инициализации pushManager
+setTimeout(updateNotificationButtonBadge, 500);
 
 init();

@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GrowHub - Уведомления</title>
+<link rel="icon" type="image/svg+xml" href="favicon-plant.svg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#28003c">
+<style>
+:root{--clr-neon:hsl(288,52%,35%);--clr-bg:hsl(295,14%,67%);--clr-success:#22c55e;--clr-error:#ef4444;--clr-warning:#f59e0b}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Courier New',monospace;min-height:100vh}
+h2,h3{text-align:center;padding:0 5px}
+.neon-buttom{background:#000;font-size:16px;text-decoration:none;color:#ebebeb;cursor:pointer;border:var(--clr-neon) .125em solid;padding:.35em 2em;border-radius:.25em;width:260px;text-align:center;box-shadow:inset 0 0 .5em 0 var(--clr-neon),0 0 .5em 0 var(--clr-neon);position:relative}
+.neon-buttom:disabled{background:#3d3b3d;color:#888;cursor:not-allowed}
+.neon-buttom::before{content:"";position:absolute;background:var(--clr-neon);top:120%;left:0;width:100%;height:100%;transform:perspective(3em)rotateX(40deg)scale(1,.35);filter:blur(1em);opacity:.7}
+.neon-buttom::after{content:"";position:absolute;background:var(--clr-neon);top:0;left:0;bottom:0;right:0;box-shadow:0 0 2em .5em var(--clr-neon);opacity:0;z-index:-1;transition:opacity 100ms}
+.neon-buttom:hover:not(:disabled),.neon-buttom:focus:not(:disabled){color:var(--clr-bg);text-shadow:none}
+.neon-buttom:hover:not(:disabled)::before,.neon-buttom:focus:not(:disabled)::before,.neon-buttom:hover:not(:disabled)::after,.neon-buttom:focus:not(:disabled)::after{opacity:1}
+.btn-success{border-color:var(--clr-success);box-shadow:inset 0 0 .5em 0 var(--clr-success),0 0 .5em 0 var(--clr-success)}
+.btn-success::before,.btn-success::after{background:var(--clr-success)}
+.btn-danger{border-color:var(--clr-error);box-shadow:inset 0 0 .5em 0 var(--clr-error),0 0 .5em 0 var(--clr-error)}
+.btn-danger::before,.btn-danger::after{background:var(--clr-error)}
+.main{display:flex;margin:20px 0;justify-content:center;align-items:center;flex-direction:column;gap:20px;padding:0 15px}
+header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.5);position:relative;z-index:100}
+.header-transition{height:40px;background:linear-gradient(#370053,#000);margin-top:-10px;margin-bottom:15px}
+.logo{margin-top:2px;display:inline-block}
+.grow{font-size:35px;color:#fff;font-weight:700;letter-spacing:5px}
+.hub{font-size:35px;color:#c900cc;font-weight:700;letter-spacing:5px;border:7px solid #c900cc;border-radius:13px;padding:2px 2px 2px 8px}
+.status-line{font-size:12px;text-align:center;opacity:.85;margin:0 0 10px;color:#e6d8f5}
+.status-line.warn{color:#ff9aa0}
+.status-line.success{color:#86efac}
+
+/* Card styles */
+.card{background:linear-gradient(135deg,rgba(138,43,226,.1) 0%,rgba(75,0,130,.1) 100%);border:2px solid rgba(138,43,226,.3);border-radius:15px;padding:20px;box-shadow:0 0 20px rgba(138,43,226,.2);width:100%;max-width:340px}
+.card-title{font-size:18px;margin-bottom:15px;text-align:center;color:#e6d8f5}
+.card-description{font-size:13px;color:#a78bba;text-align:center;margin-bottom:15px;line-height:1.5}
+
+/* Status badge */
+.status-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:20px;font-size:14px;margin-bottom:15px}
+.status-badge.enabled{background:rgba(34,197,94,.2);border:1px solid var(--clr-success);color:#86efac}
+.status-badge.disabled{background:rgba(239,68,68,.2);border:1px solid var(--clr-error);color:#fca5a5}
+.status-badge.pending{background:rgba(245,158,11,.2);border:1px solid var(--clr-warning);color:#fcd34d}
+.status-badge .dot{width:8px;height:8px;border-radius:50%;background:currentColor;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* Toggle styles */
+.toggle-group{display:flex;flex-direction:column;gap:12px;margin-top:15px}
+.toggle-item{display:flex;align-items:center;justify-content:space-between;padding:12px;background:rgba(0,0,0,.3);border-radius:10px;border:1px solid rgba(138,43,226,.2)}
+.toggle-item label{font-size:14px;color:#e6d8f5;cursor:pointer;flex:1}
+.toggle-item .toggle-switch{position:relative;width:50px;height:26px;cursor:pointer}
+.toggle-item input{opacity:0;width:0;height:0}
+.toggle-switch .slider{position:absolute;top:0;left:0;right:0;bottom:0;background:#333;border-radius:26px;transition:.3s}
+.toggle-switch .slider::before{content:"";position:absolute;width:20px;height:20px;left:3px;bottom:3px;background:#666;border-radius:50%;transition:.3s}
+.toggle-switch input:checked + .slider{background:var(--clr-success)}
+.toggle-switch input:checked + .slider::before{transform:translateX(24px);background:#fff}
+.toggle-switch input:disabled + .slider{opacity:.5;cursor:not-allowed}
+
+/* iOS notice */
+.ios-notice{background:rgba(245,158,11,.15);border:1px solid var(--clr-warning);border-radius:10px;padding:15px;margin-bottom:15px;font-size:13px;line-height:1.5}
+.ios-notice strong{color:var(--clr-warning)}
+.ios-notice ol{margin:10px 0 0 20px}
+.ios-notice li{margin:5px 0}
+
+/* Test button */
+.test-section{margin-top:20px;padding-top:20px;border-top:1px solid rgba(138,43,226,.2)}
+.test-btn{width:100%;padding:12px;background:rgba(138,43,226,.2);border:1px solid var(--clr-neon);border-radius:8px;color:#fff;font-family:inherit;font-size:14px;cursor:pointer;transition:all .2s}
+.test-btn:hover{background:rgba(138,43,226,.4)}
+.test-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* Permission denied notice */
+.blocked-notice{background:rgba(239,68,68,.15);border:1px solid var(--clr-error);border-radius:10px;padding:15px;font-size:13px;line-height:1.5}
+.blocked-notice a{color:#fca5a5}
+
+/* Browser support info */
+.browser-info{font-size:12px;color:#888;text-align:center;margin-top:10px}
+</style>
+</head>
+<body>
+<header>
+<div class="logo"><span class="grow">Grow</span><span class="hub">Hub</span></div>
+</header>
+<div class="header-transition"></div>
+<div class="status-line" id="status-line">Загрузка...</div>
+
+<main class="main">
+<h2>🔔 Уведомления</h2>
+
+<!-- Статус подписки -->
+<div class="card" id="status-card">
+<div style="text-align:center">
+<div class="status-badge disabled" id="push-status">
+<span class="dot"></span>
+<span id="status-text">Проверка...</span>
+</div>
+</div>
+<p class="card-description" id="status-description">
+Получайте мгновенные уведомления о состоянии теплицы прямо на ваше устройство.
+</p>
+
+<!-- iOS Notice (hidden by default) -->
+<div class="ios-notice hidden" id="ios-notice">
+<strong>📱 Для iOS устройств:</strong>
+<ol>
+<li>Нажмите кнопку "Поделиться" (📤)</li>
+<li>Выберите "На экран Домой"</li>
+<li>Откройте приложение с главного экрана</li>
+<li>Вернитесь на эту страницу для включения уведомлений</li>
+</ol>
+</div>
+
+<!-- Permission blocked notice (hidden by default) -->
+<div class="blocked-notice hidden" id="blocked-notice">
+<strong>🚫 Уведомления заблокированы</strong>
+<p style="margin-top:8px">
+Вы ранее запретили уведомления для этого сайта. Чтобы включить их:
+</p>
+<ol style="margin:10px 0 0 20px">
+<li>Нажмите на значок 🔒 в адресной строке</li>
+<li>Найдите "Уведомления" в настройках</li>
+<li>Измените на "Разрешить"</li>
+<li>Обновите страницу</li>
+</ol>
+</div>
+
+<!-- Main action button -->
+<div style="text-align:center;margin-top:15px">
+<button class="neon-buttom btn-success" id="btn-enable" style="width:100%">🔔 Включить уведомления</button>
+<button class="neon-buttom btn-danger hidden" id="btn-disable" style="width:100%">🔕 Отключить уведомления</button>
+</div>
+
+<!-- Test notification -->
+<div class="test-section" id="test-section" style="display:none">
+<button class="test-btn" id="btn-test">📬 Отправить тестовое уведомление</button>
+<button class="test-btn" id="btn-test-all" style="margin-top:10px">🔔 Тест всех типов уведомлений (5 штук)</button>
+</div>
+
+<div class="browser-info" id="browser-info"></div>
+</div>
+
+<!-- Типы уведомлений -->
+<div class="card hidden" id="alerts-card">
+<h3 class="card-title">Типы уведомлений</h3>
+<p class="card-description">Выберите, о каких событиях вы хотите получать уведомления:</p>
+
+<div class="toggle-group" id="alert-toggles">
+<div class="toggle-item">
+<label for="alert_water">💧 Бак для воды пуст</label>
+<div class="toggle-switch">
+<input type="checkbox" id="alert_water" checked>
+<span class="slider"></span>
+</div>
+</div>
+
+<div class="toggle-item">
+<label for="alert_humid">💨 Увлажнитель пуст</label>
+<div class="toggle-switch">
+<input type="checkbox" id="alert_humid" checked>
+<span class="slider"></span>
+</div>
+</div>
+
+<div class="toggle-item">
+<label for="alert_high_temp">🌡️ Высокая температура</label>
+<div class="toggle-switch">
+<input type="checkbox" id="alert_high_temp" checked>
+<span class="slider"></span>
+</div>
+</div>
+
+<div class="toggle-item">
+<label for="alert_low_temp">❄️ Низкая температура</label>
+<div class="toggle-switch">
+<input type="checkbox" id="alert_low_temp" checked>
+<span class="slider"></span>
+</div>
+</div>
+
+<div class="toggle-item">
+<label for="err_sensor">⚠️ Ошибки датчиков</label>
+<div class="toggle-switch">
+<input type="checkbox" id="err_sensor" checked>
+<span class="slider"></span>
+</div>
+</div>
+
+<div class="toggle-item">
+<label for="rebooted">⚡ Перезагрузка устройства</label>
+<div class="toggle-switch">
+<input type="checkbox" id="rebooted" checked>
+<span class="slider"></span>
+</div>
+</div>
+</div>
+</div>
+
+<a href="service.html" class="neon-buttom">← Назад</a>
+</main>
+
+<script src="push-notifications.js"></script>
+<script>
+(function(){
+  const statusLine = document.getElementById('status-line');
+  const pushStatus = document.getElementById('push-status');
+  const statusText = document.getElementById('status-text');
+  const statusDescription = document.getElementById('status-description');
+  const iosNotice = document.getElementById('ios-notice');
+  const blockedNotice = document.getElementById('blocked-notice');
+  const btnEnable = document.getElementById('btn-enable');
+  const btnDisable = document.getElementById('btn-disable');
+  const btnTest = document.getElementById('btn-test');
+  const testSection = document.getElementById('test-section');
+  const alertsCard = document.getElementById('alerts-card');
+  const browserInfo = document.getElementById('browser-info');
+  const alertToggles = document.getElementById('alert-toggles');
+  
+  function logStatus(msg, type = 'info'){
+    if(statusLine){
+      statusLine.textContent = msg;
+      statusLine.classList.toggle('warn', type === 'warn');
+      statusLine.classList.toggle('success', type === 'success');
+    }
+  }
+  
+  function updateUI(){
+    if(!window.pushManager) return;
+    
+    const caps = window.pushManager.getCapabilities();
+    const config = window.pushManager.loadConfig();
+    
+    console.log('[Notifications] Capabilities:', caps);
+    console.log('[Notifications] Config:', config);
+    
+    // Информация о браузере
+    if(browserInfo && caps.browserInfo){
+      browserInfo.textContent = `${caps.browserInfo.name}${caps.browserInfo.version ? ' ' + caps.browserInfo.version : ''} • ${caps.browserInfo.supportsWebPush ? 'Web Push ✓' : 'Локальные уведомления'}`;
+    }
+    
+    // Скрываем все уведомления
+    iosNotice.classList.add('hidden');
+    blockedNotice.classList.add('hidden');
+    
+    // iOS специфика
+    if(caps.isIOS && !caps.isIOSPWA && caps.supportLevel === 'ios-limited'){
+      iosNotice.classList.remove('hidden');
+      statusDescription.textContent = 'Для получения уведомлений на iOS, установите приложение на главный экран.';
+    }
+    
+    // Уведомления заблокированы
+    if(caps.permission === 'denied'){
+      blockedNotice.classList.remove('hidden');
+      pushStatus.className = 'status-badge disabled';
+      statusText.textContent = 'Заблокированы';
+      btnEnable.disabled = true;
+      btnEnable.textContent = '🚫 Заблокировано в браузере';
+      return;
+    }
+    
+    // Не поддерживается
+    if(!caps.supported && caps.supportLevel === 'none'){
+      pushStatus.className = 'status-badge disabled';
+      statusText.textContent = 'Не поддерживается';
+      statusDescription.textContent = 'Ваш браузер не поддерживает push-уведомления.';
+      btnEnable.disabled = true;
+      btnEnable.textContent = '🚫 Не поддерживается';
+      return;
+    }
+    
+    // Уведомления включены
+    if(config.enabled){
+      pushStatus.className = 'status-badge enabled';
+      statusText.textContent = 'Включены';
+      statusDescription.textContent = caps.isSubscribed 
+        ? 'Вы будете получать push-уведомления о событиях теплицы.'
+        : 'Вы будете получать локальные уведомления о событиях теплицы.';
+      
+      btnEnable.classList.add('hidden');
+      btnDisable.classList.remove('hidden');
+      testSection.style.display = 'block';
+      alertsCard.classList.remove('hidden');
+      
+      // Загружаем настройки типов уведомлений
+      loadAlertPreferences();
+      logStatus('Уведомления активны', 'success');
+    } else {
+      pushStatus.className = 'status-badge pending';
+      statusText.textContent = 'Отключены';
+      statusDescription.textContent = 'Нажмите кнопку ниже, чтобы получать уведомления о важных событиях.';
+      
+      btnEnable.classList.remove('hidden');
+      btnDisable.classList.add('hidden');
+      testSection.style.display = 'none';
+      alertsCard.classList.add('hidden');
+      logStatus('Уведомления отключены');
+    }
+  }
+  
+  function loadAlertPreferences(){
+    if(!window.pushManager) return;
+    const prefs = window.pushManager.getAlertPreferences();
+    
+    Object.keys(prefs).forEach(key => {
+      // Объединяем все ошибки датчиков в один переключатель
+      if(key.startsWith('err_sensor')){
+        const toggle = document.getElementById('err_sensor');
+        if(toggle) toggle.checked = prefs[key];
+      } else {
+        const toggle = document.getElementById(key);
+        if(toggle) toggle.checked = prefs[key];
+      }
+    });
+  }
+  
+  function saveAlertPreferences(){
+    if(!window.pushManager) return;
+    
+    const prefs = {};
+    const toggles = alertToggles.querySelectorAll('input[type="checkbox"]');
+    
+    toggles.forEach(toggle => {
+      const key = toggle.id;
+      if(key === 'err_sensor'){
+        // Применяем ко всем ошибкам датчиков
+        prefs.err_sensor_temp = toggle.checked;
+        prefs.err_sensor_hg = toggle.checked;
+        prefs.err_sensor_hg2 = toggle.checked;
+        prefs.err_sensor_dht = toggle.checked;
+      } else {
+        prefs[key] = toggle.checked;
+      }
+    });
+    
+    window.pushManager.setAlertPreferences(prefs);
+    logStatus('Настройки сохранены', 'success');
+  }
+  
+  // Обработчик кнопки включения
+  btnEnable.addEventListener('click', async () => {
+    if(!window.pushManager) return;
+    
+    btnEnable.disabled = true;
+    btnEnable.textContent = '⏳ Подождите...';
+    logStatus('Запрос разрешения...');
+    
+    try {
+      await window.pushManager.subscribe();
+      logStatus('Уведомления включены!', 'success');
+      updateUI();
+    } catch(err) {
+      console.error('[Notifications] Subscribe error:', err);
+      logStatus(err.message || 'Ошибка подписки', 'warn');
+      btnEnable.disabled = false;
+      btnEnable.textContent = '🔔 Включить уведомления';
+      updateUI();
+    }
+  });
+  
+  // Обработчик кнопки отключения
+  btnDisable.addEventListener('click', async () => {
+    if(!window.pushManager) return;
+    
+    btnDisable.disabled = true;
+    logStatus('Отключение...');
+    
+    try {
+      await window.pushManager.unsubscribe();
+      logStatus('Уведомления отключены');
+      updateUI();
+    } catch(err) {
+      console.error('[Notifications] Unsubscribe error:', err);
+      logStatus('Ошибка отключения', 'warn');
+    }
+    
+    btnDisable.disabled = false;
+  });
+  
+  // Обработчик тестового уведомления
+  btnTest.addEventListener('click', async () => {
+    if(!window.pushManager) return;
+    
+    btnTest.disabled = true;
+    btnTest.textContent = '📤 Отправка...';
+    
+    try {
+      const success = await window.pushManager.showLocalNotification(
+        '🌱 Тестовое уведомление',
+        {
+          body: 'Уведомления GrowHub работают корректно!',
+          tag: 'growhub-test',
+          data: { url: window.location.href, type: 'test' }
+        }
+      );
+      
+      if(success){
+        logStatus('Тестовое уведомление отправлено!', 'success');
+      } else {
+        logStatus('Не удалось показать уведомление', 'warn');
+      }
+    } catch(err) {
+      console.error('[Notifications] Test error:', err);
+      logStatus('Ошибка отправки', 'warn');
+    }
+    
+    btnTest.disabled = false;
+    btnTest.textContent = '📬 Отправить тестовое уведомление';
+  });
+  
+  // Обработчик теста всех типов уведомлений
+  const btnTestAll = document.getElementById('btn-test-all');
+  if(btnTestAll){
+    btnTestAll.addEventListener('click', async () => {
+      if(!window.pushManager) return;
+      
+      btnTestAll.disabled = true;
+      btnTest.disabled = true;
+      btnTestAll.textContent = '📤 Отправка...';
+      logStatus('Отправка тестовых уведомлений...', 'info');
+      
+      // Массив тестовых уведомлений
+      const testNotifications = [
+        {
+          type: 'alert_water',
+          delay: 0
+        },
+        {
+          type: 'alert_humid',
+          delay: 2000
+        },
+        {
+          type: 'alert_high_temp',
+          data: { temp: 32 },
+          delay: 4000
+        },
+        {
+          type: 'alert_low_temp',
+          data: { temp: 8 },
+          delay: 6000
+        },
+        {
+          type: 'err_sensor_temp',
+          delay: 8000
+        }
+      ];
+      
+      let successCount = 0;
+      
+      try {
+        // Отправляем уведомления с задержкой
+        for(const notif of testNotifications){
+          await new Promise(resolve => setTimeout(resolve, notif.delay));
+          
+          try {
+            const success = await window.pushManager.showGrowHubAlert(notif.type, notif.data || {});
+            if(success) successCount++;
+          } catch(err){
+            console.error('[Notifications] Failed to send:', notif.type, err);
+          }
+        }
+        
+        logStatus(`Отправлено ${successCount} из ${testNotifications.length} уведомлений`, 'success');
+      } catch(err) {
+        console.error('[Notifications] Test all error:', err);
+        logStatus('Ошибка отправки тестов', 'warn');
+      }
+      
+      btnTestAll.disabled = false;
+      btnTest.disabled = false;
+      btnTestAll.textContent = '🔔 Тест всех типов уведомлений (5 штук)';
+    });
+  }
+  
+  // Обработчики переключателей типов уведомлений
+  alertToggles.querySelectorAll('input[type="checkbox"]').forEach(toggle => {
+    toggle.addEventListener('change', saveAlertPreferences);
+  });
+  
+  // Ожидаем загрузки pushManager
+  function waitForPushManager(){
+    if(window.pushManager && window.pushManager.supported !== undefined){
+      updateUI();
+    } else {
+      setTimeout(waitForPushManager, 100);
+    }
+  }
+  
+  waitForPushManager();
+})();
+</script>
+</body>
+</html>

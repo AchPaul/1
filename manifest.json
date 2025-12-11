@@ -1,14 +1,32 @@
 {
   "name": "GrowHub Remote",
   "short_name": "GrowHub",
-  "start_url": ".",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#28003c",
-  "description": "Удалённое управление GrowHub через PWA",
+  "description": "Удалённое управление GrowHub через PWA с push-уведомлениями",
+  "orientation": "portrait-primary",
+  "categories": ["utilities", "lifestyle"],
   "icons": [
     { "src": "favicon-plant.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Состояние теплицы",
+      "short_name": "Состояние",
+      "url": "./state.html",
+      "icons": [{ "src": "favicon-plant.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Настройки",
+      "short_name": "Настройки",
+      "url": "./settings.html",
+      "icons": [{ "src": "favicon-plant.svg", "sizes": "any" }]
+    }
+  ],
+  "permissions": ["notifications", "push"]
 }
