@@ -304,10 +304,23 @@ function attachManagerEvents(){
     trackSystemChanges(js, previousState);
     // Проверяем алерты для push-уведомлений
     checkAlertsForPush(js, previousState);
-    // Сохраняем логи из ESP32 если они есть
+    // Сохраняем логи из ESP32 если они есть (с дедупликацией)
     if(js.logs && Array.isArray(js.logs)){
       console.log('[GrowHub] Получено логов из MQTT:', js.logs.length);
-      window.esp32Logs = js.logs;
+      // Инициализируем хранилище если его нет
+      if(!window.esp32LogsMap){
+        window.esp32LogsMap = new Map();
+      }
+      // Добавляем только уникальные логи
+      js.logs.forEach(log => {
+        const key = `${log.ts}_${log.msg}`;
+        if(!window.esp32LogsMap.has(key)){
+          window.esp32LogsMap.set(key, log);
+        }
+      });
+      // Обновляем массив для совместимости
+      window.esp32Logs = Array.from(window.esp32LogsMap.values());
+      console.log('[GrowHub] Уникальных логов в памяти:', window.esp32Logs.length);
       // Если мы на странице логов - обновляем отображение
       if(window.location.pathname.includes('logs.html') && typeof updateLogsDisplay === 'function'){
         updateLogsDisplay();

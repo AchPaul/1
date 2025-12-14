@@ -120,8 +120,17 @@ function renderLogs(){
           log.msg.includes('✅') || log.msg.includes('Запуск') || log.msg.includes('Завершён') ? 'success' : 'info'
   }));
   
-  // Объединяем и сортируем по времени (новые первые)
-  const logs = [...localLogs, ...mqttLogs].sort((a, b) => b.timestamp - a.timestamp);
+  // Объединяем с дедупликацией по timestamp + message
+  const logMap = new Map();
+  [...localLogs, ...mqttLogs].forEach(log => {
+    const key = `${log.timestamp}_${log.message}`;
+    if(!logMap.has(key)){
+      logMap.set(key, log);
+    }
+  });
+  
+  // Сортируем по времени (новые первые)
+  const logs = Array.from(logMap.values()).sort((a, b) => b.timestamp - a.timestamp);
   
   if(logs.length === 0){
     container.innerHTML = '<div class="empty-state">Логи пусты. События будут появляться здесь.</div>';
