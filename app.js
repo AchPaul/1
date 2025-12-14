@@ -10,6 +10,7 @@
 
 const LS_KEY = 'gh_remote_cfg_v1';
 const LS_LOGS_KEY = 'gh_logs_v1';
+const LS_ESP32_LOGS_KEY = 'gh_esp32_logs_v1';
 const MAX_LOGS = 500; // Максимальное количество записей в логах
 
 let manager = null;
@@ -34,8 +35,21 @@ let isOnSettingsPage = false;
 let systemLogs = [];
 
 function addLog(message, category = 'system', type = 'info'){
+  const now = Date.now();
+  
+  // Дедупликация: не добавляем повторяющиеся логи в течение 5 секунд
+  const isDuplicate = systemLogs.some(log => 
+    log.message === message && 
+    log.category === category && 
+    (now - log.timestamp) < 5000
+  );
+  
+  if(isDuplicate){
+    return; // Игнорируем дубликат
+  }
+  
   const log = {
-    timestamp: Date.now(),
+    timestamp: now,
     message: message,
     category: category, // system, connection, control, alert
     type: type // info, success, warning, error
@@ -70,14 +84,41 @@ function loadLogs(){
     console.warn('[GrowHub:Logs] Failed to load logs from localStorage', e);
     systemLogs = [];
   }
+  
+  // Загружаем ESP32 логи
+  try {
+    const storedEsp32 = localStorage.getItem(LS_ESP32_LOGS_KEY);
+    if(storedEsp32){
+      const logsArray = JSON.parse(storedEsp32);
+      window.esp32LogsMap = new Map();
+      logsArray.forEach(log => {
+        const key = `${log.ts}_${log.msg}`;
+        window.esp32LogsMap.set(key, log);
+      });
+      window.esp32Logs = logsArray;
+      console.log('[GrowHub] Загружено ESP32 логов из localStorage:', logsArray.length);
+    } else {
+      window.esp32LogsMap = new Map();
+      window.esp32Logs = [];
+    }
+  } catch(e) {
+    console.warn('[GrowHub:Logs] Failed to load ESP32 logs from localStorage', e);
+    window.esp32LogsMap = new Map();
+    window.esp32Logs = [];
+  }
 }
 
 // Публичные функции для доступа к логам
 window.ghGetLogs = function(){ return systemLogs; };
 window.ghClearLogs = function(){
   systemLogs = [];
+  window.esp32Logs = [];
+  if(window.esp32LogsMap){
+    window.esp32LogsMap.clear();
+  }
   try {
     localStorage.removeItem(LS_LOGS_KEY);
+    localStorage.removeItem(LS_ESP32_LOGS_KEY);
   } catch(e) {}
   addLog('Логи очищены', 'system', 'info');
 };
@@ -311,16 +352,35 @@ function attachManagerEvents(){
       if(!window.esp32LogsMap){
         window.esp32LogsMap = new Map();
       }
+      let newLogsAdded = 0;
       // Добавляем только уникальные логи
       js.logs.forEach(log => {
         const key = `${log.ts}_${log.msg}`;
         if(!window.esp32LogsMap.has(key)){
           window.esp32LogsMap.set(key, log);
+          newLogsAdded++;
         }
       });
       // Обновляем массив для совместимости
       window.esp32Logs = Array.from(window.esp32LogsMap.values());
-      console.log('[GrowHub] Уникальных логов в памяти:', window.esp32Logs.length);
+      // Ограничиваем размер
+      if(window.esp32Logs.length > MAX_LOGS){
+        window.esp32Logs = window.esp32Logs.slice(-MAX_LOGS); // Оставляем последние MAX_LOGS
+        window.esp32LogsMap = new Map();
+        window.esp32Logs.forEach(log => {
+          const key = `${log.ts}_${log.msg}`;
+          window.esp32LogsMap.set(key, log);
+        });
+      }
+      // Сохраняем в localStorage
+      try {
+        localStorage.setItem(LS_ESP32_LOGS_KEY, JSON.stringify(window.esp32Logs));
+      } catch(e) {
+        console.warn('[GrowHub:Logs] Failed to save ESP32 logs to localStorage', e);
+      }
+      if(newLogsAdded > 0){
+        console.log('[GrowHub] Добавлено новых логов:', newLogsAdded, '| Всего:', window.esp32Logs.length);
+      }
       // Если мы на странице логов - обновляем отображение
       if(window.location.pathname.includes('logs.html') && typeof updateLogsDisplay === 'function'){
         updateLogsDisplay();
