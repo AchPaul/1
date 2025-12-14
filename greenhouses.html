@@ -92,35 +92,31 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <input type="hidden" id="edit-id">
 <div class="form-group">
 <label>Название теплицы</label>
-<input type="text" id="inp-name" placeholder="Например: Домашняя теплица">
+<input type="text" id="inp-name" placeholder="Например: Мандарин">
 </div>
+<div class="form-row">
 <div class="form-group">
 <label>Адрес MQTT брокера</label>
 <input type="text" id="inp-host" placeholder="broker.example.com">
 </div>
-<div class="form-row">
 <div class="form-group">
 <label>Порт</label>
-<input type="text" id="inp-port" placeholder="8884" value="8884">
-</div>
-<div class="form-group">
-<label>Путь WebSocket</label>
-<input type="text" id="inp-path" placeholder="/mqtt" value="/mqtt">
+<input type="text" id="inp-port">
 </div>
 </div>
 <div class="form-row">
 <div class="form-group">
 <label>Логин</label>
-<input type="text" id="inp-user" placeholder="username">
+<input type="text" id="inp-user">
 </div>
 <div class="form-group">
 <label>Пароль</label>
-<input type="password" id="inp-pass" placeholder="password">
+<input type="password" id="inp-pass">
 </div>
 </div>
 <div class="form-group">
-<label>Топик (growhub/XXXXXX/)</label>
-<input type="text" id="inp-base" placeholder="growhub/abc123/">
+<label>Топик</label>
+<input type="text" id="inp-base" placeholder="abc123">
 </div>
 <div class="form-actions">
 <button id="btn-cancel">Отмена</button>
@@ -148,7 +144,6 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
   const inpName = document.getElementById('inp-name');
   const inpHost = document.getElementById('inp-host');
   const inpPort = document.getElementById('inp-port');
-  const inpPath = document.getElementById('inp-path');
   const inpUser = document.getElementById('inp-user');
   const inpPass = document.getElementById('inp-pass');
   const inpBase = document.getElementById('inp-base');
@@ -202,7 +197,6 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
         inpName.value = gh.name || '';
         inpHost.value = gh.host || '';
         inpPort.value = gh.port || '8884';
-        inpPath.value = gh.path || '/mqtt';
         inpUser.value = gh.user || '';
         inpPass.value = gh.pass || '';
         inpBase.value = gh.base || '';
@@ -213,7 +207,6 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
       inpName.value = '';
       inpHost.value = '';
       inpPort.value = '8884';
-      inpPath.value = '/mqtt';
       inpUser.value = '';
       inpPass.value = '';
       inpBase.value = '';
@@ -253,7 +246,6 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
     const name = inpName.value.trim();
     const host = inpHost.value.trim();
     const port = inpPort.value.trim() || '8884';
-    const path = inpPath.value.trim() || '/mqtt';
     const user = inpUser.value.trim();
     const pass = inpPass.value.trim();
     let base = inpBase.value.trim();
@@ -277,7 +269,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
     // Нормализуем base topic
     if(!base.endsWith('/')) base += '/';
     
-    const config = { name, host, port, path, user, pass, base, proto: 'wss' };
+    const config = { name, host, port, user, pass, base, proto: 'wss' };
     
     const editId = inpId.value;
     if(editId){
