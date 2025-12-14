@@ -90,10 +90,6 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <div id="form-section" class="form-section hidden">
 <h3 id="form-title">Новая теплица</h3>
 <input type="hidden" id="edit-id">
-<div class="form-group">
-<label>Название теплицы</label>
-<input type="text" id="inp-name" placeholder="Например: Мандарин">
-</div>
 <div class="form-row">
 <div class="form-group">
 <label>Адрес MQTT брокера</label>
@@ -141,7 +137,6 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
   const btnSave = document.getElementById('btn-save');
   
   const inpId = document.getElementById('edit-id');
-  const inpName = document.getElementById('inp-name');
   const inpHost = document.getElementById('inp-host');
   const inpPort = document.getElementById('inp-port');
   const inpUser = document.getElementById('inp-user');
@@ -164,7 +159,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
     listEl.innerHTML = greenhouses.map(gh => `
       <div class="greenhouse-card ${gh.id === activeId ? 'active' : ''}" data-id="${gh.id}">
         <div class="greenhouse-card-header">
-          <span class="greenhouse-name">${escapeHtml(gh.name)}</span>
+          <span class="greenhouse-name">${escapeHtml(gh.name || 'Новая теплица')}</span>
           ${gh.id === activeId ? '<span class="greenhouse-active-badge">Активная</span>' : ''}
         </div>
         <div class="greenhouse-info">
@@ -194,7 +189,6 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
       if(gh){
         formTitle.textContent = 'Редактирование';
         inpId.value = gh.id;
-        inpName.value = gh.name || '';
         inpHost.value = gh.host || '';
         inpPort.value = gh.port || '8884';
         inpUser.value = gh.user || '';
@@ -204,7 +198,6 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
     } else {
       formTitle.textContent = 'Новая теплица';
       inpId.value = '';
-      inpName.value = '';
       inpHost.value = '';
       inpPort.value = '8884';
       inpUser.value = '';
@@ -243,18 +236,12 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
   btnCancel.addEventListener('click', hideForm);
   
   btnSave.addEventListener('click', () => {
-    const name = inpName.value.trim();
     const host = inpHost.value.trim();
     const port = inpPort.value.trim() || '8884';
     const user = inpUser.value.trim();
     const pass = inpPass.value.trim();
     let base = inpBase.value.trim();
     
-    if(!name){
-      alert('Введите название теплицы');
-      inpName.focus();
-      return;
-    }
     if(!host){
       alert('Введите адрес брокера');
       inpHost.focus();
@@ -269,7 +256,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
     // Нормализуем base topic
     if(!base.endsWith('/')) base += '/';
     
-    const config = { name, host, port, user, pass, base, proto: 'wss' };
+    const config = { host, port, user, pass, base, proto: 'wss' };
     
     const editId = inpId.value;
     if(editId){

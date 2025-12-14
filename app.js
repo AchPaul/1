@@ -85,7 +85,7 @@ function saveGreenhouses(){
 function addGreenhouse(config){
   const gh = {
     id: generateGreenhouseId(),
-    name: config.name || 'Теплица ' + (greenhouses.length + 1),
+    name: config.name || '',
     host: config.host,
     port: config.port || '8884',
     user: config.user || '',
@@ -142,7 +142,8 @@ function switchGreenhouse(id){
     lastState = null;
     lastStateTs = 0;
     connect(gh);
-    addLog(`Переключено на: ${gh.name}`, 'connection', 'info');
+    const displayName = gh.name || 'Новая теплица';
+    addLog(`Переключено на: ${displayName}`, 'connection', 'info');
   }
   return true;
 }
@@ -509,10 +510,7 @@ function attachManagerEvents(){
   manager.on('status', (st)=>{
     connected = (st === 'connected');
     if(st === 'connected'){
-      // Показываем 'Подключено' только если нет свежих данных с именем устройства
-      if(!lastState || !lastState.name){
-        logStatus('Подключено');
-      }
+      logStatus('Подключено');
       addLog('MQTT подключен к ' + currentConfig.host, 'connection', 'success');
       setTimeout(requestSyncHint, 300);
     } else if(st === 'reconnecting'){
@@ -534,6 +532,21 @@ function attachManagerEvents(){
     const previousState = lastState;
     lastState = js;
     lastStateTs = Date.now();
+    
+    // Автоматическое обновление имени теплицы из gh_name
+    if(js.name && activeGreenhouseId){
+      const activeGh = getActiveGreenhouse();
+      if(activeGh && activeGh.name !== js.name){
+        updateGreenhouse(activeGreenhouseId, { name: js.name });
+        // Обновляем селектор на главной странице
+        const selectEl = document.getElementById('greenhouse-select');
+        if(selectEl){
+          const option = selectEl.querySelector(`option[value="${activeGreenhouseId}"]`);
+          if(option) option.textContent = js.name;
+        }
+      }
+    }
+    
     renderState(js);
     // Логирование изменений состояния систем
     trackSystemChanges(js, previousState);
@@ -1294,9 +1307,10 @@ function initGreenhouseSelector(){
   selectorWrap.style.display = 'block';
   
   // Заполняем select
-  selectEl.innerHTML = greenhouses.map(gh => 
-    `<option value="${gh.id}" ${gh.id === activeId ? 'selected' : ''}>${escapeHtmlSelector(gh.name)}</option>`
-  ).join('');
+  selectEl.innerHTML = greenhouses.map(gh => {
+    const displayName = gh.name || 'Новая теплица';
+    return `<option value="${gh.id}" ${gh.id === activeId ? 'selected' : ''}>${escapeHtmlSelector(displayName)}</option>`;
+  }).join('');
   
   // Показываем количество теплиц
   if(countEl){
@@ -1311,7 +1325,8 @@ function initGreenhouseSelector(){
       // Обновляем счётчик и UI
       if(countEl){
         const activeGh = window.ghGreenhouses.getActive();
-        countEl.textContent = activeGh ? `Подключено к: ${activeGh.name}` : '';
+        const displayName = activeGh && activeGh.name ? activeGh.name : 'Новая теплица';
+        countEl.textContent = activeGh ? `Подключено к: ${displayName}` : '';
       }
     }
   });

@@ -125,10 +125,6 @@
             this.lastStateTime = Date.now();
             try{ localStorage.setItem(LS_LAST_STATE, JSON.stringify(js)); }catch(_e){}
             this.emit('state', js);
-            // Подтверждаем что соединение активно после получения данных
-            if(this.connected){
-              this.emit('status','connected');
-            }
           }catch(e){ console.warn('[MQTTManager] state parse error', e); }
         } else if(topic === this.alertTopic){
           try{
