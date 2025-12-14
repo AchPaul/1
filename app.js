@@ -354,13 +354,24 @@ function attachManagerEvents(){
         window.esp32LogsMap = new Map();
       }
       let newLogsAdded = 0;
+      let duplicatesSkipped = 0;
       // Добавляем только уникальные логи по ID
       js.logs.forEach(log => {
-        if(log.id && !window.esp32LogsMap.has(log.id)){
-          window.esp32LogsMap.set(log.id, log);
-          newLogsAdded++;
+        if(log.id){
+          if(!window.esp32LogsMap.has(log.id)){
+            window.esp32LogsMap.set(log.id, log);
+            newLogsAdded++;
+            console.log('[GrowHub] Новый лог ID=' + log.id + ':', log.msg);
+          } else {
+            duplicatesSkipped++;
+          }
+        } else {
+          console.warn('[GrowHub] Лог без ID:', log);
         }
       });
+      if(duplicatesSkipped > 0){
+        console.log('[GrowHub] Пропущено дубликатов:', duplicatesSkipped);
+      }
       // Обновляем массив для совместимости
       window.esp32Logs = Array.from(window.esp32LogsMap.values());
       // Ограничиваем размер

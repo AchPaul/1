@@ -112,6 +112,7 @@ function renderLogs(){
   // Объединяем логи из локального хранилища и MQTT (ESP32)
   const localLogs = window.ghGetLogs ? window.ghGetLogs() : [];
   const mqttLogs = (window.esp32Logs || []).map(log => ({
+    id: log.id,  // Сохраняем ID
     timestamp: log.ts,
     message: log.msg,
     category: 'system',
@@ -120,10 +121,15 @@ function renderLogs(){
           log.msg.includes('✅') || log.msg.includes('Запуск') || log.msg.includes('Завершён') ? 'success' : 'info'
   }));
   
-  // Объединяем с дедупликацией по timestamp + message
+  // Объединяем с дедупликацией: ESP32 логи по ID, локальные по timestamp+message
   const logMap = new Map();
-  [...localLogs, ...mqttLogs].forEach(log => {
-    const key = `${log.timestamp}_${log.message}`;
+  mqttLogs.forEach(log => {
+    if(log.id){
+      logMap.set('esp32_' + log.id, log);  // Префикс для ESP32 логов
+    }
+  });
+  localLogs.forEach(log => {
+    const key = 'local_' + log.timestamp + '_' + log.message;
     if(!logMap.has(key)){
       logMap.set(key, log);
     }
