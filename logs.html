@@ -103,9 +103,25 @@ nav a:hover{color:var(--clr-neon);transform:scale(1.1)}
 // Logs page specific logic
 let currentFilter = 'all';
 
+// Инициализация логов из MQTT
+if(!window.esp32Logs) window.esp32Logs = [];
+
 function renderLogs(){
   const container = document.getElementById('logs-container');
-  const logs = window.ghGetLogs ? window.ghGetLogs() : [];
+  
+  // Объединяем логи из локального хранилища и MQTT (ESP32)
+  const localLogs = window.ghGetLogs ? window.ghGetLogs() : [];
+  const mqttLogs = (window.esp32Logs || []).map(log => ({
+    timestamp: log.ts,
+    message: log.msg,
+    category: 'system',
+    type: log.msg.includes('❌') ? 'error' : 
+          log.msg.includes('⚠️') ? 'warning' : 
+          log.msg.includes('✅') || log.msg.includes('Запуск') || log.msg.includes('Завершён') ? 'success' : 'info'
+  }));
+  
+  // Объединяем и сортируем по времени (новые первые)
+  const logs = [...localLogs, ...mqttLogs].sort((a, b) => b.timestamp - a.timestamp);
   
   if(logs.length === 0){
     container.innerHTML = '<div class="empty-state">Логи пусты. События будут появляться здесь.</div>';
@@ -216,6 +232,9 @@ document.getElementById('btn-clear').addEventListener('click', () => {
     }
   }
 });
+
+// Глобальная функция для обновления логов из app.js
+window.updateLogsDisplay = renderLogs;
 
 // Refresh logs when page becomes visible
 document.addEventListener('visibilitychange', () => {

@@ -306,11 +306,14 @@ function attachManagerEvents(){
     checkAlertsForPush(js, previousState);
     // Сохраняем логи из ESP32 если они есть
     if(js.logs && Array.isArray(js.logs)){
+      console.log('[GrowHub] Получено логов из MQTT:', js.logs.length);
       window.esp32Logs = js.logs;
       // Если мы на странице логов - обновляем отображение
       if(window.location.pathname.includes('logs.html') && typeof updateLogsDisplay === 'function'){
         updateLogsDisplay();
       }
+    } else {
+      console.warn('[GrowHub] Логи не получены из MQTT state:', typeof js.logs, js.logs);
     }
   });
   manager.on('alert', (alertData)=>{
@@ -1019,4 +1022,3 @@ function updateNotificationButtonBadge(){
 setTimeout(updateNotificationButtonBadge, 500);
 
 init();
-
