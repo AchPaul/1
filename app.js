@@ -347,52 +347,8 @@ function attachManagerEvents(){
     // Проверяем алерты для push-уведомлений
     checkAlertsForPush(js, previousState);
     // Сохраняем логи из ESP32 если они есть (с дедупликацией по ID)
-    if(js.logs && Array.isArray(js.logs)){
-      console.log('[GrowHub] Получено логов из MQTT:', js.logs.length);
-      // Инициализируем хранилище если его нет
-      if(!window.esp32LogsMap){
-        window.esp32LogsMap = new Map();
-      }
-      let newLogsAdded = 0;
-      let duplicatesSkipped = 0;
-      // Добавляем только уникальные логи по ID
-      js.logs.forEach(log => {
-        if(log.id){
-          if(!window.esp32LogsMap.has(log.id)){
-            window.esp32LogsMap.set(log.id, log);
-            newLogsAdded++;
-            console.log('[GrowHub] Новый лог ID=' + log.id + ':', log.msg);
-          } else {
-            duplicatesSkipped++;
-          }
-        } else {
-          console.warn('[GrowHub] Лог без ID:', log);
-        }
-      });
-      if(duplicatesSkipped > 0){
-        console.log('[GrowHub] Пропущено дубликатов:', duplicatesSkipped);
-      }
-      // Обновляем массив для совместимости
-      window.esp32Logs = Array.from(window.esp32LogsMap.values());
-      // Ограничиваем размер
-      if(window.esp32Logs.length > MAX_LOGS){
-        window.esp32Logs = window.esp32Logs.slice(-MAX_LOGS); // Оставляем последние MAX_LOGS
-        window.esp32LogsMap = new Map();
-        window.esp32Logs.forEach(log => {
-          if(log.id){
-            window.esp32LogsMap.set(log.id, log);
-          }
-        });
-      }
-      // Сохраняем в localStorage
-      try {
-        localStorage.setItem(LS_ESP32_LOGS_KEY, JSON.stringify(window.esp32Logs));
-      } catch(e) {
-        console.warn('[GrowHub:Logs] Failed to save ESP32 logs to localStorage', e);
-      }
-      if(newLogsAdded > 0){
-        console.log('[GrowHub] Добавлено новых логов:', newLogsAdded, '| Всего:', window.esp32Logs.length);
-      }
+    // Логи отключены в MQTT, обрабатываются только локально
+    if(false && js.logs && Array.isArray(js.logs)){
       // Если мы на странице логов - обновляем отображение
       if(window.location.pathname.includes('logs.html') && typeof updateLogsDisplay === 'function'){
         updateLogsDisplay();
