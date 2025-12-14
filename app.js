@@ -92,8 +92,9 @@ function loadLogs(){
       const logsArray = JSON.parse(storedEsp32);
       window.esp32LogsMap = new Map();
       logsArray.forEach(log => {
-        const key = `${log.ts}_${log.msg}`;
-        window.esp32LogsMap.set(key, log);
+        if(log.id){
+          window.esp32LogsMap.set(log.id, log);
+        }
       });
       window.esp32Logs = logsArray;
       console.log('[GrowHub] Загружено ESP32 логов из localStorage:', logsArray.length);
@@ -345,7 +346,7 @@ function attachManagerEvents(){
     trackSystemChanges(js, previousState);
     // Проверяем алерты для push-уведомлений
     checkAlertsForPush(js, previousState);
-    // Сохраняем логи из ESP32 если они есть (с дедупликацией)
+    // Сохраняем логи из ESP32 если они есть (с дедупликацией по ID)
     if(js.logs && Array.isArray(js.logs)){
       console.log('[GrowHub] Получено логов из MQTT:', js.logs.length);
       // Инициализируем хранилище если его нет
@@ -353,11 +354,10 @@ function attachManagerEvents(){
         window.esp32LogsMap = new Map();
       }
       let newLogsAdded = 0;
-      // Добавляем только уникальные логи
+      // Добавляем только уникальные логи по ID
       js.logs.forEach(log => {
-        const key = `${log.ts}_${log.msg}`;
-        if(!window.esp32LogsMap.has(key)){
-          window.esp32LogsMap.set(key, log);
+        if(log.id && !window.esp32LogsMap.has(log.id)){
+          window.esp32LogsMap.set(log.id, log);
           newLogsAdded++;
         }
       });
@@ -368,8 +368,9 @@ function attachManagerEvents(){
         window.esp32Logs = window.esp32Logs.slice(-MAX_LOGS); // Оставляем последние MAX_LOGS
         window.esp32LogsMap = new Map();
         window.esp32Logs.forEach(log => {
-          const key = `${log.ts}_${log.msg}`;
-          window.esp32LogsMap.set(key, log);
+          if(log.id){
+            window.esp32LogsMap.set(log.id, log);
+          }
         });
       }
       // Сохраняем в localStorage
