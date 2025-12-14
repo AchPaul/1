@@ -1364,7 +1364,8 @@ function initGreenhouseSelector(){
   // Обработчик переключения
   selectEl.addEventListener('change', ()=>{
     const newId = selectEl.value;
-    if(newId && newId !== activeId){
+    const currentActiveId = window.ghGreenhouses.getActiveId();
+    if(newId && newId !== currentActiveId){
       window.ghGreenhouses.switch(newId);
       // Обновляем счётчик и UI
       if(countEl){
