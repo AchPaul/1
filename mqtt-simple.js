@@ -44,8 +44,8 @@
       this.alertTopic = '';
       this.queue = [];
       this.maxQueue = 10;
-      this.reconnectMs = 2000;
-      this.reconnectMax = 15000;
+      this.reconnectMs = 1000;
+      this.reconnectMax = 10000;
       this.lastState = null;
       this.connected = false;
     }
@@ -73,7 +73,7 @@
         password: cfg.pass || undefined,
         keepalive: 30,
         reconnectPeriod: this.reconnectMs,
-        connectTimeout: 8000,
+        connectTimeout: 4000,
         clean: true,
       };
 
@@ -87,7 +87,7 @@
       if(!this.client) return;
       this.client.on('connect', ()=>{
         this.connected = true;
-        this.reconnectMs = 2000;
+        this.reconnectMs = 1000;
         this.client.subscribe(this.stateTopic, {qos:0});
         this.client.subscribe(this.alertTopic, {qos:0});
         this.emit('status','connected');

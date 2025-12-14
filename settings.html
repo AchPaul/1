@@ -153,6 +153,48 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </div>
 <div class="neon-divider-1"></div>
 </section>
+<section class="group_input" id="dehumidify-section">
+<h3 style="margin-top:10px">Осушение</h3>
+<div class="neon-divider-1"></div>
+<div class="slider-container">
+<div class="slider-title"><div><span>Автоматическое снижение влажности:</span></div></div>
+<label class="toggle-option">
+<input type="checkbox" id="chk_dehumidify">
+<span>Включить осушение (по умолчанию)</span>
+</label>
+<div style="font-size:13px;color:#fedaff;margin-top:10px;text-align:left">
+ℹ️ При влажности выше целевой+5% включится вентиляция для осушения.<br>
+Вентиляция выключится когда влажность снизится до цель+2%.
+</div>
+</div>
+<div class="neon-divider-1"></div>
+</section>
+<section class="group_input" id="alternate-watering-section">
+<h3 style="margin-top:10px">Полив через раз</h3>
+<div class="neon-divider-1"></div>
+<div class="slider-container">
+<div class="slider-title"><div><span>Чередование ручного и автоматического полива:</span></div></div>
+<label class="toggle-option">
+<input type="checkbox" id="chk_alternate_watering">
+<span>Включить (по умолчанию)</span>
+</label>
+<div style="font-size:13px;color:#fedaff;margin-top:10px;text-align:left">
+ℹ️ Режим чередует ручной и автоматический полив:<br>
+1️⃣ <b>Ручной</b> → вам придёт уведомление "Полейте растение"<br>
+2️⃣ Через 3 часа → <b>автоматический</b> полив<br>
+3️⃣ Снова <b>ручной</b> → уведомление<br>
+И так по кругу. После ручного полива нажмите кнопку ниже.
+</div>
+</div>
+<div class="neon-divider-1"></div>
+<div id="watering-status" style="text-align:center;margin-bottom:15px;display:none;">
+<span id="watering-status-text" style="color:#ff9aa0;font-size:14px;">⚠️ Требуется ручной полив</span>
+</div>
+<div style="text-align:center;margin-top:10px">
+<button class="neon-buttom icon" id="btn_watered" style="background:#1a5a1a" disabled>💧 Полив выполнен</button>
+</div>
+<div class="neon-divider-1"></div>
+</section>
 <a class="neon-buttom icon" href="index.html">Выйти<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M21 11H6.414l5.293-5.293-1.414-1.414L2.586 12l7.707 7.707 1.414-1.414L6.414 13H21z"/></svg></div></a>
 </main>
 <script>
@@ -255,6 +297,32 @@ document.addEventListener('DOMContentLoaded', function(){
     btnSaveNight.addEventListener('click', function(){
       saveNightSettings();
       if(window.ghShowSaved) window.ghShowSaved(this);
+    });
+  }
+  
+  // Обработка режима чередования полива
+  const chkAlternateWatering = document.getElementById('chk_alternate_watering');
+  const btnWatered = document.getElementById('btn_watered');
+  const wateringStatus = document.getElementById('watering-status');
+  
+  if(chkAlternateWatering){
+    chkAlternateWatering.addEventListener('change', function(){
+      if(window.ghPublish){
+        window.ghPublish('alternate_watering', this.checked ? 1 : 0);
+      }
+      // Обновляем UI
+      if(btnWatered) btnWatered.disabled = !this.checked;
+    });
+  }
+  
+  if(btnWatered){
+    btnWatered.addEventListener('click', function(){
+      if(window.ghPublish){
+        window.ghPublish('watered', '1');
+        if(window.ghShowSaved) window.ghShowSaved(this);
+        // Скрываем статус ожидания полива
+        if(wateringStatus) wateringStatus.style.display = 'none';
+      }
     });
   }
   /*

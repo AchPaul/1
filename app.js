@@ -9,6 +9,9 @@
  */
 
 const LS_KEY = 'gh_remote_cfg_v1';
+const LS_LOGS_KEY = 'gh_logs_v1';
+const MAX_LOGS = 500; // Максимальное количество записей в логах
+
 let manager = null;
 let connected = false;
 let baseTopic = '';
@@ -22,6 +25,75 @@ let lastStateTs = 0;
 
 let configFromUrl = false;
 
+// Механизм блокировки UI обновлений на странице настроек
+let lastUserInteractionTime = 0;
+const UI_LOCK_DURATION = 5000; // 5 секунд после последнего взаимодействия
+let isOnSettingsPage = false;
+
+// Система логирования
+let systemLogs = [];
+
+function addLog(message, category = 'system', type = 'info'){
+  const log = {
+    timestamp: Date.now(),
+    message: message,
+    category: category, // system, connection, control, alert
+    type: type // info, success, warning, error
+  };
+  
+  systemLogs.unshift(log); // Новые записи в начало
+  
+  // Ограничиваем размер логов
+  if(systemLogs.length > MAX_LOGS){
+    systemLogs = systemLogs.slice(0, MAX_LOGS);
+  }
+  
+  // Сохраняем в localStorage
+  try {
+    localStorage.setItem(LS_LOGS_KEY, JSON.stringify(systemLogs));
+  } catch(e) {
+    console.warn('[GrowHub:Logs] Failed to save logs to localStorage', e);
+  }
+}
+
+function loadLogs(){
+  try {
+    const stored = localStorage.getItem(LS_LOGS_KEY);
+    if(stored){
+      systemLogs = JSON.parse(stored);
+      // Ограничиваем размер при загрузке
+      if(systemLogs.length > MAX_LOGS){
+        systemLogs = systemLogs.slice(0, MAX_LOGS);
+      }
+    }
+  } catch(e) {
+    console.warn('[GrowHub:Logs] Failed to load logs from localStorage', e);
+    systemLogs = [];
+  }
+}
+
+// Публичные функции для доступа к логам
+window.ghGetLogs = function(){ return systemLogs; };
+window.ghClearLogs = function(){
+  systemLogs = [];
+  try {
+    localStorage.removeItem(LS_LOGS_KEY);
+  } catch(e) {}
+  addLog('Логи очищены', 'system', 'info');
+};
+window.ghAddLog = addLog;
+
+function markUserInteraction(){
+  lastUserInteractionTime = Date.now();
+}
+
+function isUIUpdateLocked(){
+  // Блокируем обновления только на странице настроек и только если недавно было взаимодействие
+  if(!isOnSettingsPage) return false;
+  const elapsed = Date.now() - lastUserInteractionTime;
+  return elapsed < UI_LOCK_DURATION;
+}
+
 const ALERT_KEYS = [
   'rebooted',
   'alert_water',
@@ -31,7 +103,8 @@ const ALERT_KEYS = [
   'err_sensor_temp',
   'err_sensor_hg',
   'err_sensor_hg2',
-  'err_sensor_dht'
+  'err_sensor_dht',
+  'watering_notification_pending'
 ];
 
 function isFlagActive(val){
@@ -102,6 +175,9 @@ const inputs = {
   vent_night: document.getElementById('inp_vent_night'),
   vent_night_always: document.getElementById('chk_vent_night_always'),
   vent_interval: document.getElementById('inp_vent_interval'),
+  dehumidify: document.getElementById('chk_dehumidify'),
+  alternate_watering: document.getElementById('chk_alternate_watering'),
+  btn_watered: document.getElementById('btn_watered'),
   profile: document.getElementById('inp_profile'),
   btn_profile: document.getElementById('btn_profile'),
   sync_now: document.getElementById('btn_sync_now'),
@@ -206,13 +282,17 @@ function attachManagerEvents(){
     connected = (st === 'connected');
     if(st === 'connected'){
       logStatus('Подключено');
+      addLog('MQTT подключен к ' + currentConfig.host, 'connection', 'success');
       setTimeout(requestSyncHint, 300);
     } else if(st === 'reconnecting'){
       logStatus('Переподключение...');
+      addLog('MQTT переподключение...', 'connection', 'warning');
     } else if(st === 'offline'){
       logStatus('Нет сети', true);
+      addLog('Нет интернет-соединения', 'connection', 'error');
     } else if(st === 'disconnected'){
       logStatus('Отключено', true);
+      addLog('MQTT отключен', 'connection', 'warning');
     }
   });
   manager.on('state', (js)=>{
@@ -220,8 +300,18 @@ function attachManagerEvents(){
     lastState = js;
     lastStateTs = Date.now();
     renderState(js);
+    // Логирование изменений состояния систем
+    trackSystemChanges(js, previousState);
     // Проверяем алерты для push-уведомлений
     checkAlertsForPush(js, previousState);
+    // Сохраняем логи из ESP32 если они есть
+    if(js.logs && Array.isArray(js.logs)){
+      window.esp32Logs = js.logs;
+      // Если мы на странице логов - обновляем отображение
+      if(window.location.pathname.includes('logs.html') && typeof updateLogsDisplay === 'function'){
+        updateLogsDisplay();
+      }
+    }
   });
   manager.on('alert', (alertData)=>{
     // Критические уведомления от ESP32
@@ -233,12 +323,72 @@ function attachManagerEvents(){
   manager.on('error', (err)=>{
     console.error('[GrowHub:PWA] MQTT error', err);
     logStatus('Ошибка: ' + (err && err.message ? err.message : 'MQTT'));
+    addLog('MQTT ошибка: ' + (err && err.message ? err.message : 'неизвестно'), 'connection', 'error');
   });
+}
+
+// Отслеживание изменений состояния систем
+function trackSystemChanges(current, previous){
+  if(!previous) return; // Первое состояние - пропускаем
+  
+  // Освещение
+  if(previous.light_on !== current.light_on){
+    const state = current.light_on ? 'включено' : 'выключено';
+    addLog(`Освещение ${state}`, 'system', 'info');
+  }
+  
+  // Полив
+  if(previous.irrigation_on !== current.irrigation_on){
+    const state = current.irrigation_on ? 'запущен' : 'остановлен';
+    addLog(`Полив ${state}`, 'system', current.irrigation_on ? 'success' : 'info');
+  }
+  
+  // Обогрев
+  if(previous.heating_on !== current.heating_on){
+    const state = current.heating_on ? 'включен' : 'выключен';
+    addLog(`Обогрев ${state} (цель: ${current.day_time ? current.temp_day : current.temp_night}°C)`, 'system', 'info');
+  }
+  
+  // Увлажнитель воздуха
+  if(previous.humidifier_on !== current.humidifier_on){
+    const state = current.humidifier_on ? 'включен' : 'выключен';
+    addLog(`Увлажнитель ${state}`, 'system', 'info');
+  }
+  
+  // Вентиляция
+  if(previous.vent_on !== current.vent_on){
+    const state = current.vent_on ? 'включена' : 'выключена';
+    addLog(`Вентиляция ${state}`, 'system', 'info');
+  }
+  
+  // Охлаждение
+  if(previous.cooling_on !== current.cooling_on){
+    const state = current.cooling_on ? 'включено' : 'выключено';
+    addLog(`Охлаждение ${state}`, 'system', 'info');
+  }
+  
+  // День/Ночь
+  if(previous.day_time !== current.day_time){
+    const mode = current.day_time ? 'Дневной' : 'Ночной';
+    addLog(`Переключение на ${mode} режим`, 'system', 'info');
+  }
+  
+  // WiFi AP
+  if(previous.ap_started !== current.ap_started){
+    const state = current.ap_started ? 'запущена' : 'остановлена';
+    addLog(`WiFi точка доступа ${state}`, 'connection', 'info');
+  }
+  
+  // Изменение профиля
+  if(previous.profile_id !== current.profile_id){
+    addLog(`Профиль изменён: ${current.profile_name || current.profile_id}`, 'control', 'success');
+  }
 }
 
 // Обработка событий браузера online/offline
 window.addEventListener('online', ()=>{
   console.log('[GrowHub:PWA] Browser online');
+  addLog('Интернет восстановлен', 'connection', 'success');
   if(!connected && currentConfig){
     logStatus('Восстановление связи...');
     setTimeout(()=> connect(currentConfig), 1000);
@@ -247,6 +397,7 @@ window.addEventListener('online', ()=>{
 window.addEventListener('offline', ()=>{
   console.log('[GrowHub:PWA] Browser offline');
   logStatus('Нет интернета');
+  addLog('Интернет отключён', 'connection', 'error');
 });
 // Обработка возврата на вкладку (visibility change)
 document.addEventListener('visibilitychange', ()=>{
@@ -261,6 +412,12 @@ document.addEventListener('visibilitychange', ()=>{
   }
 });
 function renderState(js){
+  // Пропускаем обновление UI если пользователь активно настраивает
+  const locked = isUIUpdateLocked();
+  if(locked){
+    console.log('[GrowHub:UI] Update locked - user is adjusting settings');
+  }
+  
   const alertStates = {};
   ALERT_KEYS.forEach(key=>{
     // rebooted имеет инвертированную логику: показываем алерт когда rebooted=0 (т.е. после перезагрузки)
@@ -285,7 +442,22 @@ function renderState(js){
   // Primary numeric / text fields
   document.querySelectorAll('[data-field]').forEach(el=>{
     const k = el.getAttribute('data-field');
-    if(k in js) el.textContent = js[k];
+    // Actuator states - special handling
+    if(k === 'light_state'){
+      el.textContent = (js.light_on || (js.lig_hours > 0 && js.day_time)) ? 'вкл' : 'выкл';
+    } else if(k === 'heating_state'){
+      el.textContent = js.heating_on ? 'вкл' : 'выкл';
+    } else if(k === 'irrigation_state'){
+      el.textContent = js.irrigation_on ? 'вкл' : 'выкл';
+    } else if(k === 'humidifier_state'){
+      el.textContent = js.humidifier_on ? 'вкл' : 'выкл';
+    } else if(k === 'vent_state'){
+      el.textContent = js.ventilation_on ? 'вкл' : 'выкл';
+    } else if(k === 'cooling_state'){
+      el.textContent = js.cooling_on ? 'вкл' : 'выкл';
+    } else if(k in js){
+      el.textContent = js[k];
+    }
   });
   // Device name special case
   if(js.name && deviceNameEls.length){ deviceNameEls.forEach(el=> el.textContent = js.name); }
@@ -344,27 +516,50 @@ function renderState(js){
   document.querySelectorAll('[data-field="humair_night_display"]').forEach(el=>{
     if('humair_night' in js) el.textContent = (js.humair_night === 0 || js.humair_night === '0') ? 'выкл' : js.humair_night + '%';
   });
-  // Update control values if user not dragging
-  syncInputIfIdle(inputs.lig_type, js.lig_type);
-  syncInputIfIdle(inputs.lig_hours, js.lig_hours);
-  syncInputIfIdle(inputs.lig_pwm, js.lig_pwm);
-  syncInputIfIdle(inputs.temp_day, js.temp_day);
-  syncInputIfIdle(inputs.temp_night, js.temp_night);
-  syncInputIfIdle(inputs.humgr_day, js.humgr_day);
-  syncInputIfIdle(inputs.humgr_night, js.humgr_night);
-  syncInputIfIdle(inputs.humair_day, js.humair_day);
-  syncInputIfIdle(inputs.humair_night, js.humair_night);
-  syncInputIfIdle(inputs.vent_day, js.vent_day);
-  syncInputIfIdle(inputs.vent_night, js.vent_night);
-  syncInputIfIdle(inputs.vent_interval, js.vent_interval);
-  syncCheckbox(inputs.vent_day_always, js.vent_day_always, inputs.vent_day);
-  syncCheckbox(inputs.vent_night_always, js.vent_night_always, inputs.vent_night);
-  if(typeof updateSliderValue === 'function'){
+  // Update control values if user not dragging AND UI not locked
+  if(!locked){
+    syncInputIfIdle(inputs.lig_type, js.lig_type);
+    syncInputIfIdle(inputs.lig_hours, js.lig_hours);
+    syncInputIfIdle(inputs.lig_pwm, js.lig_pwm);
+    syncInputIfIdle(inputs.temp_day, js.temp_day);
+    syncInputIfIdle(inputs.temp_night, js.temp_night);
+    syncInputIfIdle(inputs.humgr_day, js.humgr_day);
+    syncInputIfIdle(inputs.humgr_night, js.humgr_night);
+    syncInputIfIdle(inputs.humair_day, js.humair_day);
+    syncInputIfIdle(inputs.humair_night, js.humair_night);
+    syncInputIfIdle(inputs.vent_day, js.vent_day);
+    syncInputIfIdle(inputs.vent_night, js.vent_night);
+    syncInputIfIdle(inputs.vent_interval, js.vent_interval);
+    syncCheckbox(inputs.vent_day_always, js.vent_day_always, inputs.vent_day);
+    syncCheckbox(inputs.vent_night_always, js.vent_night_always, inputs.vent_night);
+  }
+  
+  // Синхронизация режима чередования полива (только если UI не заблокирован)
+  if(!locked && inputs.alternate_watering && js.alternate_watering !== undefined){
+    inputs.alternate_watering.checked = isFlagActive(js.alternate_watering);
+    // Активируем кнопку "Полив выполнен" если режим включён
+    if(inputs.btn_watered){
+      inputs.btn_watered.disabled = !inputs.alternate_watering.checked;
+    }
+  }
+  // Синхронизация режима осушения
+  if(!locked && inputs.dehumidify && js.dehumidify !== undefined){
+    inputs.dehumidify.checked = isFlagActive(js.dehumidify);
+  }
+  // Показываем статус ожидания полива (всегда обновляем - это не мешает настройке)
+  const wateringStatus = document.getElementById('watering-status');
+  const wateringStatusText = document.getElementById('watering-status-text');
+  if(wateringStatus){
+    const showStatus = isFlagActive(js.alternate_watering) && isFlagActive(js.watering_notification_pending);
+    wateringStatus.style.display = showStatus ? 'block' : 'none';
+  }
+  
+  if(!locked && typeof updateSliderValue === 'function'){
     if(inputs.vent_day) updateSliderValue(inputs.vent_day);
     if(inputs.vent_night) updateSliderValue(inputs.vent_night);
   }
-  // Sync AP mode select
-  if(js.ap_mode !== undefined){
+  // Sync AP mode select (только если не в фокусе и UI не заблокирован)
+  if(!locked && js.ap_mode !== undefined){
     const apSelect = document.querySelector('select[name="ap_mode"]');
     if(apSelect && document.activeElement !== apSelect){
       apSelect.value = String(js.ap_mode);
@@ -521,12 +716,59 @@ function bindControls(){
   ranged.forEach(([key,id])=>{
     const el = document.getElementById(id);
     if(!el) return;
+    // Отслеживаем взаимодействие пользователя с слайдерами
     el.addEventListener('input', ()=>{
+      markUserInteraction();
       const live = document.querySelector(`[data-live="${key}"]`); if(live) live.textContent = el.value;
     });
+    el.addEventListener('mousedown', markUserInteraction);
+    el.addEventListener('touchstart', markUserInteraction);
+    el.addEventListener('focus', markUserInteraction);
     // Убрана автоматическая отправка - только при нажатии кнопки "Сохранить"
   });
-  if(inputs.lig_type) inputs.lig_type.addEventListener('change', ()=> publish('lig_type', inputs.lig_type.value));
+  
+  // Отслеживаем взаимодействие с другими контролами
+  if(inputs.lig_type){
+    inputs.lig_type.addEventListener('change', ()=>{
+      markUserInteraction();
+      publish('lig_type', inputs.lig_type.value);
+    });
+    inputs.lig_type.addEventListener('focus', markUserInteraction);
+  }
+  
+  // Отслеживаем вентиляцию
+  if(inputs.vent_day){
+    inputs.vent_day.addEventListener('input', markUserInteraction);
+    inputs.vent_day.addEventListener('mousedown', markUserInteraction);
+    inputs.vent_day.addEventListener('touchstart', markUserInteraction);
+  }
+  if(inputs.vent_night){
+    inputs.vent_night.addEventListener('input', markUserInteraction);
+    inputs.vent_night.addEventListener('mousedown', markUserInteraction);
+    inputs.vent_night.addEventListener('touchstart', markUserInteraction);
+  }
+  if(inputs.vent_day_always) inputs.vent_day_always.addEventListener('change', markUserInteraction);
+  if(inputs.vent_night_always) inputs.vent_night_always.addEventListener('change', markUserInteraction);
+  if(inputs.dehumidify){
+    inputs.dehumidify.addEventListener('change', ()=>{
+      markUserInteraction();
+      publish('dehumidify', inputs.dehumidify.checked ? 1 : 0);
+    });
+  }
+  if(inputs.alternate_watering){
+    inputs.alternate_watering.addEventListener('change', ()=>{
+      markUserInteraction();
+      publish('alternate_watering', inputs.alternate_watering.checked ? 1 : 0);
+    });
+  }
+  
+  // Отслеживаем select элементы
+  const apModeSelect = document.querySelector('select[name="ap_mode"]');
+  if(apModeSelect){
+    apModeSelect.addEventListener('focus', markUserInteraction);
+    apModeSelect.addEventListener('change', markUserInteraction);
+  }
+  
   if(inputs.btn_profile) inputs.btn_profile.addEventListener('click', ()=>{ const v = inputs.profile.value.trim(); if(v) publish('profile', v); });
   if(inputs.sync_now) inputs.sync_now.addEventListener('click', requestSyncHint);
   if(inputs.disconnect) inputs.disconnect.addEventListener('click', ()=>{ if(manager){ manager.disconnect(); } });
@@ -580,6 +822,18 @@ function periodic(){
 }
 
 function init(){
+  // Загружаем логи из localStorage
+  loadLogs();
+  
+  // Определяем текущую страницу для управления блокировкой UI
+  const pathname = window.location.pathname;
+  isOnSettingsPage = pathname.endsWith('settings.html');
+  if(isOnSettingsPage){
+    console.log('[GrowHub:UI] Settings page detected - UI lock enabled');
+  }
+  
+  addLog('PWA запущено', 'system', 'info');
+  
   const rawParams = extractUrlRaw();
   const cfg = loadConfig();
   // Force fill from URL (prefer long names) before merging display
@@ -665,6 +919,17 @@ function checkAlertsForPush(state, previousState){
   const alertKeys = ['alert_water', 'alert_humid', 'alert_high_temp', 'alert_low_temp', 
                      'err_sensor_temp', 'err_sensor_hg', 'err_sensor_hg2', 'err_sensor_dht'];
   
+  const alertNames = {
+    alert_water: 'Пустой бак для полива',
+    alert_humid: 'Пустой бак увлажнителя',
+    alert_high_temp: 'Высокая температура',
+    alert_low_temp: 'Низкая температура',
+    err_sensor_temp: 'Ошибка датчика температуры',
+    err_sensor_hg: 'Ошибка датчика влажности почвы №1',
+    err_sensor_hg2: 'Ошибка датчика влажности почвы №2',
+    err_sensor_dht: 'Ошибка датчика DHT22'
+  };
+  
   alertKeys.forEach(key => {
     const wasActive = isFlagActive(previousState[key]);
     const isActive = isFlagActive(state[key]);
@@ -672,6 +937,7 @@ function checkAlertsForPush(state, previousState){
     // Отправляем уведомление только при переходе из неактивного в активное
     if(!wasActive && isActive){
       console.log('[GrowHub:Push] Alert activated:', key);
+      addLog(`Алерт: ${alertNames[key] || key}`, 'alert', 'warning');
       window.pushManager.showGrowHubAlert(key, {
         temp: state.temp_now,
         humgr: state.humgr_now,
@@ -679,6 +945,16 @@ function checkAlertsForPush(state, previousState){
       });
     }
   });
+  
+  // Обработка уведомления о необходимости ручного полива (чередование)
+  const wasWateringPending = isFlagActive(previousState.watering_notification_pending);
+  const isWateringPending = isFlagActive(state.watering_notification_pending);
+  if(!wasWateringPending && isWateringPending){
+    console.log('[GrowHub:Push] Manual watering turn (alternate mode)');
+    window.pushManager.showGrowHubAlert('watering_notification_pending', {
+      humgr: state.humgr_now
+    });
+  }
   
   // Специальная обработка rebooted (инвертированная логика)
   const wasRebooted = !isFlagActive(previousState.rebooted);

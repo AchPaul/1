@@ -371,6 +371,11 @@ class PushNotificationManager {
         title: '⚡ Теплица перезагружена',
         body: 'Требуется настройка времени.',
         tag: 'growhub-reboot'
+      },
+      watering_notification_pending: {
+        title: '💧 Ваша очередь поливать!',
+        body: `Влажность почвы: ${alertData.humgr || '?'}%. Режим чередования - сейчас ручной полив.`,
+        tag: 'growhub-alternate-watering'
       }
     };
     
