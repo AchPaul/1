@@ -27,7 +27,7 @@ let configFromUrl = false;
 
 // Механизм блокировки UI обновлений на странице настроек
 let lastUserInteractionTime = 0;
-const UI_LOCK_DURATION = 5000; // 5 секунд после последнего взаимодействия
+const UI_LOCK_DURATION = 120000; // 120 секунд после последнего взаимодействия
 let isOnSettingsPage = false;
 
 // Система логирования
@@ -1019,3 +1019,4 @@ function updateNotificationButtonBadge(){
 setTimeout(updateNotificationButtonBadge, 500);
 
 init();
+
