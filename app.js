@@ -509,7 +509,10 @@ function attachManagerEvents(){
   manager.on('status', (st)=>{
     connected = (st === 'connected');
     if(st === 'connected'){
-      logStatus('Подключено');
+      // Показываем 'Подключено' только если нет свежих данных с именем устройства
+      if(!lastState || !lastState.name){
+        logStatus('Подключено');
+      }
       addLog('MQTT подключен к ' + currentConfig.host, 'connection', 'success');
       setTimeout(requestSyncHint, 300);
     } else if(st === 'reconnecting'){
@@ -519,8 +522,12 @@ function attachManagerEvents(){
       logStatus('Нет сети', true);
       addLog('Нет интернет-соединения', 'connection', 'error');
     } else if(st === 'disconnected'){
-      logStatus('Отключено', true);
-      addLog('MQTT отключен', 'connection', 'warning');
+      // Не показываем 'Отключено' если недавно получали данные
+      const timeSinceLastState = lastStateTs ? (Date.now() - lastStateTs) : Infinity;
+      if(timeSinceLastState > 10000){
+        logStatus('Отключено', true);
+        addLog('MQTT отключен', 'connection', 'warning');
+      }
     }
   });
   manager.on('state', (js)=>{

@@ -47,6 +47,7 @@
       this.reconnectMs = 1000;
       this.reconnectMax = 10000;
       this.lastState = null;
+      this.lastStateTime = 0;
       this.connected = false;
     }
 
@@ -71,9 +72,9 @@
         clientId: 'gh-web-' + Math.random().toString(16).slice(2),
         username: cfg.user || undefined,
         password: cfg.pass || undefined,
-        keepalive: 30,
+        keepalive: 60,
         reconnectPeriod: this.reconnectMs,
-        connectTimeout: 4000,
+        connectTimeout: 10000,
         clean: true,
       };
 
@@ -102,7 +103,11 @@
       });
       this.client.on('close', ()=>{
         this.connected = false;
-        this.emit('status','disconnected');
+        // Не показываем 'disconnected' если недавно получали данные
+        const lastStateTime = this.lastStateTime || 0;
+        if(Date.now() - lastStateTime > 5000){
+          this.emit('status','disconnected');
+        }
       });
       this.client.on('offline', ()=>{
         this.connected = false;
@@ -117,8 +122,13 @@
           try{
             const js = JSON.parse(payload.toString());
             this.lastState = js;
+            this.lastStateTime = Date.now();
             try{ localStorage.setItem(LS_LAST_STATE, JSON.stringify(js)); }catch(_e){}
             this.emit('state', js);
+            // Подтверждаем что соединение активно после получения данных
+            if(this.connected){
+              this.emit('status','connected');
+            }
           }catch(e){ console.warn('[MQTTManager] state parse error', e); }
         } else if(topic === this.alertTopic){
           try{
