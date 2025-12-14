@@ -229,9 +229,13 @@ document.querySelectorAll('form').forEach(form => {
     const selectEl = form.querySelector('select');
     if(selectEl && window.ghPublish) {
       const val = selectEl.value;
-      window.ghPublish('profile', val);
+      const success = window.ghPublish('profile', val);
       if(window.ghShowSaved && submitBtn) {
-        window.ghShowSaved(submitBtn);
+        if(success) {
+          window.ghShowSaved(submitBtn, 'Сохранено ✓', null, 2000, false);
+        } else {
+          window.ghShowSaved(submitBtn, 'Ошибка: нет связи ✗', null, 2000, true);
+        }
       }
     }
   });

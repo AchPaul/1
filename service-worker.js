@@ -7,7 +7,7 @@
  */
 
 // Версия кэша - увеличивайте при обновлении ресурсов
-const CACHE = 'gh-remote-v32';
+const CACHE = 'gh-remote-v34';
 
 // Статические ресурсы для кэширования
 const ASSETS = [
@@ -23,6 +23,7 @@ const ASSETS = [
   './contacts.html',
   './notifications.html',
   './logs.html',
+  './greenhouses.html',
   './app.js',
   './mqtt-simple.js',
   './push-notifications.js',

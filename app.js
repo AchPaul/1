@@ -11,6 +11,7 @@
 const LS_KEY = 'gh_remote_cfg_v1';
 const LS_GREENHOUSES_KEY = 'gh_greenhouses_v1'; // Список всех теплиц
 const LS_ACTIVE_GH_KEY = 'gh_active_greenhouse_v1'; // ID активной теплицы
+const LS_MQTT_CONNECTED = 'gh_mqtt_connected'; // Статус MQTT подключения
 const LS_LOGS_KEY = 'gh_logs_v1';
 const LS_ESP32_LOGS_KEY = 'gh_esp32_logs_v1';
 const MAX_LOGS = 500; // Максимальное количество записей в логах
@@ -383,6 +384,29 @@ function logStatus(msg, warn=false){
   }
 }
 
+function getStoredMqttStatus(){
+  try {
+    const stored = localStorage.getItem(LS_MQTT_CONNECTED);
+    if(stored){
+      const data = JSON.parse(stored);
+      // Проверяем что статус не старше 2 минут
+      if(data.timestamp && (Date.now() - data.timestamp) < 120000){
+        return data.status;
+      }
+    }
+  } catch(e) {}
+  return null;
+}
+
+function setStoredMqttStatus(status){
+  try {
+    localStorage.setItem(LS_MQTT_CONNECTED, JSON.stringify({
+      status: status,
+      timestamp: Date.now()
+    }));
+  } catch(e) {}
+}
+
 function loadConfig(){
   const url = new URL(window.location.href);
   const p = (k)=> url.searchParams.get(k) || '';
@@ -501,6 +525,7 @@ function connect(cfg){
   manager.connect(cfg).catch(err=>{
     console.error('[GrowHub:PWA] connect error', err);
     logStatus('Ошибка подключения: ' + (err && err.message ? err.message : 'неизвестно'), true);
+    setStoredMqttStatus('disconnected');
   });
 }
 let currentConfig = null; // Сохраняем конфиг для переподключения
@@ -511,6 +536,7 @@ function attachManagerEvents(){
     connected = (st === 'connected');
     if(st === 'connected'){
       logStatus('Подключено');
+      setStoredMqttStatus('connected');
       addLog('MQTT подключен к ' + currentConfig.host, 'connection', 'success');
       setTimeout(requestSyncHint, 300);
     } else if(st === 'reconnecting'){
@@ -522,8 +548,9 @@ function attachManagerEvents(){
     } else if(st === 'disconnected'){
       // Не показываем 'Отключено' если недавно получали данные
       const timeSinceLastState = lastStateTs ? (Date.now() - lastStateTs) : Infinity;
-      if(timeSinceLastState > 10000){
+      if(timeSinceLastState > 60000){
         logStatus('Отключено', true);
+        setStoredMqttStatus('disconnected');
         addLog('MQTT отключен', 'connection', 'warning');
       }
     }
@@ -912,7 +939,7 @@ function publish(key, val){
 window.ghPublish = publish;
 
 // Helper function to show "Saved" state on buttons
-function showSavedState(button, savedText = 'Сохранено ✓', originalText = null, duration = 2000){
+function showSavedState(button, savedText = 'Сохранено ✓', originalText = null, duration = 2000, isError = false){
   if(!button) return;
   
   // Determine if it's an input or button element
@@ -923,15 +950,25 @@ function showSavedState(button, savedText = 'Сохранено ✓', originalTe
   button[textProp] = savedText;
   button.disabled = true;
 
+  // Сохраняем исходный цвет
+  const originalColor = button.style.color;
+  if(isError) {
+    button.style.color = '#ff4444';
+  }
+
   const wrap = button.closest('[data-save-wrap]');
   const status = wrap ? wrap.querySelector('.save-status') : null;
   if(status){
-    status.textContent = 'сохранено';
+    status.textContent = isError ? 'ошибка' : 'сохранено';
     status.classList.add('active');
+    if(isError) {
+      status.style.color = '#ff4444';
+    }
     if(status._hideTimer) clearTimeout(status._hideTimer);
     status._hideTimer = setTimeout(()=>{
       status.classList.remove('active');
       status.textContent = '';
+      status.style.color = '';
       status._hideTimer = null;
     }, duration);
   }
@@ -939,6 +976,7 @@ function showSavedState(button, savedText = 'Сохранено ✓', originalTe
   setTimeout(() => {
     button[textProp] = originalText;
     button.disabled = false;
+    button.style.color = originalColor;
   }, duration);
 }
 // Expose for inline forms on other pages
@@ -1067,7 +1105,8 @@ if(formCfg.save){
     
     if(cfgBox) cfgBox.classList.remove('visible');
     connect(cfg);
-    showSavedState(formCfg.save);
+    // Для настроек подключения всегда успешно (сохраняем локально)
+    showSavedState(formCfg.save, false);
     
     // Обновляем селектор теплиц
     setTimeout(initGreenhouseSelector, 100);
@@ -1157,6 +1196,11 @@ function init(){
     }
   } else {
     logStatus('Автозагрузка конфигурации...');
+    // Проверяем сохраненный статус MQTT
+    const storedStatus = getStoredMqttStatus();
+    if(storedStatus === 'connected'){
+      logStatus('Подключено');
+    }
     connect(cfg);
   }
   bindControls();

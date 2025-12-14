@@ -245,13 +245,24 @@ document.addEventListener('DOMContentLoaded', function(){
       ['vent_day_always', 'chk_vent_day_always']
     ];
     
+    let allSuccess = true;
     dayParams.forEach(([key, id]) => {
       const el = document.getElementById(id);
       if(el) {
         const payload = el.type === 'checkbox' ? (el.checked ? 1 : 0) : el.value;
-        window.ghPublish(key, payload);
+        const success = window.ghPublish(key, payload);
+        if(!success) allSuccess = false;
       }
     });
+    
+    const btn = document.getElementById('btn_save_day');
+    if(btn && window.ghShowSaved) {
+      if(allSuccess) {
+        window.ghShowSaved(btn, 'Сохранено ✓', null, 2000, false);
+      } else {
+        window.ghShowSaved(btn, 'Ошибка: нет связи ✗', null, 2000, true);
+      }
+    }
   }
   
   // Функция для отправки ночных параметров
@@ -266,13 +277,24 @@ document.addEventListener('DOMContentLoaded', function(){
       ['vent_night_always', 'chk_vent_night_always']
     ];
     
+    let allSuccess = true;
     nightParams.forEach(([key, id]) => {
       const el = document.getElementById(id);
       if(el) {
         const payload = el.type === 'checkbox' ? (el.checked ? 1 : 0) : el.value;
-        window.ghPublish(key, payload);
+        const success = window.ghPublish(key, payload);
+        if(!success) allSuccess = false;
       }
     });
+    
+    const btn = document.getElementById('btn_save_night');
+    if(btn && window.ghShowSaved) {
+      if(allSuccess) {
+        window.ghShowSaved(btn, 'Сохранено ✓', null, 2000, false);
+      } else {
+        window.ghShowSaved(btn, 'Ошибка: нет связи ✗', null, 2000, true);
+      }
+    }
   }
   /*
   function saveVentSettings(){
@@ -287,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function(){
   if(btnSaveDay){
     btnSaveDay.addEventListener('click', function(){
       saveDaySettings();
-      if(window.ghShowSaved) window.ghShowSaved(this);
+      // Обработка результата внутри saveDaySettings
     });
   }
   
@@ -296,7 +318,7 @@ document.addEventListener('DOMContentLoaded', function(){
   if(btnSaveNight){
     btnSaveNight.addEventListener('click', function(){
       saveNightSettings();
-      if(window.ghShowSaved) window.ghShowSaved(this);
+      // Обработка результата внутри saveNightSettings
     });
   }
   
@@ -308,7 +330,15 @@ document.addEventListener('DOMContentLoaded', function(){
   if(chkAlternateWatering){
     chkAlternateWatering.addEventListener('change', function(){
       if(window.ghPublish){
-        window.ghPublish('alternate_watering', this.checked ? 1 : 0);
+        const success = window.ghPublish('alternate_watering', this.checked ? 1 : 0);
+        // Можно показать уведомление при ошибке
+        if(!success && window.ghShowSaved) {
+          const tempEl = document.createElement('span');
+          tempEl.textContent = 'Ошибка связи';
+          tempEl.style.color = '#ff4444';
+          this.parentNode.appendChild(tempEl);
+          setTimeout(() => tempEl.remove(), 2000);
+        }
       }
       // Обновляем UI
       if(btnWatered) btnWatered.disabled = !this.checked;
@@ -318,10 +348,16 @@ document.addEventListener('DOMContentLoaded', function(){
   if(btnWatered){
     btnWatered.addEventListener('click', function(){
       if(window.ghPublish){
-        window.ghPublish('watered', '1');
-        if(window.ghShowSaved) window.ghShowSaved(this);
-        // Скрываем статус ожидания полива
-        if(wateringStatus) wateringStatus.style.display = 'none';
+        const success = window.ghPublish('watered', '1');
+        if(window.ghShowSaved) {
+          if(success) {
+            window.ghShowSaved(this, 'Сохранено ✓', null, 2000, false);
+          } else {
+            window.ghShowSaved(this, 'Ошибка: нет связи ✗', null, 2000, true);
+          }
+        }
+        // Скрываем статус ожидания полива только при успехе
+        if(success && wateringStatus) wateringStatus.style.display = 'none';
       }
     });
   }

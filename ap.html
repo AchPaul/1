@@ -85,9 +85,13 @@ formAp.addEventListener('submit', (e) => {
   const select = document.querySelector('select[name="ap_mode"]');
   if(select && window.ghPublish) {
     const val = select.value;
-    window.ghPublish('ap_mode', val);
+    const success = window.ghPublish('ap_mode', val);
     if(window.ghShowSaved && submitBtn) {
-      window.ghShowSaved(submitBtn);
+      if(success) {
+        window.ghShowSaved(submitBtn, 'Сохранено ✓', null, 2000, false);
+      } else {
+        window.ghShowSaved(submitBtn, 'Ошибка: нет связи ✗', null, 2000, true);
+      }
     }
   }
 });

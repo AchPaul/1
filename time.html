@@ -183,6 +183,15 @@ document.addEventListener('DOMContentLoaded', function(){
       btnSave.value = 'Сохранено ✓';
       btnSave.disabled = true;
       setTimeout(()=>{ btnSave.value = 'Сохранить'; btnSave.disabled = false; }, 2000);
+    } else {
+      btnSave.value = 'Ошибка: нет связи ✗';
+      btnSave.style.color = '#ff4444';
+      btnSave.disabled = true;
+      setTimeout(()=>{ 
+        btnSave.value = 'Сохранить'; 
+        btnSave.style.color = ''; 
+        btnSave.disabled = false; 
+      }, 2000);
     }
   });
   
