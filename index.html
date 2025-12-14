@@ -71,6 +71,15 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 .neon-buttom .badge-dot{position:absolute;top:-4px;right:-4px;width:12px;height:12px;background:#22c55e;border-radius:50%;border:2px solid #000;animation:pulse-badge 2s infinite}
 .neon-buttom .badge-dot.pending{background:#f59e0b}
 @keyframes pulse-badge{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.7;transform:scale(1.1)}}
+/* Greenhouse selector */
+.greenhouse-selector{width:100%;max-width:320px;margin-bottom:15px}
+.greenhouse-select-wrap{display:flex;gap:10px;align-items:center}
+.greenhouse-select{flex:1;padding:12px 15px;background:#1a0026;border:2px solid #6d00a6;border-radius:10px;color:#fff;font-family:'Courier New',monospace;font-size:14px;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23c900cc'%3E%3Cpath d='M6 9L1 4h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.greenhouse-select:focus{outline:none;border-color:#c900cc;box-shadow:0 0 8px rgba(201,0,204,.4)}
+.greenhouse-select option{background:#1a0026;color:#fff}
+.greenhouse-manage-btn{padding:10px 15px;background:#1a0026;border:2px solid #6d00a6;border-radius:10px;color:#c900cc;font-size:16px;cursor:pointer;text-decoration:none;display:flex;align-items:center;justify-content:center}
+.greenhouse-manage-btn:hover{background:#2a0036;border-color:#c900cc}
+.greenhouse-count{font-size:12px;color:#888;text-align:center;margin-top:5px}
 </style>
 </head>
 <body>
@@ -79,6 +88,15 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </header>
 <div class="header-transition"></div>
 <main class="main">
+<!-- Селектор теплиц -->
+<div class="greenhouse-selector" id="greenhouse-selector" style="display:none">
+<div class="greenhouse-select-wrap">
+<select class="greenhouse-select" id="greenhouse-select"></select>
+<a href="greenhouses.html" class="greenhouse-manage-btn" title="Управление теплицами">⚙️</a>
+</div>
+<div class="greenhouse-count" id="greenhouse-count"></div>
+</div>
+
 <div class="device-name-section">
 <div class="device-name-container">
 <span class="device-name-text"><span data-field="name">—</span></span>
@@ -122,6 +140,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <a href="profile.html" class="neon-buttom icon">Выбрать растение<div class="icon_btn"><svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#fff" stroke-width="2"><polyline points="1 10.5 12 1.5 23 10.5"/><polyline points="20 7.5 20 22.5 4 22.5 4 7.5"/><line x1="22" y1="22.5" x2="2" y2="22.5"/><path d="M7 10.5h.77A4.23 4.23 0 0 1 12 14.73v.77h-.77A4.23 4.23 0 0 1 7 11.27V10.5z"/><path d="M16.23 11.5H17v.77a4.23 4.23 0 0 1-4.23 4.23H12v-.77a4.23 4.23 0 0 1 4.23-4.23z" transform="translate(29 28)rotate(180)"/><line x1="12" y1="21.5" x2="12" y2="14.5"/></svg></div></a>
 <a href="service.html" class="neon-buttom icon">Сервисные настройки<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M12 16c2.206 0 4-1.794 4-4s-1.794-4-4-4-4 1.794-4 4 1.794 4 4 4zm0-6c1.084 0 2 .916 2 2s-.916 2-2 2-2-.916-2-2 .916-2 2-2z"/><path d="m2.845 16.136 1 1.73c.531.917 1.809 1.261 2.73.73l.529-.306A8.1 8.1 0 0 0 9 19.402V20c0 1.103.897 2 2 2h2c1.103 0 2-.897 2-2v-.598a8.132 8.132 0 0 0 1.896-1.111l.529.306c.923.53 2.198.188 2.731-.731l.999-1.729a2.001 2.001 0 0 0-.731-2.732l-.505-.292a7.718 7.718 0 0 0 0-2.224l.505-.292a2.002 2.002 0 0 0 .731-2.732l-.999-1.729c-.531-.92-1.808-1.265-2.731-.732l-.529.306A8.1 8.1 0 0 0 15 4.598V4c0-1.103-.897-2-2-2h-2c-1.103 0-2 .897-2 2v.598a8.132 8.132 0 0 0-1.896 1.111l-.529-.306c-.924-.531-2.2-.187-2.731.732l-.999 1.729a2.001 2.001 0 0 0 .731 2.732l.505.292a7.683 7.683 0 0 0 0 2.223l-.505.292a2.003 2.003 0 0 0-.731 2.733zm3.326-2.758A5.703 5.703 0 0 1 6 12c0-.462.058-.926.17-1.378a.999.999 0 0 0-.47-1.108l-1.123-.65.998-1.729 1.145.662a.997.997 0 0 0 1.188-.142 6.071 6.071 0 0 1 2.384-1.399A1 1 0 0 0 11 5.3V4h2v1.3a1 1 0 0 0 .708.956 6.083 6.083 0 0 1 2.384 1.399.999.999 0 0 0 1.188.142l1.144-.661 1 1.729-1.124.649a1 1 0 0 0-.47 1.108c.112.452.17.916.17 1.378 0 .461-.058.925-.171 1.378a1 1 0 0 0 .471 1.108l1.123.649-.998 1.729-1.145-.661a.996.996 0 0 0-1.188.142 6.071 6.071 0 0 1-2.384 1.399A1 1 0 0 0 13 18.7l.002 1.3H11v-1.3a1 1 0 0 0-.708-.956 6.083 6.083 0 0 1-2.384-1.399.992.992 0 0 0-1.188-.141l-1.144.662-1-1.729 1.124-.651a1 1 0 0 0 .471-1.108z"/></svg></div></a>
 <a href="contacts.html" class="neon-buttom icon">Контакты<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M17.707 12.293a.999.999 0 0 0-1.414 0l-1.594 1.594c-.739-.22-2.118-.72-2.992-1.594s-1.374-2.253-1.594-2.992l1.594-1.594a.999.999 0 0 0 0-1.414l-4-4a.999.999 0 0 0-1.414 0L3.581 5.005c-.38.38-.594.902-.586 1.435.023 1.424.4 6.37 4.298 10.268s8.844 4.274 10.269 4.298h.028c.528 0 1.027-.208 1.405-.586l2.712-2.712a.999.999 0 0 0 0-1.414l-4-4.001zm-.127 6.712c-1.248-.021-5.518-.356-8.873-3.712-3.366-3.366-3.692-7.651-3.712-8.874L7 4.414 9.586 7 8.293 8.293a1 1 0 0 0-.272.912c.024.115.611 2.842 2.271 4.502s4.387 2.247 4.502 2.271a.991.991 0 0 0 .912-.271L17 14.414 19.586 17l-2.006 2.005z"/></svg></div></a>
+<a href="greenhouses.html" class="neon-buttom icon">Мои теплицы<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/><path d="M7 12h2v5H7zm4-3h2v8h-2zm4-3h2v11h-2z"/></svg></div></a>
 </main>
 <script src="mqtt-simple.js"></script>
 <script src="push-notifications.js"></script>

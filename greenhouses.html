@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Мои теплицы - GrowHub</title>
+<link rel="icon" type="image/svg+xml" href="favicon-plant.svg">
+<link rel="manifest" href="manifest.json">
+<style>
+:root{--clr-neon:hsl(288,52%,35%);--clr-bg:hsl(295,14%,67%)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:'Courier New',monospace;min-height:100vh}
+header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.5)}
+.header-transition{height:40px;background:linear-gradient(180deg,#28003c 0%,#1a0026 50%,#000 100%);margin-top:-5px;margin-bottom:15px}
+.logo{display:inline-block}
+.grow{font-size:35px;color:#fff;font-weight:700;letter-spacing:5px}
+.hub{font-size:35px;color:#c900cc;font-weight:700;letter-spacing:5px;border:7px solid #c900cc;border-radius:13px;padding:2px 2px 2px 8px}
+.main{display:flex;margin:20px auto;justify-content:center;align-items:center;flex-direction:column;gap:20px;max-width:400px;padding:0 15px}
+.neon-buttom{background:#000;font-size:16px;text-decoration:none;color:#ebebeb;cursor:pointer;border:var(--clr-neon) .125em solid;padding:.35em 2em;border-radius:.25em;width:100%;max-width:320px;text-align:center;box-shadow:inset 0 0 .5em 0 var(--clr-neon),0 0 .5em 0 var(--clr-neon);position:relative;display:block}
+.neon-buttom:disabled{background:#3d3b3d;color:#fff;cursor:wait}
+.neon-buttom::before{content:"";position:absolute;background:var(--clr-neon);top:120%;left:0;width:100%;height:100%;transform:perspective(3em)rotateX(40deg)scale(1,.35);filter:blur(1em);opacity:.7}
+.neon-buttom::after{content:"";position:absolute;background:var(--clr-neon);top:0;left:0;bottom:0;right:0;box-shadow:0 0 2em .5em var(--clr-neon);opacity:0;z-index:-1;transition:opacity 100ms}
+.neon-buttom:hover,.neon-buttom:focus{color:var(--clr-bg);text-shadow:none}
+.neon-buttom:hover::before,.neon-buttom:focus::before,.neon-buttom:hover::after,.neon-buttom:focus::after{opacity:1}
+
+.section-title{font-size:1.2em;color:#c900cc;margin:20px 0 10px;text-align:center}
+.greenhouse-list{width:100%;display:flex;flex-direction:column;gap:12px}
+.greenhouse-card{background:linear-gradient(135deg,rgba(138,43,226,.1) 0%,rgba(75,0,130,.1) 100%);border:2px solid rgba(138,43,226,.3);border-radius:15px;padding:15px;box-shadow:0 0 20px rgba(138,43,226,.2)}
+.greenhouse-card.active{border-color:#c900cc;box-shadow:0 0 25px rgba(201,0,204,.4)}
+.greenhouse-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.greenhouse-name{font-size:1.1em;font-weight:bold;color:#fff}
+.greenhouse-active-badge{background:#c900cc;color:#fff;font-size:11px;padding:2px 8px;border-radius:10px}
+.greenhouse-info{font-size:13px;color:#aaa;margin-bottom:10px}
+.greenhouse-info span{display:block;margin:2px 0}
+.greenhouse-actions{display:flex;gap:10px}
+.greenhouse-actions button{flex:1;padding:8px;font-size:13px;background:#1a0026;border:1px solid #6d00a6;border-radius:8px;color:#fff;cursor:pointer;font-family:inherit}
+.greenhouse-actions button:hover{background:#2a0036;border-color:#c900cc}
+.greenhouse-actions button.btn-danger{border-color:#dc3545}
+.greenhouse-actions button.btn-danger:hover{background:#4a1a1a}
+.greenhouse-actions button.btn-primary{border-color:#c900cc;background:rgba(201,0,204,.2)}
+.greenhouse-actions button.btn-primary:hover{background:rgba(201,0,204,.4)}
+
+.form-section{width:100%;background:linear-gradient(135deg,rgba(138,43,226,.1) 0%,rgba(75,0,130,.1) 100%);border:2px solid rgba(138,43,226,.3);border-radius:15px;padding:20px;margin-top:10px}
+.form-section h3{margin-bottom:15px;color:#c900cc;text-align:center}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;margin-bottom:5px;font-size:13px;color:#aaa}
+.form-group input{width:100%;padding:10px;background:#1a0026;border:2px solid #6d00a6;border-radius:8px;color:#fff;font-family:inherit;font-size:14px}
+.form-group input:focus{outline:none;border-color:#c900cc;box-shadow:0 0 8px rgba(201,0,204,.4)}
+.form-group input::placeholder{color:#666}
+.form-row{display:flex;gap:10px}
+.form-row .form-group{flex:1}
+.form-actions{display:flex;gap:10px;margin-top:15px}
+.form-actions button{flex:1;padding:12px;font-size:14px;background:#1a0026;border:2px solid #6d00a6;border-radius:8px;color:#fff;cursor:pointer;font-family:inherit}
+.form-actions button:hover{background:#2a0036;border-color:#c900cc}
+.form-actions button.btn-primary{border-color:#c900cc;background:rgba(201,0,204,.2)}
+.form-actions button.btn-primary:hover{background:rgba(201,0,204,.4)}
+
+.empty-state{text-align:center;padding:30px;color:#888}
+.empty-state svg{margin-bottom:15px;opacity:.5}
+
+.hidden{display:none!important}
+.back-link{margin-top:20px}
+</style>
+</head>
+<body>
+<header>
+<div class="logo"><span class="grow">Grow</span><span class="hub">Hub</span></div>
+</header>
+<div class="header-transition"></div>
+
+<main class="main">
+<h2 class="section-title">🌱 Мои теплицы</h2>
+
+<div id="greenhouse-list" class="greenhouse-list">
+<!-- Заполняется динамически -->
+</div>
+
+<div id="empty-state" class="empty-state hidden">
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5">
+<path d="M12 2L2 7v10c0 5.55 3.84 10.74 10 12 6.16-1.26 10-6.45 10-12V7l-10-5z"/>
+<path d="M12 8v4m0 4h.01"/>
+</svg>
+<p>Теплицы не добавлены</p>
+<p style="font-size:13px;margin-top:5px">Нажмите "Добавить теплицу" чтобы начать</p>
+</div>
+
+<button id="btn-add" class="neon-buttom">➕ Добавить теплицу</button>
+
+<!-- Форма добавления/редактирования -->
+<div id="form-section" class="form-section hidden">
+<h3 id="form-title">Новая теплица</h3>
+<input type="hidden" id="edit-id">
+<div class="form-group">
+<label>Название теплицы</label>
+<input type="text" id="inp-name" placeholder="Например: Домашняя теплица">
+</div>
+<div class="form-group">
+<label>Адрес MQTT брокера</label>
+<input type="text" id="inp-host" placeholder="broker.example.com">
+</div>
+<div class="form-row">
+<div class="form-group">
+<label>Порт</label>
+<input type="text" id="inp-port" placeholder="8884" value="8884">
+</div>
+<div class="form-group">
+<label>Путь WebSocket</label>
+<input type="text" id="inp-path" placeholder="/mqtt" value="/mqtt">
+</div>
+</div>
+<div class="form-row">
+<div class="form-group">
+<label>Логин</label>
+<input type="text" id="inp-user" placeholder="username">
+</div>
+<div class="form-group">
+<label>Пароль</label>
+<input type="password" id="inp-pass" placeholder="password">
+</div>
+</div>
+<div class="form-group">
+<label>Топик (growhub/XXXXXX/)</label>
+<input type="text" id="inp-base" placeholder="growhub/abc123/">
+</div>
+<div class="form-actions">
+<button id="btn-cancel">Отмена</button>
+<button id="btn-save" class="btn-primary">Сохранить</button>
+</div>
+</div>
+
+<a href="index.html" class="neon-buttom back-link">← Назад</a>
+</main>
+
+<script src="mqtt-simple.js"></script>
+<script src="push-notifications.js"></script>
+<script src="app.js"></script>
+<script>
+(function(){
+  const listEl = document.getElementById('greenhouse-list');
+  const emptyEl = document.getElementById('empty-state');
+  const formEl = document.getElementById('form-section');
+  const formTitle = document.getElementById('form-title');
+  const btnAdd = document.getElementById('btn-add');
+  const btnCancel = document.getElementById('btn-cancel');
+  const btnSave = document.getElementById('btn-save');
+  
+  const inpId = document.getElementById('edit-id');
+  const inpName = document.getElementById('inp-name');
+  const inpHost = document.getElementById('inp-host');
+  const inpPort = document.getElementById('inp-port');
+  const inpPath = document.getElementById('inp-path');
+  const inpUser = document.getElementById('inp-user');
+  const inpPass = document.getElementById('inp-pass');
+  const inpBase = document.getElementById('inp-base');
+  
+  function renderList(){
+    const greenhouses = window.ghGreenhouses.getAll();
+    const activeId = window.ghGreenhouses.getActiveId();
+    
+    if(greenhouses.length === 0){
+      listEl.classList.add('hidden');
+      emptyEl.classList.remove('hidden');
+      return;
+    }
+    
+    listEl.classList.remove('hidden');
+    emptyEl.classList.add('hidden');
+    
+    listEl.innerHTML = greenhouses.map(gh => `
+      <div class="greenhouse-card ${gh.id === activeId ? 'active' : ''}" data-id="${gh.id}">
+        <div class="greenhouse-card-header">
+          <span class="greenhouse-name">${escapeHtml(gh.name)}</span>
+          ${gh.id === activeId ? '<span class="greenhouse-active-badge">Активная</span>' : ''}
+        </div>
+        <div class="greenhouse-info">
+          <span>🌐 ${escapeHtml(gh.host)}:${gh.port}</span>
+          <span>📡 ${escapeHtml(gh.base)}</span>
+        </div>
+        <div class="greenhouse-actions">
+          ${gh.id !== activeId ? `<button class="btn-primary" onclick="selectGreenhouse('${gh.id}')">Выбрать</button>` : ''}
+          <button onclick="editGreenhouse('${gh.id}')">✏️ Изменить</button>
+          <button class="btn-danger" onclick="deleteGreenhouse('${gh.id}')">🗑️</button>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  function escapeHtml(str){
+    if(!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  
+  function showForm(editId){
+    formEl.classList.remove('hidden');
+    btnAdd.classList.add('hidden');
+    
+    if(editId){
+      const gh = window.ghGreenhouses.getAll().find(g => g.id === editId);
+      if(gh){
+        formTitle.textContent = 'Редактирование';
+        inpId.value = gh.id;
+        inpName.value = gh.name || '';
+        inpHost.value = gh.host || '';
+        inpPort.value = gh.port || '8884';
+        inpPath.value = gh.path || '/mqtt';
+        inpUser.value = gh.user || '';
+        inpPass.value = gh.pass || '';
+        inpBase.value = gh.base || '';
+      }
+    } else {
+      formTitle.textContent = 'Новая теплица';
+      inpId.value = '';
+      inpName.value = '';
+      inpHost.value = '';
+      inpPort.value = '8884';
+      inpPath.value = '/mqtt';
+      inpUser.value = '';
+      inpPass.value = '';
+      inpBase.value = '';
+    }
+  }
+  
+  function hideForm(){
+    formEl.classList.add('hidden');
+    btnAdd.classList.remove('hidden');
+  }
+  
+  window.selectGreenhouse = function(id){
+    window.ghGreenhouses.switch(id);
+    renderList();
+    // Перенаправляем на главную страницу
+    setTimeout(() => {
+      window.location.href = 'index.html';
+    }, 300);
+  };
+  
+  window.editGreenhouse = function(id){
+    showForm(id);
+  };
+  
+  window.deleteGreenhouse = function(id){
+    const gh = window.ghGreenhouses.getAll().find(g => g.id === id);
+    if(gh && confirm(`Удалить теплицу "${gh.name}"?`)){
+      window.ghGreenhouses.delete(id);
+      renderList();
+    }
+  };
+  
+  btnAdd.addEventListener('click', () => showForm(null));
+  btnCancel.addEventListener('click', hideForm);
+  
+  btnSave.addEventListener('click', () => {
+    const name = inpName.value.trim();
+    const host = inpHost.value.trim();
+    const port = inpPort.value.trim() || '8884';
+    const path = inpPath.value.trim() || '/mqtt';
+    const user = inpUser.value.trim();
+    const pass = inpPass.value.trim();
+    let base = inpBase.value.trim();
+    
+    if(!name){
+      alert('Введите название теплицы');
+      inpName.focus();
+      return;
+    }
+    if(!host){
+      alert('Введите адрес брокера');
+      inpHost.focus();
+      return;
+    }
+    if(!base){
+      alert('Введите топик');
+      inpBase.focus();
+      return;
+    }
+    
+    // Нормализуем base topic
+    if(!base.endsWith('/')) base += '/';
+    
+    const config = { name, host, port, path, user, pass, base, proto: 'wss' };
+    
+    const editId = inpId.value;
+    if(editId){
+      window.ghGreenhouses.update(editId, config);
+    } else {
+      const newGh = window.ghGreenhouses.add(config);
+      // Автоматически выбираем новую теплицу
+      window.ghGreenhouses.setActive(newGh.id);
+    }
+    
+    hideForm();
+    renderList();
+  });
+  
+  // Инициализация
+  renderList();
+})();
+</script>
+</body>
+</html>

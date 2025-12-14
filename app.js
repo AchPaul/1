@@ -9,9 +9,158 @@
  */
 
 const LS_KEY = 'gh_remote_cfg_v1';
+const LS_GREENHOUSES_KEY = 'gh_greenhouses_v1'; // Список всех теплиц
+const LS_ACTIVE_GH_KEY = 'gh_active_greenhouse_v1'; // ID активной теплицы
 const LS_LOGS_KEY = 'gh_logs_v1';
 const LS_ESP32_LOGS_KEY = 'gh_esp32_logs_v1';
 const MAX_LOGS = 500; // Максимальное количество записей в логах
+
+// === Система управления несколькими теплицами ===
+let greenhouses = []; // Массив теплиц [{id, name, host, port, user, pass, base, path, proto}]
+let activeGreenhouseId = null;
+
+function generateGreenhouseId(){
+  return 'gh_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+function loadGreenhouses(){
+  try {
+    const stored = localStorage.getItem(LS_GREENHOUSES_KEY);
+    if(stored){
+      greenhouses = JSON.parse(stored);
+    } else {
+      greenhouses = [];
+    }
+    // Загружаем ID активной теплицы
+    activeGreenhouseId = localStorage.getItem(LS_ACTIVE_GH_KEY);
+    // Проверяем что активная теплица существует
+    if(activeGreenhouseId && !greenhouses.find(g => g.id === activeGreenhouseId)){
+      activeGreenhouseId = greenhouses.length > 0 ? greenhouses[0].id : null;
+      localStorage.setItem(LS_ACTIVE_GH_KEY, activeGreenhouseId || '');
+    }
+    // Миграция старой конфигурации если теплицы пусты
+    if(greenhouses.length === 0){
+      const oldCfg = localStorage.getItem(LS_KEY);
+      if(oldCfg){
+        try {
+          const cfg = JSON.parse(oldCfg);
+          if(cfg.host && cfg.base){
+            const migrated = {
+              id: generateGreenhouseId(),
+              name: 'Теплица 1',
+              host: cfg.host,
+              port: cfg.port || '8884',
+              user: cfg.user || '',
+              pass: cfg.pass || '',
+              base: cfg.base,
+              path: cfg.path || '/mqtt',
+              proto: cfg.proto || 'wss'
+            };
+            greenhouses.push(migrated);
+            activeGreenhouseId = migrated.id;
+            saveGreenhouses();
+            console.log('[GrowHub] Миграция старой конфигурации в новую систему теплиц');
+          }
+        } catch(e){}
+      }
+    }
+  } catch(e) {
+    console.warn('[GrowHub] Failed to load greenhouses', e);
+    greenhouses = [];
+  }
+  return greenhouses;
+}
+
+function saveGreenhouses(){
+  try {
+    localStorage.setItem(LS_GREENHOUSES_KEY, JSON.stringify(greenhouses));
+    if(activeGreenhouseId){
+      localStorage.setItem(LS_ACTIVE_GH_KEY, activeGreenhouseId);
+    }
+  } catch(e){
+    console.warn('[GrowHub] Failed to save greenhouses', e);
+  }
+}
+
+function addGreenhouse(config){
+  const gh = {
+    id: generateGreenhouseId(),
+    name: config.name || 'Теплица ' + (greenhouses.length + 1),
+    host: config.host,
+    port: config.port || '8884',
+    user: config.user || '',
+    pass: config.pass || '',
+    base: config.base,
+    path: config.path || '/mqtt',
+    proto: config.proto || 'wss'
+  };
+  greenhouses.push(gh);
+  if(!activeGreenhouseId){
+    activeGreenhouseId = gh.id;
+  }
+  saveGreenhouses();
+  return gh;
+}
+
+function updateGreenhouse(id, config){
+  const idx = greenhouses.findIndex(g => g.id === id);
+  if(idx === -1) return null;
+  greenhouses[idx] = { ...greenhouses[idx], ...config };
+  saveGreenhouses();
+  return greenhouses[idx];
+}
+
+function deleteGreenhouse(id){
+  greenhouses = greenhouses.filter(g => g.id !== id);
+  if(activeGreenhouseId === id){
+    activeGreenhouseId = greenhouses.length > 0 ? greenhouses[0].id : null;
+  }
+  saveGreenhouses();
+}
+
+function getActiveGreenhouse(){
+  if(!activeGreenhouseId) return null;
+  return greenhouses.find(g => g.id === activeGreenhouseId) || null;
+}
+
+function setActiveGreenhouse(id){
+  const gh = greenhouses.find(g => g.id === id);
+  if(!gh) return false;
+  activeGreenhouseId = id;
+  localStorage.setItem(LS_ACTIVE_GH_KEY, id);
+  return true;
+}
+
+function switchGreenhouse(id){
+  if(!setActiveGreenhouse(id)) return false;
+  const gh = getActiveGreenhouse();
+  if(gh){
+    // Отключаемся от текущего MQTT и подключаемся к новому
+    if(manager){
+      manager.disconnect();
+    }
+    lastState = null;
+    lastStateTs = 0;
+    connect(gh);
+    addLog(`Переключено на: ${gh.name}`, 'connection', 'info');
+  }
+  return true;
+}
+
+// Публичные функции для работы с теплицами из других страниц
+window.ghGreenhouses = {
+  load: loadGreenhouses,
+  save: saveGreenhouses,
+  add: addGreenhouse,
+  update: updateGreenhouse,
+  delete: deleteGreenhouse,
+  getActive: getActiveGreenhouse,
+  setActive: setActiveGreenhouse,
+  switch: switchGreenhouse,
+  getAll: () => greenhouses,
+  getActiveId: () => activeGreenhouseId
+};
+// === Конец системы управления теплицами ===
 
 let manager = null;
 let connected = false;
@@ -236,9 +385,10 @@ function logStatus(msg, warn=false){
 function loadConfig(){
   const url = new URL(window.location.href);
   const p = (k)=> url.searchParams.get(k) || '';
-  let cfg = null;
-  const stored = localStorage.getItem(LS_KEY);
-  if(stored){ try { cfg = JSON.parse(stored); } catch(_){} }
+  
+  // Загружаем список теплиц
+  loadGreenhouses();
+  
   // Support both short (h,p,u,pw,b) and long (host,port,user,pass,topic) parameter styles
   const longParams = {
     host: p('host'),
@@ -267,13 +417,49 @@ function loadConfig(){
   // Normalize base topic trailing slash
   if(chosen.base && !chosen.base.endsWith('/')) chosen.base += '/';
   if(chosen.path && !chosen.path.startsWith('/')) chosen.path = '/' + chosen.path;
+  
+  // Если есть URL параметры - используем их и добавляем как новую теплицу
+  if(configFromUrl && chosen.host && chosen.base){
+    // Проверяем есть ли уже такая теплица
+    const existing = greenhouses.find(g => g.host === chosen.host && g.base === chosen.base);
+    if(existing){
+      setActiveGreenhouse(existing.id);
+      return existing;
+    } else {
+      // Добавляем новую теплицу из URL
+      const newGh = addGreenhouse({
+        name: 'Теплица (URL)',
+        ...chosen
+      });
+      setActiveGreenhouse(newGh.id);
+      return newGh;
+    }
+  }
+  
+  // Если нет URL параметров - берем активную теплицу
+  const activeGh = getActiveGreenhouse();
+  if(activeGh){
+    return activeGh;
+  }
+  
+  // Fallback: старая логика для совместимости
+  let cfg = null;
+  const stored = localStorage.getItem(LS_KEY);
+  if(stored){ try { cfg = JSON.parse(stored); } catch(_){} }
+  
   // Merge with stored config (URL params override stored when non-empty)
   const merged = Object.assign({}, cfg||{}, Object.fromEntries(Object.entries(chosen).filter(([,v])=>v)));
   return merged;
 }
 
 function saveConfig(cfg){
+  // Сохраняем для совместимости со старым форматом
   localStorage.setItem(LS_KEY, JSON.stringify(cfg));
+  
+  // Также обновляем активную теплицу если она есть
+  if(activeGreenhouseId){
+    updateGreenhouse(activeGreenhouseId, cfg);
+  }
 }
 
 function fillConfigForm(cfg){
@@ -843,9 +1029,28 @@ if(formCfg.save){
       pass: formCfg.pass.value.trim(),
       base: formCfg.base.value.trim()
     };
+    
+    // Проверяем есть ли уже такая теплица
+    const existing = greenhouses.find(g => g.host === cfg.host && g.base === cfg.base);
+    if(existing){
+      // Обновляем существующую
+      updateGreenhouse(existing.id, cfg);
+      setActiveGreenhouse(existing.id);
+    } else if(cfg.host && cfg.base){
+      // Добавляем новую теплицу
+      const newGh = addGreenhouse({
+        name: 'Теплица ' + (greenhouses.length + 1),
+        ...cfg
+      });
+      setActiveGreenhouse(newGh.id);
+    }
+    
     if(cfgBox) cfgBox.classList.remove('visible');
     connect(cfg);
     showSavedState(formCfg.save);
+    
+    // Обновляем селектор теплиц
+    setTimeout(initGreenhouseSelector, 100);
   });
 }
 if(formCfg.clear){
@@ -1061,5 +1266,65 @@ function updateNotificationButtonBadge(){
 
 // Вызываем обновление badge после инициализации pushManager
 setTimeout(updateNotificationButtonBadge, 500);
+
+// Инициализация селектора теплиц на главной странице
+function initGreenhouseSelector(){
+  const selectorWrap = document.getElementById('greenhouse-selector');
+  const selectEl = document.getElementById('greenhouse-select');
+  const countEl = document.getElementById('greenhouse-count');
+  
+  if(!selectorWrap || !selectEl) return;
+  
+  const greenhouses = window.ghGreenhouses.getAll();
+  const activeId = window.ghGreenhouses.getActiveId();
+  
+  // Показываем селектор только если есть теплицы
+  if(greenhouses.length === 0){
+    selectorWrap.style.display = 'none';
+    return;
+  }
+  
+  selectorWrap.style.display = 'block';
+  
+  // Заполняем select
+  selectEl.innerHTML = greenhouses.map(gh => 
+    `<option value="${gh.id}" ${gh.id === activeId ? 'selected' : ''}>${escapeHtmlSelector(gh.name)}</option>`
+  ).join('');
+  
+  // Показываем количество теплиц
+  if(countEl){
+    countEl.textContent = `${greenhouses.length} ${pluralize(greenhouses.length, 'теплица', 'теплицы', 'теплиц')}`;
+  }
+  
+  // Обработчик переключения
+  selectEl.addEventListener('change', ()=>{
+    const newId = selectEl.value;
+    if(newId && newId !== activeId){
+      window.ghGreenhouses.switch(newId);
+      // Обновляем счётчик и UI
+      if(countEl){
+        const activeGh = window.ghGreenhouses.getActive();
+        countEl.textContent = activeGh ? `Подключено к: ${activeGh.name}` : '';
+      }
+    }
+  });
+}
+
+function escapeHtmlSelector(str){
+  if(!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function pluralize(n, one, few, many){
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if(mod100 >= 11 && mod100 <= 19) return many;
+  if(mod10 === 1) return one;
+  if(mod10 >= 2 && mod10 <= 4) return few;
+  return many;
+}
+
+// Вызываем инициализацию селектора после загрузки
+setTimeout(initGreenhouseSelector, 100);
 
 init();
