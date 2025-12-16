@@ -978,12 +978,13 @@ function syncCheckbox(input, value, slider){
 }
 
 function publish(key, val){
-  if(!manager) return;
+  if(!manager) return false;
   const now = Date.now();
-  if(lastPubMap[key] && (now - lastPubMap[key] < PUB_THROTTLE_MS)) return; // throttle
+  if(lastPubMap[key] && (now - lastPubMap[key] < PUB_THROTTLE_MS)) return true; // throttled but treated as success
   lastPubMap[key] = now;
-  manager.publish(key, String(val));
-  flashPub(`${key}=${val}`);
+  const result = manager.publish(key, String(val));
+  if(result) flashPub(`${key}=${val}`);
+  return result;
 }
 // Expose for inline forms on other pages
 window.ghPublish = publish;
