@@ -367,10 +367,16 @@ const inputs = {
   vent_day_always: document.getElementById('chk_vent_day_always'),
   vent_night: document.getElementById('inp_vent_night'),
   vent_night_always: document.getElementById('chk_vent_night_always'),
+  smart_humair_day: document.getElementById('chk_smart_humair_day'),
+  smart_humair_night: document.getElementById('chk_smart_humair_night'),
   vent_interval: document.getElementById('inp_vent_interval'),
   dehumidify: document.getElementById('chk_dehumidify'),
   alternate_watering: document.getElementById('chk_alternate_watering'),
   btn_watered: document.getElementById('btn_watered'),
+  growth_stage_0: document.getElementById('gs_0'),
+  growth_stage_1: document.getElementById('gs_1'),
+  growth_stage_2: document.getElementById('gs_2'),
+  growth_stage_3: document.getElementById('gs_3'),
   profile: document.getElementById('inp_profile'),
   btn_profile: document.getElementById('btn_profile'),
   sync_now: document.getElementById('btn_sync_now'),
@@ -718,22 +724,28 @@ function renderState(js){
   
   // Primary numeric / text fields
   document.querySelectorAll('[data-field]').forEach(el=>{
-    const k = el.getAttribute('data-field');
-    // Actuator states - special handling
-    if(k === 'light_state'){
-      el.textContent = (js.light_on || (js.lig_hours > 0 && js.day_time)) ? 'вкл' : 'выкл';
-    } else if(k === 'heating_state'){
-      el.textContent = js.heating_on ? 'вкл' : 'выкл';
-    } else if(k === 'irrigation_state'){
-      el.textContent = js.irrigation_on ? 'вкл' : 'выкл';
-    } else if(k === 'humidifier_state'){
-      el.textContent = js.humidifier_on ? 'вкл' : 'выкл';
-    } else if(k === 'vent_state'){
-      el.textContent = js.ventilation_on ? 'вкл' : 'выкл';
-    } else if(k === 'cooling_state'){
+  const k = el.getAttribute('data-field'); 
+        // Actuator states - special handling 
+    if(k === 'cooling_state'){
       el.textContent = js.cooling_on ? 'вкл' : 'выкл';
+    } else if(k === 'cooling_enabled' || k === 'dehumidify' || k === 'alternate_watering'){
+      el.textContent = isFlagActive(js[k]) ? 'вкл' : 'выкл';
+    } else if(k === 'smart_humair'){
+      el.textContent = isFlagActive(js.smart_humair) ? 'вкл' : 'выкл';
     } else if(k in js){
-      el.textContent = js[k];
+      // Авто-суффикс для текущей влажности воздуха в шапке
+      if(k === 'humair_now'){
+        let text = js[k];
+        if(isFlagActive(js.smart_humair)) text += ' (авто)';
+        el.textContent = text;
+      } else if(k === 'growth_stage_name'){
+        el.textContent = js.growth_stage_name || '';
+      } else if(k === 'growth_stage'){
+        const stageMap = {0:'Универсальный',1:'Проращивание',2:'Вегетация',3:'Цветение'};
+        el.textContent = stageMap[js.growth_stage] || String(js.growth_stage);
+      } else {
+        el.textContent = js[k];
+      }
     }
   });
   // Device name special case
@@ -751,7 +763,12 @@ function renderState(js){
         el.textContent = 'выкл';
       } else if (suffix) {
         // Для state.html: добавляем суффикс (°C, %, мин)
-        el.textContent = val + suffix;
+        let text = val + suffix;
+        // Добавляем (А) если включен умный контроль влажности воздуха
+        if ((k === 'humair_day' || k === 'humair_night') && isFlagActive(js.smart_humair)) {
+          text += '(А)';
+        }
+        el.textContent = text;
       } else {
         el.textContent = val;
       }
@@ -788,10 +805,18 @@ function renderState(js){
   });
   // Влажность воздуха display: "выкл" при 0, иначе "X%"
   document.querySelectorAll('[data-field="humair_day_display"]').forEach(el=>{
-    if('humair_day' in js) el.textContent = (js.humair_day === 0 || js.humair_day === '0') ? 'выкл' : js.humair_day + '%';
+    if('humair_day' in js){
+      let text = (js.humair_day === 0 || js.humair_day === '0') ? 'выкл' : js.humair_day + '%';
+      if(isFlagActive(js.smart_humair)) text += ' (авто)';
+      el.textContent = text;
+    }
   });
   document.querySelectorAll('[data-field="humair_night_display"]').forEach(el=>{
-    if('humair_night' in js) el.textContent = (js.humair_night === 0 || js.humair_night === '0') ? 'выкл' : js.humair_night + '%';
+    if('humair_night' in js){
+      let text = (js.humair_night === 0 || js.humair_night === '0') ? 'выкл' : js.humair_night + '%';
+      if(isFlagActive(js.smart_humair)) text += ' (авто)';
+      el.textContent = text;
+    }
   });
   // Update control values if user not dragging AND UI not locked
   if(!locked){
@@ -823,6 +848,29 @@ function renderState(js){
   if(!locked && inputs.dehumidify && js.dehumidify !== undefined){
     inputs.dehumidify.checked = isFlagActive(js.dehumidify);
   }
+  // Синхронизация фазы роста (VPD)
+  if(!locked && js.growth_stage !== undefined){
+    const stage = parseInt(js.growth_stage);
+    const radioMap = {
+      0: inputs.growth_stage_0,
+      1: inputs.growth_stage_1,
+      2: inputs.growth_stage_2,
+      3: inputs.growth_stage_3
+    };
+    if(radioMap[stage]){
+      radioMap[stage].checked = true;
+    }
+  }
+  // Синхронизация умного контроля влажности воздуха
+  if(!locked && js.smart_humair !== undefined){
+    const dayBox = inputs.smart_humair_day;
+    const nightBox = inputs.smart_humair_night;
+    if(dayBox) syncCheckbox(dayBox, js.smart_humair, inputs.humair_day);
+    if(nightBox) syncCheckbox(nightBox, js.smart_humair, inputs.humair_night);
+    const lock = isFlagActive(js.smart_humair);
+    if(inputs.humair_day){ inputs.humair_day.classList.toggle('locked', lock); inputs.humair_day.disabled = lock; }
+    if(inputs.humair_night){ inputs.humair_night.classList.toggle('locked', lock); inputs.humair_night.disabled = lock; }
+  }
   // Показываем статус ожидания полива (всегда обновляем - это не мешает настройке)
   const wateringStatus = document.getElementById('watering-status');
   const wateringStatusText = document.getElementById('watering-status-text');
@@ -834,6 +882,8 @@ function renderState(js){
   if(!locked && typeof updateSliderValue === 'function'){
     if(inputs.vent_day) updateSliderValue(inputs.vent_day);
     if(inputs.vent_night) updateSliderValue(inputs.vent_night);
+    if(inputs.humair_day) updateSliderValue(inputs.humair_day);
+    if(inputs.humair_night) updateSliderValue(inputs.humair_night);
   }
   // Sync AP mode select (только если не в фокусе и UI не заблокирован)
   if(!locked && js.ap_mode !== undefined){
@@ -1047,6 +1097,26 @@ function bindControls(){
     inputs.alternate_watering.addEventListener('change', ()=>{
       markUserInteraction();
       publish('alternate_watering', inputs.alternate_watering.checked ? 1 : 0);
+    });
+  }
+  const smartHumBoxes = [inputs.smart_humair_day, inputs.smart_humair_night].filter(Boolean);
+  if(smartHumBoxes.length){
+    smartHumBoxes.forEach(box=>{
+      box.addEventListener('change', ()=>{
+        markUserInteraction();
+        const checked = box.checked;
+        // Держим оба переключателя в одном состоянии
+        smartHumBoxes.forEach(other=>{ if(other !== box) other.checked = checked; });
+        publish('smart_humair', checked ? 1 : 0);
+        if(typeof updateSliderValue === 'function'){
+          if(inputs.humair_day) updateSliderValue(inputs.humair_day);
+          if(inputs.humair_night) updateSliderValue(inputs.humair_night);
+        }
+        // Лочим/разлочим слайдеры при переключении чекбокса
+        const lock = checked;
+        if(inputs.humair_day){ inputs.humair_day.classList.toggle('locked', lock); inputs.humair_day.disabled = lock; }
+        if(inputs.humair_night){ inputs.humair_night.classList.toggle('locked', lock); inputs.humair_night.disabled = lock; }
+      });
     });
   }
   

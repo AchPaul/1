@@ -83,8 +83,12 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <div class="neon-divider-1"></div>
 <div class="slider-container">
 <div class="slider-title"><div><span>Влажность воздуха:</span></div></div>
+<label class="toggle-option">
+<input type="checkbox" id="chk_smart_humair_day" data-slider="inp_humair_day">
+<span>Умный контроль (авто по VPD)</span>
+</label>
 <span class="slider-value" data-live="humair_day">—</span>%
-<input type="range" class="slider" min="0" max="90" id="inp_humair_day">
+<input type="range" class="slider" min="0" max="90" id="inp_humair_day" data-always-id="chk_smart_humair_day">
 </div>
 <div class="neon-divider-1"></div>
 <div class="slider-container">
@@ -134,8 +138,12 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <div class="neon-divider-1"></div>
 <div class="slider-container">
 <div class="slider-title"><div><span>Влажность воздуха:</span></div></div>
+<label class="toggle-option">
+<input type="checkbox" id="chk_smart_humair_night" data-slider="inp_humair_night">
+<span>Умный контроль (авто по VPD)</span>
+</label>
 <span class="slider-value" data-live="humair_night">—</span>%
-<input type="range" class="slider" min="0" max="90" id="inp_humair_night">
+<input type="range" class="slider" min="0" max="90" id="inp_humair_night" data-always-id="chk_smart_humair_night">
 </div>
 <div class="neon-divider-1"></div>
 <div class="slider-container">
@@ -195,6 +203,41 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </div>
 <div class="neon-divider-1"></div>
 </section>
+<section class="group_input" id="growth-stage-section">
+<h3 style="margin-top:10px">Фаза роста и VPD</h3>
+<div class="neon-divider-1"></div>
+<div class="slider-container">
+<div class="slider-title"><div><span>Выберите фазу роста растения:</span></div></div>
+<div style="display:flex;flex-direction:column;gap:12px;margin:15px 0">
+<label class="toggle-option" style="justify-content:flex-start">
+<input type="radio" name="growth_stage" value="0" id="gs_0">
+<span>🌱 Универсальный (VPD 0.8-1.2 кПа)</span>
+</label>
+<label class="toggle-option" style="justify-content:flex-start">
+<input type="radio" name="growth_stage" value="1" id="gs_1">
+<span>🌰 Проращивание (VPD 0.4-0.8 кПа)</span>
+</label>
+<label class="toggle-option" style="justify-content:flex-start">
+<input type="radio" name="growth_stage" value="2" id="gs_2">
+<span>🌿 Вегетация (VPD 0.8-1.2 кПа)</span>
+</label>
+<label class="toggle-option" style="justify-content:flex-start">
+<input type="radio" name="growth_stage" value="3" id="gs_3">
+<span>🌸 Цветение (VPD 1.0-1.5 кПа)</span>
+</label>
+</div>
+<div style="font-size:13px;color:#fedaff;margin-top:10px;text-align:left">
+ℹ️ <b>VPD</b> (Vapor Pressure Deficit) — дефицит давления пара.<br>
+Определяет оптимальный баланс температуры и влажности воздуха для транспирации растений.<br><br>
+📊 <b>Научные диапазоны VPD:</b><br>
+• Проращивание: 0.4-0.8 кПа — высокая влажность для нежных ростков<br>
+• Вегетация: 0.8-1.2 кПа — активный рост и развитие листьев<br>
+• Цветение: 1.0-1.5 кПа — стимуляция цветения и плодоношения<br><br>
+🔬 Основано на: Prenger & Lindhout (2022), FAO-56
+</div>
+</div>
+<div class="neon-divider-1"></div>
+</section>
 <a class="neon-buttom icon" href="index.html">Выйти<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M21 11H6.414l5.293-5.293-1.414-1.414L2.586 12l7.707 7.707 1.414-1.414L6.414 13H21z"/></svg></div></a>
 </main>
 <script>
@@ -209,6 +252,7 @@ function updateSliderValue(sl){
   const checkbox = alwaysId ? document.getElementById(alwaysId) : null;
   const isAlways = checkbox ? checkbox.checked : false;
   span.textContent = isAlways ? '-' : sl.value;
+  sl.disabled = isAlways;
   sl.classList.toggle('locked', isAlways);
   sl.tabIndex = isAlways ? -1 : 0;
 }
@@ -370,6 +414,31 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
   */
+  
+  // Обработка выбора фазы роста (VPD)
+  const growthStageRadios = document.querySelectorAll('input[name="growth_stage"]');
+  growthStageRadios.forEach(function(radio){
+    radio.addEventListener('change', function(){
+      if(window.ghPublish){
+        const success = window.ghPublish('growth_stage', this.value);
+        if(!success && window.ghShowSaved) {
+          const tempEl = document.createElement('span');
+          tempEl.textContent = ' Ошибка связи';
+          tempEl.style.color = '#ff4444';
+          tempEl.style.fontSize = '12px';
+          this.parentNode.appendChild(tempEl);
+          setTimeout(() => tempEl.remove(), 2000);
+        } else {
+          // Показываем короткое уведомление об успехе
+          const tempEl = document.createElement('span');
+          tempEl.textContent = ' ✓';
+          tempEl.style.color = '#44ff44';
+          this.parentNode.appendChild(tempEl);
+          setTimeout(() => tempEl.remove(), 1500);
+        }
+      }
+    });
+  });
 });
 </script>
 <script src="mqtt-simple.js"></script>
