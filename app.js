@@ -1033,6 +1033,33 @@ function showSavedState(button, savedText = 'Сохранено ✓', originalTe
 // Expose for inline forms on other pages
 window.ghShowSaved = showSavedState;
 
+// Helper function to show feedback next to checkboxes
+function showCheckboxFeedback(checkbox, success, duration = 2000){
+  if(!checkbox) return;
+  const label = checkbox.closest('.toggle-option') || checkbox.parentNode;
+  if(!label) return;
+  
+  // Удаляем старый feedback если есть
+  const existingFeedback = label.querySelector('.feedback-msg');
+  if(existingFeedback) existingFeedback.remove();
+  
+  const feedback = document.createElement('span');
+  feedback.className = 'feedback-msg';
+  feedback.style.fontSize = '12px';
+  feedback.style.marginLeft = '5px';
+  if(success){
+    feedback.textContent = ' ✓';
+    feedback.style.color = '#44ff44';
+  } else {
+    feedback.textContent = ' ✗ нет связи';
+    feedback.style.color = '#ff4444';
+  }
+  label.appendChild(feedback);
+  setTimeout(() => feedback.remove(), duration);
+}
+// Expose for inline checkbox handlers
+window.ghShowCheckboxFeedback = showCheckboxFeedback;
+
 function flashPub(msg){
   if(!pubStatusEl) return;
   pubStatusEl.textContent = 'Отправлено: ' + msg;
@@ -1089,26 +1116,29 @@ function bindControls(){
   if(inputs.vent_day_always) inputs.vent_day_always.addEventListener('change', markUserInteraction);
   if(inputs.vent_night_always) inputs.vent_night_always.addEventListener('change', markUserInteraction);
   if(inputs.dehumidify){
-    inputs.dehumidify.addEventListener('change', ()=>{
+    inputs.dehumidify.addEventListener('change', function(){
       markUserInteraction();
-      publish('dehumidify', inputs.dehumidify.checked ? 1 : 0);
+      const success = publish('dehumidify', this.checked ? 1 : 0);
+      showCheckboxFeedback(this, success);
     });
   }
   if(inputs.alternate_watering){
-    inputs.alternate_watering.addEventListener('change', ()=>{
+    inputs.alternate_watering.addEventListener('change', function(){
       markUserInteraction();
-      publish('alternate_watering', inputs.alternate_watering.checked ? 1 : 0);
+      const success = publish('alternate_watering', this.checked ? 1 : 0);
+      showCheckboxFeedback(this, success);
     });
   }
   const smartHumBoxes = [inputs.smart_humair_day, inputs.smart_humair_night].filter(Boolean);
   if(smartHumBoxes.length){
     smartHumBoxes.forEach(box=>{
-      box.addEventListener('change', ()=>{
+      box.addEventListener('change', function(){
         markUserInteraction();
-        const checked = box.checked;
+        const checked = this.checked;
         // Держим оба переключателя в одном состоянии
-        smartHumBoxes.forEach(other=>{ if(other !== box) other.checked = checked; });
-        publish('smart_humair', checked ? 1 : 0);
+        smartHumBoxes.forEach(other=>{ if(other !== this) other.checked = checked; });
+        const success = publish('smart_humair', checked ? 1 : 0);
+        showCheckboxFeedback(this, success);
         if(typeof updateSliderValue === 'function'){
           if(inputs.humair_day) updateSliderValue(inputs.humair_day);
           if(inputs.humair_night) updateSliderValue(inputs.humair_night);
@@ -1131,8 +1161,52 @@ function bindControls(){
   if(inputs.btn_profile) inputs.btn_profile.addEventListener('click', ()=>{ const v = inputs.profile.value.trim(); if(v) publish('profile', v); });
   if(inputs.sync_now) inputs.sync_now.addEventListener('click', requestSyncHint);
   if(inputs.disconnect) inputs.disconnect.addEventListener('click', ()=>{ if(manager){ manager.disconnect(); } });
-  if(ackButtons.water) ackButtons.water.addEventListener('click', ()=> publish('refill','water'));
-  if(ackButtons.humid) ackButtons.humid.addEventListener('click', ()=> publish('refill','humid'));
+  if(ackButtons.water) ackButtons.water.addEventListener('click', function(){
+    const btn = this;
+    const success = publish('refill','water');
+    if(success){
+      btn.textContent = 'Сохранено ✓';
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.classList.add('hidden');
+        btn.disabled = false;
+        btn.textContent = '💧 Бак залит';
+      }, 2000);
+    } else {
+      const originalText = btn.textContent;
+      btn.textContent = 'Ошибка: нет связи ✗';
+      btn.style.color = '#ff4444';
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.style.color = '';
+        btn.disabled = false;
+      }, 2000);
+    }
+  });
+  if(ackButtons.humid) ackButtons.humid.addEventListener('click', function(){
+    const btn = this;
+    const success = publish('refill','humid');
+    if(success){
+      btn.textContent = 'Сохранено ✓';
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.classList.add('hidden');
+        btn.disabled = false;
+        btn.textContent = '💨 Увлажнитель залит';
+      }, 2000);
+    } else {
+      const originalText = btn.textContent;
+      btn.textContent = 'Ошибка: нет связи ✗';
+      btn.style.color = '#ff4444';
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.style.color = '';
+        btn.disabled = false;
+      }, 2000);
+    }
+  });
 }
 
 function requestSyncHint(){

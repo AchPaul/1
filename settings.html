@@ -261,14 +261,38 @@ document.addEventListener('DOMContentLoaded', function(){
     sl.addEventListener('input', function(){ updateSliderValue(this); });
     updateSliderValue(sl);
   });
-  document.querySelectorAll('.toggle-option input[type="checkbox"]').forEach(function(cb){
+  // Обработчики только для vent_day_always и vent_night_always
+  // (smart_humair обрабатывается в app.js)
+  ['chk_vent_day_always', 'chk_vent_night_always'].forEach(function(cbId){
+    const cb = document.getElementById(cbId);
+    if(!cb) return;
     const sliderId = cb.getAttribute('data-slider');
     const slider = sliderId ? document.getElementById(sliderId) : null;
     cb.addEventListener('change', function(){
       if(slider) updateSliderValue(slider);
       if(window.ghPublish){
-        const key = cb.id === 'chk_vent_day_always' ? 'vent_day_always' : 'vent_night_always';
-        window.ghPublish(key, cb.checked ? 1 : 0);
+        const key = cbId === 'chk_vent_day_always' ? 'vent_day_always' : 'vent_night_always';
+        const success = window.ghPublish(key, cb.checked ? 1 : 0);
+        // Показываем обратную связь рядом с чекбоксом
+        const label = cb.closest('.toggle-option');
+        if(label){
+          const existingFeedback = label.querySelector('.feedback-msg');
+          if(existingFeedback) existingFeedback.remove();
+          
+          const feedback = document.createElement('span');
+          feedback.className = 'feedback-msg';
+          feedback.style.fontSize = '12px';
+          feedback.style.marginLeft = '5px';
+          if(success){
+            feedback.textContent = '✓';
+            feedback.style.color = '#44ff44';
+          } else {
+            feedback.textContent = '✗ нет связи';
+            feedback.style.color = '#ff4444';
+          }
+          label.appendChild(feedback);
+          setTimeout(() => feedback.remove(), 2000);
+        }
       }
     });
     if(slider) updateSliderValue(slider);
@@ -367,24 +391,14 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   
   // Обработка режима чередования полива
+  // (MQTT публикация и обратная связь обрабатываются в app.js)
   const chkAlternateWatering = document.getElementById('chk_alternate_watering');
   const btnWatered = document.getElementById('btn_watered');
   const wateringStatus = document.getElementById('watering-status');
   
   if(chkAlternateWatering){
     chkAlternateWatering.addEventListener('change', function(){
-      if(window.ghPublish){
-        const success = window.ghPublish('alternate_watering', this.checked ? 1 : 0);
-        // Можно показать уведомление при ошибке
-        if(!success && window.ghShowSaved) {
-          const tempEl = document.createElement('span');
-          tempEl.textContent = 'Ошибка связи';
-          tempEl.style.color = '#ff4444';
-          this.parentNode.appendChild(tempEl);
-          setTimeout(() => tempEl.remove(), 2000);
-        }
-      }
-      // Обновляем UI
+      // Обновляем только UI, MQTT публикация в app.js
       if(btnWatered) btnWatered.disabled = !this.checked;
     });
   }
@@ -421,21 +435,24 @@ document.addEventListener('DOMContentLoaded', function(){
     radio.addEventListener('change', function(){
       if(window.ghPublish){
         const success = window.ghPublish('growth_stage', this.value);
-        if(!success && window.ghShowSaved) {
-          const tempEl = document.createElement('span');
-          tempEl.textContent = ' Ошибка связи';
-          tempEl.style.color = '#ff4444';
-          tempEl.style.fontSize = '12px';
-          this.parentNode.appendChild(tempEl);
-          setTimeout(() => tempEl.remove(), 2000);
+        // Удаляем старый feedback если есть
+        const label = this.closest('.toggle-option') || this.parentNode;
+        const existingFeedback = label.querySelector('.feedback-msg');
+        if(existingFeedback) existingFeedback.remove();
+        
+        const feedback = document.createElement('span');
+        feedback.className = 'feedback-msg';
+        feedback.style.fontSize = '12px';
+        feedback.style.marginLeft = '5px';
+        if(success){
+          feedback.textContent = ' ✓';
+          feedback.style.color = '#44ff44';
         } else {
-          // Показываем короткое уведомление об успехе
-          const tempEl = document.createElement('span');
-          tempEl.textContent = ' ✓';
-          tempEl.style.color = '#44ff44';
-          this.parentNode.appendChild(tempEl);
-          setTimeout(() => tempEl.remove(), 1500);
+          feedback.textContent = ' ✗ нет связи';
+          feedback.style.color = '#ff4444';
         }
+        label.appendChild(feedback);
+        setTimeout(() => feedback.remove(), 2000);
       }
     });
   });

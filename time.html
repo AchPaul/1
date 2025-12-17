@@ -96,66 +96,6 @@ document.addEventListener('DOMContentLoaded', function(){
   const form = document.getElementById('time-form');
   const btnSave = document.getElementById('btn-save');
   
-  // MQTT клиент для этой страницы
-  let mqttManager = null;
-  let connected = false;
-  
-  // Загрузка конфигурации из localStorage
-  function loadConfig(){
-    const stored = localStorage.getItem('gh_remote_cfg_v1');
-    if(stored){ try { return JSON.parse(stored); } catch(_){} }
-    return null;
-  }
-  
-  function connectMqtt(){
-    const cfg = loadConfig();
-    if(!cfg || !cfg.host || !cfg.port || !cfg.base){
-      const st = document.getElementById('status-line');
-      if(st){ st.textContent = 'MQTT не настроен'; st.classList.add('warn'); }
-      return;
-    }
-    if(!cfg.base.endsWith('/')) cfg.base += '/';
-    if(cfg.path && !cfg.path.startsWith('/')) cfg.path = '/' + cfg.path;
-    
-    try {
-      console.log('[Time] Initializing MQTTManager');
-      mqttManager = new MQTTManager();
-      
-      mqttManager.on('status', (status) => {
-        connected = (status === 'connected');
-        console.log('[Time] MQTT status:', status);
-      });
-      
-      mqttManager.on('state', (state) => {
-        console.log('[Time] State received:', state);
-        // Устанавливаем сохранённое значение включения света
-        if(state.light_on_hour !== undefined){
-          lightOnSlider.value = state.light_on_hour;
-          lightOnVal.textContent = state.light_on_hour;
-        }
-      });
-      
-      mqttManager.on('error', (error) => {
-        console.error('[Time] MQTT error:', error);
-      });
-      
-      console.log('[Time] Connecting to MQTT...');
-      mqttManager.connect(cfg);
-      
-    } catch(e) {
-      console.error('[Time] Init error:', e);
-    }
-  }
-  
-  function publish(key, val){
-    if(!connected || !mqttManager){
-      return false;
-    }
-    console.log('[Time] Publishing:', key, '=', val);
-    mqttManager.publish(key, String(val));
-    return true;
-  }
-  
   // Инициализация текущего времени
   const now = new Date();
   currentTimeSlider.value = now.getHours();
@@ -179,19 +119,11 @@ document.addEventListener('DOMContentLoaded', function(){
     // Публикация через MQTT: формат "light_on:current_hour"
     const payload = lightOn + ':' + currentHour;
     
-    if(publish('set_time', payload)){
-      btnSave.value = 'Сохранено ✓';
-      btnSave.disabled = true;
-      setTimeout(()=>{ btnSave.value = 'Сохранить'; btnSave.disabled = false; }, 2000);
-    } else {
-      btnSave.value = 'Ошибка: нет связи ✗';
-      btnSave.style.color = '#ff4444';
-      btnSave.disabled = true;
-      setTimeout(()=>{ 
-        btnSave.value = 'Сохранить'; 
-        btnSave.style.color = ''; 
-        btnSave.disabled = false; 
-      }, 2000);
+    if(window.ghPublish){
+      const success = window.ghPublish('set_time', payload);
+      if(window.ghShowSaved){
+        window.ghShowSaved(btnSave, success ? 'Сохранено ✓' : 'Ошибка: нет связи ✗', 'Сохранить', 2000, !success);
+      }
     }
   });
   
@@ -209,9 +141,6 @@ document.addEventListener('DOMContentLoaded', function(){
       isShown = false;
     }
   });
-  
-  // Подключение к MQTT при загрузке страницы
-  connectMqtt();
 });
 </script>
 </body>
