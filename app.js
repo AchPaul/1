@@ -580,6 +580,9 @@ function attachManagerEvents(){
       }
     }
     
+    // Генерируем CustomEvent для других страниц (time.html и т.д.)
+    window.dispatchEvent(new CustomEvent('gh-state-update', { detail: js }));
+    
     renderState(js);
     // Логирование изменений состояния систем
     trackSystemChanges(js, previousState);

@@ -101,6 +101,18 @@ document.addEventListener('DOMContentLoaded', function(){
   currentTimeSlider.value = now.getHours();
   currentTimeVal.textContent = now.getHours();
   
+  // Обработчик состояния из MQTT для автоматического заполнения
+  window.addEventListener('gh-state-update', function(e){
+    const state = e.detail;
+    if(state && state.light_on_hour !== undefined){
+      const lightOn = parseInt(state.light_on_hour);
+      if(!isNaN(lightOn) && lightOn >= 0 && lightOn <= 23){
+        lightOnSlider.value = lightOn;
+        lightOnVal.textContent = lightOn;
+      }
+    }
+  });
+  
   // Обновление значений слайдеров
   function updateSlider(slider, label){
     label.textContent = slider.value;
