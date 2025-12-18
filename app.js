@@ -142,6 +142,7 @@ function switchGreenhouse(id){
     }
     lastState = null;
     lastStateTs = 0;
+    deviceOnline = null; // Reset device status when switching
     connect(gh);
     const displayName = gh.name || 'Новая теплица';
     addLog(`Переключено на: ${displayName}`, 'connection', 'info');
@@ -166,6 +167,7 @@ window.ghGreenhouses = {
 
 let manager = null;
 let connected = false;
+let deviceOnline = null; // null = unknown, true = online, false = offline (from LWT)
 let baseTopic = '';
 let stateTopic = '';
 let setBase = '';
@@ -541,7 +543,14 @@ function attachManagerEvents(){
   manager.on('status', (st)=>{
     connected = (st === 'connected');
     if(st === 'connected'){
-      logStatus('Подключено');
+      // Брокер подключен, но статус устройства ещё неизвестен - ждём LWT
+      if(deviceOnline === null){
+        logStatus('Подключение к устройству...');
+      } else if(deviceOnline){
+        logStatus('Подключено');
+      } else {
+        logStatus('Устройство не в сети', true);
+      }
       setStoredMqttStatus('connected');
       addLog('MQTT подключен к ' + currentConfig.host, 'connection', 'success');
       setTimeout(requestSyncHint, 300);
@@ -561,10 +570,29 @@ function attachManagerEvents(){
       }
     }
   });
+  // Handle device LWT status (online/offline)
+  manager.on('deviceStatus', (isOnline)=>{
+    deviceOnline = isOnline;
+    if(connected){
+      if(isOnline){
+        logStatus('Подключено');
+        addLog('Устройство в сети', 'connection', 'success');
+      } else {
+        logStatus('Устройство не в сети', true);
+        addLog('Устройство не в сети (LWT)', 'connection', 'warning');
+      }
+    }
+  });
   manager.on('state', (js)=>{
     const previousState = lastState;
     lastState = js;
     lastStateTs = Date.now();
+    
+    // If we receive state, device is definitely online
+    if(deviceOnline !== true){
+      deviceOnline = true;
+      logStatus('Подключено');
+    }
     
     // Автоматическое обновление имени теплицы из gh_name
     if(js.name && activeGreenhouseId){
@@ -736,12 +764,8 @@ function renderState(js){
     } else if(k === 'smart_humair'){
       el.textContent = isFlagActive(js.smart_humair) ? 'вкл' : 'выкл';
     } else if(k in js){
-      // Авто-суффикс для текущей влажности воздуха в шапке
-      if(k === 'humair_now'){
-        let text = js[k];
-        if(isFlagActive(js.smart_humair)) text += ' (авто)';
-        el.textContent = text;
-      } else if(k === 'growth_stage_name'){
+      // humair_now показываем без "(авто)" - авто показывается только в целевых значениях день/ночь
+      if(k === 'growth_stage_name'){
         el.textContent = js.growth_stage_name || '';
       } else if(k === 'growth_stage'){
         const stageMap = {0:'Универсальный',1:'Проращивание',2:'Вегетация',3:'Цветение'};
@@ -767,9 +791,9 @@ function renderState(js){
       } else if (suffix) {
         // Для state.html: добавляем суффикс (°C, %, мин)
         let text = val + suffix;
-        // Добавляем (А) если включен умный контроль влажности воздуха
+        // Добавляем (авто) если включен умный контроль влажности воздуха
         if ((k === 'humair_day' || k === 'humair_night') && isFlagActive(js.smart_humair)) {
-          text += '(А)';
+          text += '(авто)';
         }
         el.textContent = text;
       } else {

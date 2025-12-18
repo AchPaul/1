@@ -38,7 +38,7 @@
     constructor(){
       this.client = null;
       this.cfg = null;
-      this.events = {status: [], state: [], error: [], cached: [], alert: []};
+      this.events = {status: [], state: [], error: [], cached: [], alert: [], deviceStatus: []};
       this.baseTopic = '';
       this.stateTopic = '';
       this.alertTopic = '';
@@ -49,6 +49,7 @@
       this.lastState = null;
       this.lastStateTime = 0;
       this.connected = false;
+      this.deviceOnline = null; // null = unknown, true = online, false = offline
     }
 
     on(evt, cb){ if(this.events[evt]) this.events[evt].push(cb); }
@@ -66,6 +67,7 @@
       this.baseTopic = base;
       this.stateTopic = base + 'state/json';
       this.alertTopic = base + 'alert';
+      this.deviceStatusTopic = base + 'status'; // LWT topic for online/offline
 
       const url = `${proto}://${cfg.host}:${cfg.port}${path}`;
       const opts = {
@@ -91,6 +93,7 @@
         this.reconnectMs = 1000;
         this.client.subscribe(this.stateTopic, {qos:0});
         this.client.subscribe(this.alertTopic, {qos:0});
+        this.client.subscribe(this.deviceStatusTopic, {qos:0}); // Subscribe to LWT
         this.emit('status','connected');
         this._flushQueue();
       });
@@ -131,6 +134,11 @@
             const alertData = JSON.parse(payload.toString());
             this.emit('alert', alertData);
           }catch(e){ console.warn('[MQTTManager] alert parse error', e); }
+        } else if(topic === this.deviceStatusTopic){
+          // LWT status: "online" or "offline"
+          const status = payload.toString().trim().toLowerCase();
+          this.deviceOnline = (status === 'online');
+          this.emit('deviceStatus', this.deviceOnline);
         }
       });
     }
@@ -183,6 +191,7 @@
         try{ this.client.end(true); }catch(_e){}
       }
       this.connected = false;
+      this.deviceOnline = null; // Reset device status on disconnect
       this.emit('status','disconnected');
     }
   }
