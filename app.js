@@ -372,8 +372,10 @@ const inputs = {
   smart_humair_day: document.getElementById('chk_smart_humair_day'),
   smart_humair_night: document.getElementById('chk_smart_humair_night'),
   vent_interval: document.getElementById('inp_vent_interval'),
+  cooling: document.getElementById('chk_cooling'),
   dehumidify: document.getElementById('chk_dehumidify'),
   alternate_watering: document.getElementById('chk_alternate_watering'),
+  btn_save_advanced: document.getElementById('btn_save_advanced'),
   btn_watered: document.getElementById('btn_watered'),
   growth_stage_0: document.getElementById('gs_0'),
   growth_stage_1: document.getElementById('gs_1'),
@@ -875,6 +877,10 @@ function renderState(js){
   if(!locked && inputs.dehumidify && js.dehumidify !== undefined){
     inputs.dehumidify.checked = isFlagActive(js.dehumidify);
   }
+  // Синхронизация режима охлаждения (state/json: cooling_enabled)
+  if(!locked && inputs.cooling && js.cooling_enabled !== undefined){
+    inputs.cooling.checked = isFlagActive(js.cooling_enabled);
+  }
   // Синхронизация фазы роста (VPD)
   if(!locked && js.growth_stage !== undefined){
     const stage = parseInt(js.growth_stage);
@@ -1142,18 +1148,34 @@ function bindControls(){
   }
   if(inputs.vent_day_always) inputs.vent_day_always.addEventListener('change', markUserInteraction);
   if(inputs.vent_night_always) inputs.vent_night_always.addEventListener('change', markUserInteraction);
+  const hasAdvancedSave = !!inputs.btn_save_advanced;
+  // Для settings.html: если есть кнопка "Сохранить" в дополнительных опциях,
+  // то не публикуем изменения сразу (как в локальном site_settings).
+  if(inputs.cooling){
+    inputs.cooling.addEventListener('change', function(){
+      markUserInteraction();
+      if(!hasAdvancedSave){
+        const success = publish('cooling', this.checked ? 1 : 0);
+        showCheckboxFeedback(this, success);
+      }
+    });
+  }
   if(inputs.dehumidify){
     inputs.dehumidify.addEventListener('change', function(){
       markUserInteraction();
-      const success = publish('dehumidify', this.checked ? 1 : 0);
-      showCheckboxFeedback(this, success);
+      if(!hasAdvancedSave){
+        const success = publish('dehumidify', this.checked ? 1 : 0);
+        showCheckboxFeedback(this, success);
+      }
     });
   }
   if(inputs.alternate_watering){
     inputs.alternate_watering.addEventListener('change', function(){
       markUserInteraction();
-      const success = publish('alternate_watering', this.checked ? 1 : 0);
-      showCheckboxFeedback(this, success);
+      if(!hasAdvancedSave){
+        const success = publish('alternate_watering', this.checked ? 1 : 0);
+        showCheckboxFeedback(this, success);
+      }
     });
   }
   const smartHumBoxes = [inputs.smart_humair_day, inputs.smart_humair_night].filter(Boolean);

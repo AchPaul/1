@@ -161,25 +161,36 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </div>
 <div class="neon-divider-1"></div>
 </section>
-<section class="group_input" id="dehumidify-section">
-<h3 style="margin-top:10px">Осушение</h3>
+<section class="group_input" id="advanced-settings-section">
+<h3 style="margin-top:10px">Дополнительные опции</h3>
 <div class="neon-divider-1"></div>
+
+<div class="slider-container">
+<div class="slider-title"><div><span>Автоматическое охлаждение при перегреве:</span></div></div>
+<label class="toggle-option">
+<input type="checkbox" id="chk_cooling">
+<span>Включить охлаждение</span>
+</label>
+<div style="font-size:13px;color:#fedaff;margin-top:10px;text-align:left">
+ℹ️ При превышении целевой температуры на 2°C включится вентиляция и увлажнение на 5 минут
+</div>
+</div>
+
+<div class="neon-divider-1"></div>
+
 <div class="slider-container">
 <div class="slider-title"><div><span>Автоматическое снижение влажности:</span></div></div>
 <label class="toggle-option">
 <input type="checkbox" id="chk_dehumidify">
-<span>Включить осушение (по умолчанию)</span>
+<span>Включить осушение</span>
 </label>
 <div style="font-size:13px;color:#fedaff;margin-top:10px;text-align:left">
-ℹ️ При влажности выше целевой+5% включится вентиляция для осушения.<br>
-Вентиляция выключится когда влажность снизится до цель+2%.
+ℹ️ При влажности выше целевой+5% включится вентиляция для осушения, выключится при цель+2%
 </div>
 </div>
+
 <div class="neon-divider-1"></div>
-</section>
-<section class="group_input" id="alternate-watering-section">
-<h3 style="margin-top:10px">Полив через раз</h3>
-<div class="neon-divider-1"></div>
+
 <div class="slider-container">
 <div class="slider-title"><div><span>Чередование ручного и автоматического полива:</span></div></div>
 <label class="toggle-option">
@@ -194,13 +205,22 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 И так по кругу. После ручного полива нажмите кнопку ниже.
 </div>
 </div>
+
 <div class="neon-divider-1"></div>
+
+<div style="text-align:center;margin-top:20px">
+<button class="neon-buttom icon" id="btn_save_advanced">Сохранить</button>
+</div>
+
+<div class="neon-divider-1"></div>
+
 <div id="watering-status" style="text-align:center;margin-bottom:15px;display:none;">
 <span id="watering-status-text" style="color:#ff9aa0;font-size:14px;">⚠️ Требуется ручной полив</span>
 </div>
 <div style="text-align:center;margin-top:10px">
 <button class="neon-buttom icon" id="btn_watered" style="background:#1a5a1a" disabled>💧 Полив выполнен</button>
 </div>
+
 <div class="neon-divider-1"></div>
 </section>
 <section class="group_input" id="growth-stage-section">
@@ -389,9 +409,47 @@ document.addEventListener('DOMContentLoaded', function(){
       // Обработка результата внутри saveNightSettings
     });
   }
+
+  // Функция для отправки дополнительных опций
+  function saveAdvancedSettings(){
+    if(!window.ghPublish) return;
+
+    const advancedParams = [
+      ['cooling', 'chk_cooling'],
+      ['dehumidify', 'chk_dehumidify'],
+      ['alternate_watering', 'chk_alternate_watering']
+    ];
+
+    let allSuccess = true;
+    advancedParams.forEach(([key, id]) => {
+      const el = document.getElementById(id);
+      if(el){
+        const payload = el.type === 'checkbox' ? (el.checked ? 1 : 0) : el.value;
+        const success = window.ghPublish(key, payload);
+        if(!success) allSuccess = false;
+      }
+    });
+
+    const btn = document.getElementById('btn_save_advanced');
+    if(btn && window.ghShowSaved){
+      if(allSuccess){
+        window.ghShowSaved(btn, 'Сохранено ✓', null, 2000, false);
+      } else {
+        window.ghShowSaved(btn, 'Ошибка: нет связи ✗', null, 2000, true);
+      }
+    }
+  }
+
+  // Кнопка сохранения дополнительных опций
+  const btnSaveAdvanced = document.getElementById('btn_save_advanced');
+  if(btnSaveAdvanced){
+    btnSaveAdvanced.addEventListener('click', function(){
+      saveAdvancedSettings();
+    });
+  }
   
   // Обработка режима чередования полива
-  // (MQTT публикация и обратная связь обрабатываются в app.js)
+  // (MQTT публикация происходит по кнопке "Сохранить" в дополнительных опциях)
   const chkAlternateWatering = document.getElementById('chk_alternate_watering');
   const btnWatered = document.getElementById('btn_watered');
   const wateringStatus = document.getElementById('watering-status');
