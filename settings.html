@@ -257,7 +257,22 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </div>
 </div>
 <div class="neon-divider-1"></div>
+
+<div class="slider-container">
+<div class="slider-title"><div><span>VPD цель: <span id="vpd_target_display">—</span></span></div></div>
+<input class="group_input" type="number" id="inp_vpd_target_x10" min="0" max="25" step="1" value="0" inputmode="numeric">
+<div style="font-size:13px;color:#fedaff;margin-top:10px;text-align:left">
+ℹ️ Если указать конкретный VPD — фаза роста игнорируется. Если VPD пустой/0 — применится VPD для выбранной фазы роста.<br>
+Формат: kPa×10. Примеры: 0 = по фазе, 10 = 1.0 kPa, 16 = 1.6 kPa.
+</div>
+</div>
+<div class="neon-divider-1"></div>
+<div style="text-align:center;margin-top:20px">
+<button class="neon-buttom icon" id="btn_save_vpd_target">Сохранить</button>
+</div>
+<div class="neon-divider-1"></div>
 </section>
+
 <a class="neon-buttom icon" href="index.html">Выйти<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M21 11H6.414l5.293-5.293-1.414-1.414L2.586 12l7.707 7.707 1.414-1.414L6.414 13H21z"/></svg></div></a>
 </main>
 <script>
@@ -487,33 +502,7 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   */
   
-  // Обработка выбора фазы роста (VPD)
-  const growthStageRadios = document.querySelectorAll('input[name="growth_stage"]');
-  growthStageRadios.forEach(function(radio){
-    radio.addEventListener('change', function(){
-      if(window.ghPublish){
-        const success = window.ghPublish('growth_stage', this.value);
-        // Удаляем старый feedback если есть
-        const label = this.closest('.toggle-option') || this.parentNode;
-        const existingFeedback = label.querySelector('.feedback-msg');
-        if(existingFeedback) existingFeedback.remove();
-        
-        const feedback = document.createElement('span');
-        feedback.className = 'feedback-msg';
-        feedback.style.fontSize = '12px';
-        feedback.style.marginLeft = '5px';
-        if(success){
-          feedback.textContent = ' ✓';
-          feedback.style.color = '#44ff44';
-        } else {
-          feedback.textContent = ' ✗ нет связи';
-          feedback.style.color = '#ff4444';
-        }
-        label.appendChild(feedback);
-        setTimeout(() => feedback.remove(), 2000);
-      }
-    });
-  });
+  // Выбор фазы роста и VPD обрабатывается в app.js одной кнопкой "Сохранить"
 });
 </script>
 <script src="mqtt-simple.js"></script>

@@ -184,6 +184,37 @@ let lastUserInteractionTime = 0;
 const UI_LOCK_DURATION = 120000; // 120 секунд после последнего взаимодействия
 let isOnSettingsPage = false;
 
+function isStagePresetProfileName(name){
+  if(!name) return false;
+  return /Рассада|Вегетация|Цветение/.test(String(name));
+}
+
+function applyStagePresetUi(profileName){
+  const hide = isStagePresetProfileName(profileName);
+  const stateRow = document.getElementById('growth-stage-row');
+  if(stateRow) stateRow.style.display = hide ? 'none' : '';
+  const settingsSection = document.getElementById('growth-stage-section');
+  if(settingsSection) settingsSection.style.display = hide ? 'none' : '';
+  const vpdSection = document.getElementById('vpd-target-section');
+  if(vpdSection) vpdSection.style.display = hide ? 'none' : '';
+  // Extra safety: prevent sending commands from hidden controls
+  const radios = document.querySelectorAll('input[name="growth_stage"]');
+  if(radios && radios.length){
+    radios.forEach(r => { r.disabled = hide; });
+  }
+
+  const vpdInp = document.getElementById('inp_vpd_target_x10');
+  if(vpdInp) vpdInp.disabled = hide;
+  const vpdBtn = document.getElementById('btn_save_vpd_target');
+  if(vpdBtn) vpdBtn.disabled = hide;
+}
+
+function formatVpdTargetX10(x10){
+  const n = Number(x10);
+  if(!Number.isFinite(n) || n <= 0) return 'авто';
+  return (n / 10).toFixed(1) + ' kPa';
+}
+
 // Система логирования
 let systemLogs = [];
 
@@ -381,6 +412,9 @@ const inputs = {
   growth_stage_1: document.getElementById('gs_1'),
   growth_stage_2: document.getElementById('gs_2'),
   growth_stage_3: document.getElementById('gs_3'),
+  vpd_target_x10: document.getElementById('inp_vpd_target_x10'),
+  vpd_target_display: document.getElementById('vpd_target_display'),
+  btn_save_vpd_target: document.getElementById('btn_save_vpd_target'),
   profile: document.getElementById('inp_profile'),
   btn_profile: document.getElementById('btn_profile'),
   sync_now: document.getElementById('btn_sync_now'),
@@ -765,6 +799,8 @@ function renderState(js){
       el.textContent = isFlagActive(js[k]) ? 'вкл' : 'выкл';
     } else if(k === 'smart_humair'){
       el.textContent = isFlagActive(js.smart_humair) ? 'вкл' : 'выкл';
+    } else if(k === 'vpd_target_x10'){
+      el.textContent = formatVpdTargetX10(js.vpd_target_x10);
     } else if(k in js){
       // humair_now показываем без "(авто)" - авто показывается только в целевых значениях день/ночь
       if(k === 'growth_stage_name'){
@@ -836,6 +872,19 @@ function renderState(js){
   document.querySelectorAll('[data-field="humair_day_display"]').forEach(el=>{
     if('humair_day' in js){
       let text = (js.humair_day === 0 || js.humair_day === '0') ? 'выкл' : js.humair_day + '%';
+
+  // UI rule: show either Growth Stage (auto) OR Manual VPD for user profiles.
+  // - Factory profiles always show Growth Stage.
+  // - User profiles show Manual VPD only when vpd_target_x10 > 0.
+  const stageRow = document.getElementById('growth-stage-row');
+  const vpdRow = document.getElementById('vpd-target-row');
+  if(stageRow || vpdRow){
+    const profileId = Number(js.profile_id);
+    const vpdX10 = Number(js.vpd_target_x10);
+    const showManualVpd = Number.isFinite(profileId) && profileId <= 4 && Number.isFinite(vpdX10) && vpdX10 > 0;
+    if(stageRow) stageRow.style.display = showManualVpd ? 'none' : '';
+    if(vpdRow) vpdRow.style.display = showManualVpd ? '' : 'none';
+  }
       if(isFlagActive(js.smart_humair)) text += ' (авто)';
       el.textContent = text;
     }
@@ -892,6 +941,15 @@ function renderState(js){
     };
     if(radioMap[stage]){
       radioMap[stage].checked = true;
+    }
+  }
+
+  // Синхронизация цели VPD (vpd_target_x10)
+  if(js.vpd_target_x10 !== undefined){
+    const disp = inputs.vpd_target_display;
+    if(disp) disp.textContent = formatVpdTargetX10(js.vpd_target_x10);
+    if(!locked && inputs.vpd_target_x10 && document.activeElement !== inputs.vpd_target_x10){
+      inputs.vpd_target_x10.value = String(js.vpd_target_x10);
     }
   }
   // Синхронизация умного контроля влажности воздуха
@@ -954,6 +1012,10 @@ function renderState(js){
     const apStateText = js.ap_started === 1 ? 'Включена' : 'Выключена';
     apStateEls.forEach(el=> el.textContent = apStateText);
   }
+
+  // Hide growth-stage UI for stage preset profiles (Рассада/Вегетация/Цветение)
+  applyStagePresetUi(js.profile_name);
+
   // Alerts - always process all alerts to ensure proper hide/show
   if(alertsBox){
     let hasActiveAlerts = false;
@@ -1148,6 +1210,65 @@ function bindControls(){
   }
   if(inputs.vent_day_always) inputs.vent_day_always.addEventListener('change', markUserInteraction);
   if(inputs.vent_night_always) inputs.vent_night_always.addEventListener('change', markUserInteraction);
+
+  // VPD target (x10)
+  if(inputs.vpd_target_x10){
+    inputs.vpd_target_x10.addEventListener('input', ()=>{
+      markUserInteraction();
+      if(inputs.vpd_target_display) inputs.vpd_target_display.textContent = formatVpdTargetX10(inputs.vpd_target_x10.value);
+
+      // Явный VPD -> фаза роста игнорируется (визуально отключаем радиокнопки)
+      const raw = String(inputs.vpd_target_x10.value || '').trim();
+      let vv = raw.length ? parseInt(raw, 10) : 0;
+      if(Number.isNaN(vv)) vv = 0;
+      const disable = vv > 0;
+      const radios = document.querySelectorAll('input[name="growth_stage"]');
+      radios.forEach(r => { r.disabled = disable; });
+    });
+    inputs.vpd_target_x10.addEventListener('focus', markUserInteraction);
+
+    // initial state
+    const raw0 = String(inputs.vpd_target_x10.value || '').trim();
+    let vv0 = raw0.length ? parseInt(raw0, 10) : 0;
+    if(Number.isNaN(vv0)) vv0 = 0;
+    const disable0 = vv0 > 0;
+    const radios0 = document.querySelectorAll('input[name="growth_stage"]');
+    radios0.forEach(r => { r.disabled = disable0; });
+  }
+  if(inputs.btn_save_vpd_target){
+    inputs.btn_save_vpd_target.addEventListener('click', ()=>{
+      markUserInteraction();
+
+      if(isStagePresetProfileName(lastState && lastState.profile_name)){
+        showSavedState(inputs.btn_save_vpd_target, 'Заблокировано профилем', null, 2200, true);
+        return;
+      }
+
+      // Единая форма: если указан VPD > 0 -> публикуем только VPD (фаза игнорируется)
+      // иначе (VPD пустой/0) -> публикуем growth_stage (а VPD берётся прошивкой по фазе)
+      const raw = String(inputs.vpd_target_x10 ? inputs.vpd_target_x10.value : '').trim();
+      let v = raw.length ? parseInt(raw, 10) : 0;
+      if(Number.isNaN(v)) v = 0;
+      v = Math.max(0, Math.min(25, v));
+      if(inputs.vpd_target_x10) inputs.vpd_target_x10.value = String(v);
+      if(inputs.vpd_target_display) inputs.vpd_target_display.textContent = formatVpdTargetX10(v);
+
+      let ok = true;
+      if(v > 0){
+        ok = publish('vpd_target', v);
+      } else {
+        const checked = document.querySelector('input[name="growth_stage"]:checked');
+        if(!checked){
+          showSavedState(inputs.btn_save_vpd_target, 'Выберите фазу', null, 2000, true);
+          return;
+        }
+        ok = publish('growth_stage', checked.value);
+      }
+
+      showSavedState(inputs.btn_save_vpd_target, ok ? 'Сохранено ✓' : 'Ошибка: нет связи ✗', null, 2000, !ok);
+    });
+  }
+
   const hasAdvancedSave = !!inputs.btn_save_advanced;
   // Для settings.html: если есть кнопка "Сохранить" в дополнительных опциях,
   // то не публикуем изменения сразу (как в локальном site_settings).
