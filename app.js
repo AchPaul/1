@@ -189,8 +189,15 @@ function isStagePresetProfileName(name){
   return /Рассада|Вегетация|Цветение/.test(String(name));
 }
 
-function applyStagePresetUi(profileName){
-  const hide = isStagePresetProfileName(profileName);
+function applyStagePresetUi(profileId, profileName){
+  // Backward compatibility: old call sites passed only profile_name
+  let id = profileId;
+  let name = profileName;
+  if(profileName === undefined){
+    name = profileId;
+    id = undefined;
+  }
+  const hide = isStagePresetProfileId(id) || isStagePresetProfileName(name);
   const stateRow = document.getElementById('growth-stage-row');
   if(stateRow) stateRow.style.display = hide ? 'none' : '';
   const settingsSection = document.getElementById('growth-stage-section');
@@ -213,6 +220,19 @@ function formatVpdTargetX10(x10){
   const n = Number(x10);
   if(!Number.isFinite(n) || n <= 0) return 'авто';
   return (n / 10).toFixed(1) + ' kPa';
+}
+
+function setGrowthStageRadiosLockedByVpd(rawVpdValue){
+  const raw = String(rawVpdValue || '').trim();
+  let vv = raw.length ? parseInt(raw, 10) : 0;
+  if(Number.isNaN(vv)) vv = 0;
+  // Требование: блокировать выбор фазы, если поле VPD не пустое и не 0.
+  // Для простоты: любое значение != 0 считается ручным VPD.
+  const disable = vv !== 0;
+  const radios = document.querySelectorAll('input[name="growth_stage"]');
+  if(radios && radios.length){
+    radios.forEach(r => { r.disabled = disable; });
+  }
 }
 
 function isStagePresetProfileId(profileId){
@@ -960,6 +980,11 @@ function renderState(js){
     if(!locked && inputs.vpd_target_x10 && document.activeElement !== inputs.vpd_target_x10){
       inputs.vpd_target_x10.value = String(js.vpd_target_x10);
     }
+
+    // ВАЖНО: программная установка value не триггерит input event
+    if(inputs.vpd_target_x10){
+      setGrowthStageRadiosLockedByVpd(inputs.vpd_target_x10.value);
+    }
   }
   // Синхронизация умного контроля влажности воздуха
   if(!locked && js.smart_humair !== undefined){
@@ -1022,8 +1047,8 @@ function renderState(js){
     apStateEls.forEach(el=> el.textContent = apStateText);
   }
 
-  // Hide growth-stage UI for stage preset profiles (Рассада/Вегетация/Цветение)
-  applyStagePresetUi(js.profile_name);
+  // Hide growth-stage UI for stage preset profiles (stable by profile_id, with name fallback)
+  applyStagePresetUi(js.profile_id, js.profile_name);
 
   // Alerts - always process all alerts to ensure proper hide/show
   if(alertsBox){
@@ -1226,23 +1251,13 @@ function bindControls(){
       markUserInteraction();
       if(inputs.vpd_target_display) inputs.vpd_target_display.textContent = formatVpdTargetX10(inputs.vpd_target_x10.value);
 
-      // Явный VPD -> фаза роста игнорируется (визуально отключаем радиокнопки)
-      const raw = String(inputs.vpd_target_x10.value || '').trim();
-      let vv = raw.length ? parseInt(raw, 10) : 0;
-      if(Number.isNaN(vv)) vv = 0;
-      const disable = vv > 0;
-      const radios = document.querySelectorAll('input[name="growth_stage"]');
-      radios.forEach(r => { r.disabled = disable; });
+      // Автоблокировка выбора фазы, если VPD задан вручную (не пустое и не 0)
+      setGrowthStageRadiosLockedByVpd(inputs.vpd_target_x10.value);
     });
     inputs.vpd_target_x10.addEventListener('focus', markUserInteraction);
 
     // initial state
-    const raw0 = String(inputs.vpd_target_x10.value || '').trim();
-    let vv0 = raw0.length ? parseInt(raw0, 10) : 0;
-    if(Number.isNaN(vv0)) vv0 = 0;
-    const disable0 = vv0 > 0;
-    const radios0 = document.querySelectorAll('input[name="growth_stage"]');
-    radios0.forEach(r => { r.disabled = disable0; });
+    setGrowthStageRadiosLockedByVpd(inputs.vpd_target_x10.value);
   }
   if(inputs.btn_save_vpd_target){
     inputs.btn_save_vpd_target.addEventListener('click', ()=>{
