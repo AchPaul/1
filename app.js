@@ -215,6 +215,13 @@ function formatVpdTargetX10(x10){
   return (n / 10).toFixed(1) + ' kPa';
 }
 
+function isStagePresetProfileId(profileId){
+  const id = Number(profileId);
+  // Firmware uses PLANT_NUMS=337; stage presets are the last 3 entries: 334..336.
+  // Use numeric id instead of profile_name to avoid localization/rename fragility.
+  return Number.isFinite(id) && id >= 334 && id <= 336;
+}
+
 // Система логирования
 let systemLogs = [];
 
@@ -795,6 +802,9 @@ function renderState(js){
         // Actuator states - special handling 
     if(k === 'cooling_state'){
       el.textContent = js.cooling_on ? 'вкл' : 'выкл';
+    } else if (k === 'vpd_mode') {
+      const vpdX10 = Number(js.vpd_target_x10);
+      el.textContent = (Number.isFinite(vpdX10) && vpdX10 > 0) ? 'Ручной' : 'По фазе';
     } else if(k === 'cooling_enabled' || k === 'dehumidify' || k === 'alternate_watering'){
       el.textContent = isFlagActive(js[k]) ? 'вкл' : 'выкл';
     } else if(k === 'smart_humair'){
@@ -872,19 +882,6 @@ function renderState(js){
   document.querySelectorAll('[data-field="humair_day_display"]').forEach(el=>{
     if('humair_day' in js){
       let text = (js.humair_day === 0 || js.humair_day === '0') ? 'выкл' : js.humair_day + '%';
-
-  // UI rule: show either Growth Stage (auto) OR Manual VPD for user profiles.
-  // - Factory profiles always show Growth Stage.
-  // - User profiles show Manual VPD only when vpd_target_x10 > 0.
-  const stageRow = document.getElementById('growth-stage-row');
-  const vpdRow = document.getElementById('vpd-target-row');
-  if(stageRow || vpdRow){
-    const profileId = Number(js.profile_id);
-    const vpdX10 = Number(js.vpd_target_x10);
-    const showManualVpd = Number.isFinite(profileId) && profileId <= 4 && Number.isFinite(vpdX10) && vpdX10 > 0;
-    if(stageRow) stageRow.style.display = showManualVpd ? 'none' : '';
-    if(vpdRow) vpdRow.style.display = showManualVpd ? '' : 'none';
-  }
       if(isFlagActive(js.smart_humair)) text += ' (авто)';
       el.textContent = text;
     }
@@ -896,6 +893,18 @@ function renderState(js){
       el.textContent = text;
     }
   });
+
+  // UI rule: show either Growth Stage (auto) OR Manual VPD target.
+  // When vpd_target_x10 > 0: user manually set VPD target, hide growth stage, show VPD target.
+  // When vpd_target_x10 = 0: use stage-based VPD, show growth stage, hide VPD target row.
+  const stageRow = document.getElementById('growth-stage-row');
+  const vpdRow = document.getElementById('vpd-target-row');
+  if(stageRow || vpdRow){
+    const vpdX10 = Number(js.vpd_target_x10);
+    const hasManualVpd = Number.isFinite(vpdX10) && vpdX10 > 0;
+    if(stageRow) stageRow.style.display = hasManualVpd ? 'none' : '';
+    if(vpdRow) vpdRow.style.display = hasManualVpd ? '' : 'none';
+  }
   // Update control values if user not dragging AND UI not locked
   if(!locked){
     syncInputIfIdle(inputs.lig_type, js.lig_type);
@@ -1239,7 +1248,7 @@ function bindControls(){
     inputs.btn_save_vpd_target.addEventListener('click', ()=>{
       markUserInteraction();
 
-      if(isStagePresetProfileName(lastState && lastState.profile_name)){
+      if(isStagePresetProfileId(lastState && lastState.profile_id)){
         showSavedState(inputs.btn_save_vpd_target, 'Заблокировано профилем', null, 2200, true);
         return;
       }
@@ -1257,12 +1266,15 @@ function bindControls(){
       if(v > 0){
         ok = publish('vpd_target', v);
       } else {
+        // Exit manual VPD mode: explicitly clear manual target first.
+        ok = publish('vpd_target', 0);
+
         const checked = document.querySelector('input[name="growth_stage"]:checked');
         if(!checked){
           showSavedState(inputs.btn_save_vpd_target, 'Выберите фазу', null, 2000, true);
           return;
         }
-        ok = publish('growth_stage', checked.value);
+        ok = ok && publish('growth_stage', checked.value);
       }
 
       showSavedState(inputs.btn_save_vpd_target, ok ? 'Сохранено ✓' : 'Ошибка: нет связи ✗', null, 2000, !ok);
