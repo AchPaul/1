@@ -508,5 +508,26 @@ document.addEventListener('DOMContentLoaded', function(){
 <script src="mqtt-simple.js"></script>
 <script src="push-notifications.js"></script>
 <script src="app.js"></script>
+<script>
+// Enable growth-stage radios only when VPD input is empty or not a positive number.
+function toggleGrowthRadiosByVpd(el){
+  const vpd = el ? el.value.trim() : '';
+  const radios = document.querySelectorAll('input[name="growth_stage"]');
+  let disable = false;
+  if (vpd.length){
+    const n = Number(vpd);
+    if (!Number.isNaN(n) && n > 0) disable = true;
+  }
+  radios.forEach(r => {
+    if(disable) r.setAttribute('disabled','disabled'); else r.removeAttribute('disabled');
+  });
+}
+document.addEventListener('DOMContentLoaded', function(){
+  const vpdEl = document.getElementById('inp_vpd_target_x10');
+  if (!vpdEl) return;
+  toggleGrowthRadiosByVpd(vpdEl);
+  vpdEl.addEventListener('input', function(){ toggleGrowthRadiosByVpd(this); });
+});
+</script>
 </body>
 </html>
