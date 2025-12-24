@@ -850,7 +850,13 @@ function renderState(js){
     const k = el.getAttribute('data-live');
     if(k in js){
       const suffix = el.getAttribute('data-suffix') || '';
-      const val = js[k];
+      let val = js[k];
+      // Smart humidity: show calculated target humidity derived from VPD.
+      // Firmware publishes these as humair_vpd_day/night + humair_vpd_valid.
+      if(isFlagActive(js.smart_humair) && isFlagActive(js.humair_vpd_valid)){
+        if(k === 'humair_day' && js.humair_vpd_day !== null && js.humair_vpd_day !== undefined) val = js.humair_vpd_day;
+        if(k === 'humair_night' && js.humair_vpd_night !== null && js.humair_vpd_night !== undefined) val = js.humair_vpd_night;
+      }
       if ((k === 'vent_day' && ventDayAlways) || (k === 'vent_night' && ventNightAlways)) {
         el.textContent = 'вкл';
       } else if (suffix && (val === 0 || val === '0')) {
@@ -901,14 +907,22 @@ function renderState(js){
   // Влажность воздуха display: "выкл" при 0, иначе "X%"
   document.querySelectorAll('[data-field="humair_day_display"]').forEach(el=>{
     if('humair_day' in js){
-      let text = (js.humair_day === 0 || js.humair_day === '0') ? 'выкл' : js.humair_day + '%';
+      let v = js.humair_day;
+      if(isFlagActive(js.smart_humair) && isFlagActive(js.humair_vpd_valid) && js.humair_vpd_day !== null && js.humair_vpd_day !== undefined){
+        v = js.humair_vpd_day;
+      }
+      let text = (v === 0 || v === '0') ? 'выкл' : v + '%';
       if(isFlagActive(js.smart_humair)) text += ' (авто)';
       el.textContent = text;
     }
   });
   document.querySelectorAll('[data-field="humair_night_display"]').forEach(el=>{
     if('humair_night' in js){
-      let text = (js.humair_night === 0 || js.humair_night === '0') ? 'выкл' : js.humair_night + '%';
+      let v = js.humair_night;
+      if(isFlagActive(js.smart_humair) && isFlagActive(js.humair_vpd_valid) && js.humair_vpd_night !== null && js.humair_vpd_night !== undefined){
+        v = js.humair_vpd_night;
+      }
+      let text = (v === 0 || v === '0') ? 'выкл' : v + '%';
       if(isFlagActive(js.smart_humair)) text += ' (авто)';
       el.textContent = text;
     }
