@@ -3,6 +3,8 @@
 (function(){
   const MQTT_CDN = 'https://unpkg.com/mqtt/dist/mqtt.min.js';
   const LS_LAST_STATE = 'gh_last_state';
+  const LS_LAST_STATE_TS = 'gh_last_state_ts'; // Timestamp when state was received
+  const STALE_DATA_THRESHOLD = 120000; // 2 minutes - data older than this is considered stale
 
   let mqttReady;
   if (window.mqtt) {
@@ -50,6 +52,13 @@
       this.lastStateTime = 0;
       this.connected = false;
       this.deviceOnline = null; // null = unknown, true = online, false = offline
+      this.awaitingFirstState = true; // Flag to track if we're waiting for first fresh state
+      this.cachedStateWasStale = false; // Flag to indicate cached state was stale
+    }
+    
+    isDataStale(timestamp){
+      if(!timestamp) return true;
+      return (Date.now() - timestamp) > STALE_DATA_THRESHOLD;
     }
 
     on(evt, cb){ if(this.events[evt]) this.events[evt].push(cb); }
@@ -59,6 +68,11 @@
       this.cfg = cfg || {};
       const mqtt = await mqttReady;
       if(this.client){ try{ this.client.end(true); }catch(_e){} this.client = null; }
+      
+      // Reset state tracking for new connection
+      this.awaitingFirstState = true;
+      this.cachedStateWasStale = false;
+      this.deviceOnline = null;
 
       if(!cfg || !cfg.host || !cfg.port || !cfg.base) throw new Error('Incomplete MQTT config');
       const proto = deriveProto(cfg);
@@ -126,7 +140,12 @@
             const js = JSON.parse(payload.toString());
             this.lastState = js;
             this.lastStateTime = Date.now();
-            try{ localStorage.setItem(LS_LAST_STATE, JSON.stringify(js)); }catch(_e){}
+            this.awaitingFirstState = false; // Got fresh data
+            this.deviceOnline = true; // If we receive state, device is online
+            try{ 
+              localStorage.setItem(LS_LAST_STATE, JSON.stringify(js)); 
+              localStorage.setItem(LS_LAST_STATE_TS, String(this.lastStateTime));
+            }catch(_e){}
             this.emit('state', js);
           }catch(e){ console.warn('[MQTTManager] state parse error', e); }
         } else if(topic === this.alertTopic){
@@ -146,13 +165,24 @@
     _emitCachedState(){
       try{
         const cached = localStorage.getItem(LS_LAST_STATE);
+        const cachedTs = localStorage.getItem(LS_LAST_STATE_TS);
+        const timestamp = cachedTs ? parseInt(cachedTs, 10) : 0;
+        
         if(cached){
           const js = JSON.parse(cached);
           this.lastState = js;
-          this.emit('cached', true);
+          this.lastStateTime = timestamp;
+          this.cachedStateWasStale = this.isDataStale(timestamp);
+          this.emit('cached', { stale: this.cachedStateWasStale, timestamp: timestamp });
           this.emit('state', js);
+        } else {
+          this.cachedStateWasStale = true; // No cached data = treat as stale
+          this.emit('cached', { stale: true, timestamp: 0 });
         }
-      }catch(_e){}
+      }catch(_e){
+        this.cachedStateWasStale = true;
+        this.emit('cached', { stale: true, timestamp: 0 });
+      }
     }
 
     _flushQueue(){
@@ -192,6 +222,7 @@
       }
       this.connected = false;
       this.deviceOnline = null; // Reset device status on disconnect
+      this.awaitingFirstState = true;
       this.emit('status','disconnected');
     }
   }
