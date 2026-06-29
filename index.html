@@ -388,7 +388,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </div>
 </div>
 
-<section class="history-section" id="history-section" aria-label="История климата" hidden style="display:none">
+<section class="history-section" id="history-section" aria-label="История климата">
 <button type="button" class="history-toggle" id="history-toggle" aria-expanded="false" aria-controls="history-body" onclick="toggleHistory()">
 <span class="history-toggle-label">
 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#e6b8f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
@@ -418,7 +418,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <span><i style="background:#33ccff"></i>Почва</span>
 </div>
 </div>
-<p class="history-empty" id="history-empty" style="display:none">Данные накапливаются (1 точка/мин). Ось времени — с момента включения</p>
+<p class="history-empty" id="history-empty" style="display:none">Данные накапливаются. Ось времени — с момента включения</p>
 </div>
 </section>
 
@@ -535,11 +535,54 @@ function applyLiquidGauge(elId,rawValue,forceError){
   el.classList.remove('tile-center--liquid-error');
   el.style.setProperty('--water-level',calcW(rawValue));
 }
+function flag1(v){return v===1||v===true||v==='1';}
+function statePick(d,compactKey,legacyKey,fb){
+  if(!d)return fb;
+  if(d[compactKey]!=null&&d[compactKey]!=='')return d[compactKey];
+  if(legacyKey&&d[legacyKey]!=null&&d[legacyKey]!=='')return d[legacyKey];
+  return fb;
+}
+function fmtTempPeriod(v){var n=safeNumeric(v);return n===0?'выкл':String(n)+'°C';}
+function fmtHumPeriod(v){var n=safeNumeric(v);return n===0?'выкл':String(n)+'%';}
+function fmtHumAirPeriodDisplay(d,period){
+  var smart=flag1(statePick(d,'sh','smart_humair',0))&&flag1(statePick(d,'hv','humair_vpd_valid',0));
+  var dayRaw=statePick(d,'had','h_a_day',0);
+  var nightRaw=statePick(d,'han','h_a_nig',0);
+  var hvd=statePick(d,'hvd','humair_vpd_day',null);
+  var hvn=statePick(d,'hvn','humair_vpd_night',null);
+  if(period==='day'){
+    if(smart&&hvd!=null)return String(safeNumeric(hvd))+'% (авто)';
+    return fmtHumPeriod(dayRaw);
+  }
+  if(smart&&hvn!=null)return String(safeNumeric(hvn))+'% (авто)';
+  return fmtHumPeriod(nightRaw);
+}
+function fmtAirPeriodRaw(d,period){
+  var smart=flag1(statePick(d,'sh','smart_humair',0))&&flag1(statePick(d,'hv','humair_vpd_valid',0));
+  var dayRaw=statePick(d,'had','h_a_day',0);
+  var nightRaw=statePick(d,'han','h_a_nig',0);
+  var hvd=statePick(d,'hvd','humair_vpd_day',null);
+  var hvn=statePick(d,'hvn','humair_vpd_night',null);
+  if(period==='day')return smart&&hvd!=null?String(safeNumeric(hvd)):String(safeNumeric(dayRaw));
+  return smart&&hvn!=null?String(safeNumeric(hvn)):String(safeNumeric(nightRaw));
+}
+function fmtDayNightLabel(d){
+  if(d.dnit!=null)return d.dnit?'День':'Ночь';
+  return d.day_night||'';
+}
 function resolveAirPeriodNumeric(periodKey,fallback){
   var fb=safeNumeric(fallback);
-  if(!isSmartHumairActive()||!lastDashboardData||!lastDashboardData.humair_vpd_valid)return fb;
-  if(periodKey==='day'&&lastDashboardData.humair_vpd_day!=null)return safeNumeric(lastDashboardData.humair_vpd_day);
-  if(periodKey==='night'&&lastDashboardData.humair_vpd_night!=null)return safeNumeric(lastDashboardData.humair_vpd_night);
+  if(!lastDashboardData)return fb;
+  var d=lastDashboardData;
+  if(!isSmartHumairActive()||!flag1(statePick(d,'hv','humair_vpd_valid',0)))return fb;
+  if(periodKey==='day'){
+    var hvd=statePick(d,'hvd','humair_vpd_day',null);
+    if(hvd!=null)return safeNumeric(hvd);
+  }
+  if(periodKey==='night'){
+    var hvn=statePick(d,'hvn','humair_vpd_night',null);
+    if(hvn!=null)return safeNumeric(hvn);
+  }
   return fb;
 }
 function setAirDialReadOnly(locked){
@@ -618,7 +661,7 @@ function setFeatureChipState(chip,enabled){
 function syncCoolingChip(data){
   var chip=document.getElementById('feat-temp-cooling');
   if(!chip||chip.classList.contains('pending'))return;
-  var available=!!(data&&data.cooling_available);
+  var available=!!flag1(statePick(data,'ca','cooling_available',0));
   chip.dataset.locked=available?'0':'1';
   chip.classList.toggle('locked',!available);
   if(!available){
@@ -627,7 +670,7 @@ function syncCoolingChip(data){
     if(unavail)chip.textContent=unavail;
     return;
   }
-  setFeatureChipState(chip,!!(data&&data.cooling_ui_enabled));
+  setFeatureChipState(chip,!!flag1(statePick(data,'cu','cooling_ui_enabled',0)));
 }
 function closeAllFeatureDrawers(exceptKey){
   var drawers=document.querySelectorAll('.feature-drawer');
@@ -731,6 +774,7 @@ function syncServiceAcks(d){
   el.style.display=(d.out_hg||d.out_ha)?'flex':'none';
 }
 function updateAlerts(){
+  if(document.hidden)return;
   fetch('/api/status',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
     setAlert('alert-reboot',d.reboot_alert);
     setAlert('alert-out-hg',d.out_hg);
@@ -766,50 +810,63 @@ function syncDashboardState(data){
   if(!data)return;
   lastDashboardData=data;
 
-  if(data.device_name)setText('device-name-text',data.device_name);
-  currentDayNight=data.day_night||currentDayNight;
+  if(statePick(data,'dn','device_name',''))setText('device-name-text',statePick(data,'dn','device_name',''));
+  currentDayNight=fmtDayNightLabel(data)||currentDayNight;
   setText('status-day-night',currentDayNight);
-  setText('light-current-value',String(data.light_h||'0'));
-  if(PARAMS.light&&PARAMS.light.periods[0])PARAMS.light.periods[0].value=String(data.light_h||'0');
-  if(data.light_on!==undefined){var s=document.getElementById('tile-light-start');if(s)s.textContent=String(data.light_on)+':00';var inp=document.getElementById('light-on-hour');if(inp&&!isEditLocked('light-schedule')&&document.activeElement!==inp)inp.value=data.light_on;}
+  var lightH=String(statePick(data,'lh','light_h',0));
+  setText('light-current-value',lightH);
+  if(PARAMS.light&&PARAMS.light.periods[0])PARAMS.light.periods[0].value=lightH;
+  var lightOn=statePick(data,'lon','light_on',undefined);
+  if(lightOn!==undefined){var s=document.getElementById('tile-light-start');if(s)s.textContent=String(lightOn)+':00';var inp=document.getElementById('light-on-hour');if(inp&&!isEditLocked('light-schedule')&&document.activeElement!==inp)inp.value=lightOn;}
 
-  setText('temp-current-value',data.temp_display||'--');
-  setText('temp-current-unit',data.temp_unit||'');
-  updatePeriodState('temp','day',data.temp_day||'0',data.temp_day_display||'--');
-  updatePeriodState('temp','night',data.temp_nig||'0',data.temp_nig_display||'--');
+  var tempErr=flag1(statePick(data,'et',null,0));
+  setText('temp-current-value',tempErr?'Ошибка':String(statePick(data,'ts','temp_display','--')));
+  setText('temp-current-unit',tempErr?'':'°C');
+  var td=statePick(data,'td','temp_day',0);
+  var tn=statePick(data,'tn','temp_nig',0);
+  updatePeriodState('temp','day',String(td),fmtTempPeriod(td));
+  updatePeriodState('temp','night',String(tn),fmtTempPeriod(tn));
 
-  setText('air-current-value',data.h_a_now||'--');
-  setText('air-current-unit',data.h_a_unit||'');
-  updatePeriodState('air','day',String(resolveAirPeriodNumeric('day',data.h_a_day||'0')),data.h_a_day_display||'--');
-  updatePeriodState('air','night',String(resolveAirPeriodNumeric('night',data.h_a_nig||'0')),data.h_a_nig_display||'--');
+  var airErr=flag1(statePick(data,'eh',null,0));
+  setText('air-current-value',airErr?'Ошибка':String(statePick(data,'ha','h_a_now','--')));
+  setText('air-current-unit',airErr?'':'%');
+  updatePeriodState('air','day',fmtAirPeriodRaw(data,'day'),fmtHumAirPeriodDisplay(data,'day'));
+  updatePeriodState('air','night',fmtAirPeriodRaw(data,'night'),fmtHumAirPeriodDisplay(data,'night'));
 
-  setText('soil-current-value',data.h_g_now||'--');
-  setText('soil-current-unit',data.h_g_unit||'');
-  updatePeriodState('soil','day',data.h_g_day||'0',data.h_g_day_display||'--');
-  updatePeriodState('soil','night',data.h_g_nig||'0',data.h_g_nig_display||'--');
+  var soilErr=flag1(statePick(data,'ehg',null,0));
+  setText('soil-current-value',soilErr?'Ошибка':String(statePick(data,'hg','h_g_now','--')));
+  setText('soil-current-unit',soilErr?'':'%');
+  var hgd=statePick(data,'hgd','h_g_day',0);
+  var hgn=statePick(data,'hgn','h_g_nig',0);
+  updatePeriodState('soil','day',String(hgd),fmtHumPeriod(hgd));
+  updatePeriodState('soil','night',String(hgn),fmtHumPeriod(hgn));
 
-  updatePeriodState('vent','day',data.vent_int_d||'0',(data.vent_always_day?'вкл':(parseInt(data.vent_int_d||'0')>0?String(data.vent_int_d||'0')+' мин':'выкл')));
-  updatePeriodState('vent','night',data.vent_int_n||'0',(data.vent_always_night?'вкл':(parseInt(data.vent_int_n||'0')>0?String(data.vent_int_n||'0')+' мин':'выкл')));
+  var vad=flag1(statePick(data,'vad','vent_always_day',0));
+  var van=flag1(statePick(data,'van','vent_always_night',0));
+  var vd=statePick(data,'vd','vent_int_d',0);
+  var vn=statePick(data,'vn','vent_int_n',0);
+  updatePeriodState('vent','day',String(vd),(vad?'вкл':(parseInt(vd||'0',10)>0?String(vd)+' мин':'выкл')));
+  updatePeriodState('vent','night',String(vn),(van?'вкл':(parseInt(vn||'0',10)>0?String(vn)+' мин':'выкл')));
 
-  FEATURE_STATE.smart_humair=(data.smart_humair? 'checked' : '');
-  FEATURE_STATE.cooling_enabled=(data.cooling_ui_enabled? 'checked' : '');
-  FEATURE_STATE.dehumidify_enabled=(data.dehumidify_enabled? 'checked' : '');
-  FEATURE_STATE.alternate_watering=(data.alternate_watering? 'checked' : '');
-  FEATURE_STATE.vent_always_day=(data.vent_always_day? 'checked' : '');
-  FEATURE_STATE.vent_always_night=(data.vent_always_night? 'checked' : '');
+  FEATURE_STATE.smart_humair=flag1(statePick(data,'sh','smart_humair',0))?'checked':'';
+  FEATURE_STATE.cooling_enabled=flag1(statePick(data,'cu','cooling_ui_enabled',0))?'checked':'';
+  FEATURE_STATE.dehumidify_enabled=flag1(statePick(data,'dh','dehumidify_enabled',0))?'checked':'';
+  FEATURE_STATE.alternate_watering=flag1(statePick(data,'aw','alternate_watering',0))?'checked':'';
+  FEATURE_STATE.vent_always_day=vad?'checked':'';
+  FEATURE_STATE.vent_always_night=van?'checked':'';
 
   syncCoolingChip(data);
-  setFeatureChipById('feat-air-smart',!!data.smart_humair);
-  setFeatureChipById('feat-air-dehumidify',!!data.dehumidify_enabled);
-  setFeatureChipById('feat-soil-alt',!!data.alternate_watering);
-  setFeatureChipById('feat-vent-day-always',!!data.vent_always_day);
-  setFeatureChipById('feat-vent-night-always',!!data.vent_always_night);
+  setFeatureChipById('feat-air-smart',flag1(statePick(data,'sh','smart_humair',0)));
+  setFeatureChipById('feat-air-dehumidify',flag1(statePick(data,'dh','dehumidify_enabled',0)));
+  setFeatureChipById('feat-soil-alt',flag1(statePick(data,'aw','alternate_watering',0)));
+  setFeatureChipById('feat-vent-day-always',vad);
+  setFeatureChipById('feat-vent-night-always',van);
 
-  if(data.growth_stage!==undefined){
-    updateGrowthTile(parseInt(data.growth_stage||0),parseInt(data.vpd_target_x10||0),!!data.is_stage_preset,isEditLocked('growth-vpd'));
+  if(statePick(data,'gs','growth_stage',undefined)!==undefined){
+    updateGrowthTile(parseInt(statePick(data,'gs','growth_stage',0),10),parseInt(statePick(data,'vt','vpd_target_x10',0),10),!!flag1(statePick(data,'isp','is_stage_preset',0)),isEditLocked('growth-vpd'));
   }
-  applyLiquidGauge('soil-liquid',data.h_g_now);
-  applyLiquidGauge('air-liquid',data.h_a_now);
+  applyLiquidGauge('soil-liquid',statePick(data,'hg','h_g_now',null),soilErr);
+  applyLiquidGauge('air-liquid',statePick(data,'ha','h_a_now',null),airErr);
   syncVentCurrent();
 
   var modalOpen=document.getElementById('bs-modal').classList.contains('active');
@@ -827,14 +884,15 @@ function syncDashboardState(data){
       if(isSmartHumairActive())document.getElementById('bs-subtitle').textContent='Рассчитывается автоматически (SmartHum)';
     }
   }
-  pushSpark('temp',parseFloat(data.temp_display));
-  pushSpark('air',parseFloat(data.h_a_now));
-  pushSpark('soil',parseFloat(data.h_g_now));
+  pushSpark('temp',tempErr?NaN:safeNumeric(statePick(data,'ts','temp_display',0)));
+  pushSpark('air',airErr?NaN:safeNumeric(statePick(data,'ha','h_a_now',0)));
+  pushSpark('soil',soilErr?NaN:safeNumeric(statePick(data,'hg','h_g_now',0)));
   drawSpark('spark-temp',sparkHistory.temp,'#ff4d6d');
   drawSpark('spark-air',sparkHistory.air,'#d35cff');
   drawSpark('spark-soil',sparkHistory.soil,'#33ccff');
 }
 function fetchDashboardState(){
+  if(document.hidden)return Promise.resolve();
   return fetch('/api/state',{cache:'no-store'}).then(function(r){return r.json();}).then(function(data){
     syncDashboardState(data);
     return data;
@@ -1128,10 +1186,12 @@ var SPARK_MAX=15;
 function pushSpark(key,val){var n=parseFloat(val);if(isNaN(n))return;sparkHistory[key].push(n);if(sparkHistory[key].length>SPARK_MAX)sparkHistory[key].shift();}
 function drawSpark(id,data,color){var c=document.getElementById(id);if(!c||data.length<2)return;var ctx=c.getContext('2d');var w=c.width,h=c.height;ctx.clearRect(0,0,w,h);var mn=data[0],mx=data[0];for(var j=1;j<data.length;j++){if(data[j]<mn)mn=data[j];if(data[j]>mx)mx=data[j];}var rng=mx-mn||1;ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.lineJoin='round';for(var i=0;i<data.length;i++){var x=i/(data.length-1)*w;var y=h-2-(data[i]-mn)/rng*(h-4);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();}
 var HIST_INVALID=255;
-var GH_HISTORY_UI=false;
 var historyHours=12;
 var historyOpen=false;
 var __historyFetchCtrl=null;
+var __historyFetchInFlight=false;
+var __historyFetchTimer=null;
+var __historyFetchSeq=0;
 // Биты алармов из прошивки (rec.alarms). На каждом графике показываем только профильные ошибки.
 var HIST_ALARM_DS18B20=0x40; // ошибка датчиков температуры DS18B20
 var HIST_ALARM_DHT22=0x10;   // ошибка датчика воздуха DHT22
@@ -1153,25 +1213,43 @@ function loadHistoryRangePref(){
   }catch(e){}
   applyHistoryRangeUi();
 }
+function cancelHistoryFetch(){
+  if(__historyFetchTimer){clearTimeout(__historyFetchTimer);__historyFetchTimer=null;}
+  if(__historyFetchCtrl){try{__historyFetchCtrl.abort();}catch(e){}}
+  __historyFetchInFlight=false;
+}
+function scheduleHistoryFetch(delayMs){
+  if(!historyOpen)return;
+  if(__historyFetchTimer){clearTimeout(__historyFetchTimer);__historyFetchTimer=null;}
+  __historyFetchTimer=setTimeout(function(){
+    __historyFetchTimer=null;
+    fetchHistoryChart();
+  },delayMs==null?280:delayMs);
+}
 function toggleHistory(){
-  if(!GH_HISTORY_UI)return;
   historyOpen=!historyOpen;
   var body=document.getElementById('history-body');
   var btn=document.getElementById('history-toggle');
   if(body)body.hidden=!historyOpen;
   if(btn){btn.classList.toggle('active',historyOpen);btn.setAttribute('aria-expanded',historyOpen?'true':'false');}
   if(navigator.vibrate)navigator.vibrate(8);
-  if(historyOpen)fetchHistoryChart();
+  if(historyOpen){
+    cancelHistoryFetch();
+    scheduleHistoryFetch(0);
+  }else{
+    cancelHistoryFetch();
+  }
 }
 function setHistoryRange(h){
-  if(!GH_HISTORY_UI)return;
   h=parseInt(h,10);
   if(h!==6&&h!==12&&h!==24)return;
+  if(h===historyHours)return;
   historyHours=h;
   applyHistoryRangeUi();
   try{localStorage.setItem('gh_history_hours',String(h));}catch(e){}
   if(navigator.vibrate)navigator.vibrate(8);
-  fetchHistoryChart();
+  cancelHistoryFetch();
+  scheduleHistoryFetch(280);
 }
 function setupHistoryCanvas(canvas){
   var dpr=window.devicePixelRatio||1;
@@ -1323,33 +1401,49 @@ function drawHistoryChart(payload){
   if(metaHum)metaHum.textContent=hasHum?meta:'датчик недоступен';
 }
 function fetchHistoryChart(){
-  if(!GH_HISTORY_UI)return Promise.resolve();
   if(!historyOpen)return Promise.resolve();
   if(document.hidden)return Promise.resolve();
-  if(__historyFetchCtrl){try{__historyFetchCtrl.abort();}catch(e){}}
+  if(__historyFetchInFlight)return Promise.resolve();
+  var reqHours=historyHours;
+  var seq=++__historyFetchSeq;
+  __historyFetchInFlight=true;
   __historyFetchCtrl=new AbortController();
   var sig=__historyFetchCtrl.signal;
-  return fetch('/api/history?hours='+historyHours,{cache:'no-store',signal:sig}).then(function(r){
+  return fetch('/api/history?hours='+reqHours,{cache:'no-store',signal:sig}).then(function(r){
     if(r.status===503)return null;
     return r.json();
   }).then(function(data){
+    if(seq!==__historyFetchSeq||reqHours!==historyHours)return;
+    if(data&&data.hours){
+      var srvH=parseInt(data.hours,10);
+      if((srvH===6||srvH===12||srvH===24)&&srvH!==historyHours){
+        historyHours=srvH;
+        applyHistoryRangeUi();
+      }
+    }
     if(data===null){drawHistoryChart({points:[]});return;}
     if(data&&(data.ta||data.points))drawHistoryChart(data);
     else if(Array.isArray(data))drawHistoryChart({points:data});
     else drawHistoryChart({points:[]});
   }).catch(function(err){
     if(err&&err.name==='AbortError')return;
+    if(seq!==__historyFetchSeq||reqHours!==historyHours)return;
     drawHistoryChart({points:[]});
+  }).finally(function(){
+    if(seq===__historyFetchSeq)__historyFetchInFlight=false;
   });
 }
 var __historyResizeTimer=null;
 window.addEventListener('resize',function(){
   if(!historyOpen)return;
   if(__historyResizeTimer)clearTimeout(__historyResizeTimer);
-  __historyResizeTimer=setTimeout(fetchHistoryChart,200);
+  __historyResizeTimer=setTimeout(function(){
+    __historyResizeTimer=null;
+    scheduleHistoryFetch(280);
+  },200);
 });
 window.addEventListener('pagehide',function(){
-  if(__historyFetchCtrl){try{__historyFetchCtrl.abort();}catch(e){}}
+  cancelHistoryFetch();
 });
 function attachSheetDrag(sheetId,headerId,closeFn){
   var sheet=document.getElementById(sheetId);
@@ -1428,8 +1522,8 @@ updateAlerts();
 })();
 loadHistoryRangePref();
 fetchDashboardState();
-setInterval(updateAlerts,5000);
-setInterval(fetchDashboardState,10000);
+setInterval(updateAlerts,10000);
+setInterval(fetchDashboardState,15000);
 </script>
 
 <script src="app.js"></script>

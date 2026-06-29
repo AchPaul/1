@@ -109,11 +109,11 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </div>
 </div>
 </form>
-
 <a class="neon-buttom icon" href="index.html">Выйти<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M21 11H6.414l5.293-5.293-1.414-1.414L2.586 12l7.707 7.707 1.414-1.414L6.414 13H21z"/></svg></div></a>
 </main>
-<script src="mqtt-simple.js"></script>
+
 <script src="plant_config.js"></script>
+<script src="mqtt-simple.js"></script>
 <script src="pwa-bridge.js"></script>
 
 <script>
@@ -123,15 +123,15 @@ function renderPlantResults(plants){
   if(!box)return;
   box.innerHTML='';
   if(!plants||!plants.length){box.innerHTML='<div class="plant-search-hint">Ничего не найдено</div>';return;}
-  plants.forEach(function(p){
+  plants.forEach(function(p){{
     var btn=document.createElement('button');
     btn.type='button';
     btn.className='plant-result';
     btn.textContent=p.n||'';
     btn.dataset.id=String(p.id);
-    btn.addEventListener('click',function(){selectPlant(p.id,p.n,btn);});
+    btn.addEventListener('click',function(){{selectPlant(p.id,p.n,btn);}});
     box.appendChild(btn);
-  });
+  }});
 }
 function selectPlant(id,name,btnEl){
   var hid=document.getElementById('plant-id');
@@ -140,7 +140,7 @@ function selectPlant(id,name,btnEl){
   if(sel)sel.textContent='Выбрано: '+(name||'');
   var apply=document.getElementById('plant-apply-btn');
   if(apply)apply.disabled=false;
-  document.querySelectorAll('.plant-result').forEach(function(b){b.classList.remove('selected');});
+  document.querySelectorAll('.plant-result').forEach(function(b){{b.classList.remove('selected');}});
   if(btnEl)btnEl.classList.add('selected');
 }
 function runPlantSearch(q){
@@ -148,21 +148,20 @@ function runPlantSearch(q){
   var box=document.getElementById('plant-search-results');
   if(!box)return;
   if(q.length<2){box.innerHTML='<div class="plant-search-hint">Введите минимум 2 символа</div>';return;}
-  fetch('/api/plants_search?q='+encodeURIComponent(q)+'&limit=12',{cache:'no-store'})
-    .then(function(r){return r.json();})
-    .then(function(d){renderPlantResults(d.plants);})
-    .catch(function(){renderPlantResults([]);});
+  fetch('/api/plants_search?q='+encodeURIComponent(q)+'&limit=12',{{cache:'no-store'}})
+    .then(function(r){{return r.json();}})
+    .then(function(d){{renderPlantResults(d.plants);}})
+    .catch(function(){{renderPlantResults([]);}});
 }
 function bindPlantSearch(){
   var inp=document.getElementById('plant-search-input');
   if(!inp)return;
-  inp.addEventListener('input',function(){
+  inp.addEventListener('input',function(){{
     clearTimeout(plantSearchTimer);
-    plantSearchTimer=setTimeout(function(){runPlantSearch(inp.value);},400);
-  });
+    plantSearchTimer=setTimeout(function(){{runPlantSearch(inp.value);}},400);
+  }});
 }
-bindPlantSearch();
-function loadProfileConfig(){
+bindPlantSearch();function loadProfileConfig(){
   fetch('/api/profile_config',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
     var ps=document.getElementById('profile-select');
     var ss=document.getElementById('stage-select');
@@ -191,3 +190,4 @@ document.querySelectorAll('form').forEach(function(f){f.addEventListener('submit
 
 </body>
 </html>
+    
