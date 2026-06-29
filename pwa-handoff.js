@@ -144,25 +144,10 @@
   }
 
   function bindHandoffButtons(cfg){
-    var shareBtn = document.getElementById('pwa-btn-share');
     var copyBtn = document.getElementById('pwa-btn-copy');
     var copyStatus = document.getElementById('pwa-copy-status');
     var link = document.getElementById('pwa-link');
     var urlDisplay = document.getElementById('pwa-url-display');
-
-    if(shareBtn && !shareBtn.dataset.bound){
-      shareBtn.dataset.bound = '1';
-      if(!navigator.share) shareBtn.style.display = 'none';
-      shareBtn.addEventListener('click', function(){
-        var url = state.lastUrl || (cfg.getUrl && cfg.getUrl());
-        if(!url) return;
-        navigator.share({
-          title: 'GrowHub PWA',
-          text: 'Ссылка для удалённого доступа к теплице',
-          url: url
-        }).catch(function(){});
-      });
-    }
 
     if(copyBtn && !copyBtn.dataset.bound){
       copyBtn.dataset.bound = '1';
