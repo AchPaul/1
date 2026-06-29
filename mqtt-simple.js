@@ -2,9 +2,31 @@
 // Loads mqtt.js from CDN if not already present and exposes window.MQTTManager
 (function(){
   const MQTT_CDN = 'https://unpkg.com/mqtt/dist/mqtt.min.js';
-  const LS_LAST_STATE = 'gh_last_state';
-  const LS_LAST_STATE_TS = 'gh_last_state_ts'; // Timestamp when state was received
-  const STALE_DATA_THRESHOLD = 120000; // 2 minutes - data older than this is considered stale
+  const LS_LAST_STATE_PREFIX = 'gh_last_state_';
+  const LS_LAST_STATE_TS_PREFIX = 'gh_last_state_ts_';
+  const LS_LAST_HISTORY_PREFIX = 'gh_last_history_';
+  const LS_LAST_HISTORY_TS_PREFIX = 'gh_last_history_ts_';
+
+  function cacheSlug(base){
+    return String(base || 'default').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 48);
+  }
+
+  function lsStateKey(base){ return LS_LAST_STATE_PREFIX + cacheSlug(base); }
+  function lsStateTsKey(base){ return LS_LAST_STATE_TS_PREFIX + cacheSlug(base); }
+  function lsHistoryKey(base){ return LS_LAST_HISTORY_PREFIX + cacheSlug(base); }
+  function lsHistoryTsKey(base){ return LS_LAST_HISTORY_TS_PREFIX + cacheSlug(base); }
+  const STALE_DATA_THRESHOLD = 120000; // 2 minutes — единый порог устаревания (кеш + «не в сети»)
+  const LEGACY_LS_KEYS = ['gh_last_state', 'gh_last_state_ts', 'gh_last_history', 'gh_last_history_ts'];
+
+  function purgeLegacyLsCache(){
+    LEGACY_LS_KEYS.forEach(function(k){
+      try{ localStorage.removeItem(k); }catch(_e){}
+    });
+  }
+
+  if (typeof window !== 'undefined') {
+    window.GH_STALE_DATA_MS = STALE_DATA_THRESHOLD;
+  }
 
   let mqttReady;
   if (window.mqtt) {
@@ -40,16 +62,17 @@
     constructor(){
       this.client = null;
       this.cfg = null;
-      this.events = {status: [], state: [], error: [], cached: [], alert: [], deviceStatus: []};
+      this.events = {status: [], state: [], history: [], error: [], cached: [], deviceStatus: []};
       this.baseTopic = '';
       this.stateTopic = '';
-      this.alertTopic = '';
       this.queue = [];
       this.maxQueue = 10;
       this.reconnectMs = 1000;
       this.reconnectMax = 10000;
       this.lastState = null;
       this.lastStateTime = 0;
+      this.lastHistory = null;
+      this.lastHistoryTime = 0;
       this.connected = false;
       this.deviceOnline = null; // null = unknown, true = online, false = offline
       this.awaitingFirstState = true; // Flag to track if we're waiting for first fresh state
@@ -74,13 +97,14 @@
       this.cachedStateWasStale = false;
       this.deviceOnline = null;
 
+      purgeLegacyLsCache();
       if(!cfg || !cfg.host || !cfg.port || !cfg.base) throw new Error('Incomplete MQTT config');
       const proto = deriveProto(cfg);
       const path = ensureSlash(cfg.path || '/mqtt');
       const base = cfg.base.endsWith('/') ? cfg.base : cfg.base + '/';
       this.baseTopic = base;
       this.stateTopic = base + 'state/json';
-      this.alertTopic = base + 'alert';
+      this.historyTopic = base + 'history/json';
       this.deviceStatusTopic = base + 'status'; // LWT topic for online/offline
 
       const url = `${proto}://${cfg.host}:${cfg.port}${path}`;
@@ -98,6 +122,7 @@
       this._bind();
       // emit cached state immediately if present
       this._emitCachedState();
+      this._emitCachedHistory();
     }
 
     _bind(){
@@ -106,7 +131,7 @@
         this.connected = true;
         this.reconnectMs = 1000;
         this.client.subscribe(this.stateTopic, {qos:0});
-        this.client.subscribe(this.alertTopic, {qos:0});
+        this.client.subscribe(this.historyTopic, {qos:0});
         this.client.subscribe(this.deviceStatusTopic, {qos:0}); // Subscribe to LWT
         this.emit('status','connected');
         this._flushQueue();
@@ -143,16 +168,22 @@
             this.awaitingFirstState = false; // Got fresh data
             this.deviceOnline = true; // If we receive state, device is online
             try{ 
-              localStorage.setItem(LS_LAST_STATE, JSON.stringify(js)); 
-              localStorage.setItem(LS_LAST_STATE_TS, String(this.lastStateTime));
+              localStorage.setItem(lsStateKey(this.baseTopic), JSON.stringify(js)); 
+              localStorage.setItem(lsStateTsKey(this.baseTopic), String(this.lastStateTime));
             }catch(_e){}
             this.emit('state', js);
           }catch(e){ console.warn('[MQTTManager] state parse error', e); }
-        } else if(topic === this.alertTopic){
+        } else if(topic === this.historyTopic){
           try{
-            const alertData = JSON.parse(payload.toString());
-            this.emit('alert', alertData);
-          }catch(e){ console.warn('[MQTTManager] alert parse error', e); }
+            const hist = JSON.parse(payload.toString());
+            this.lastHistory = hist;
+            this.lastHistoryTime = Date.now();
+            try{
+              localStorage.setItem(lsHistoryKey(this.baseTopic), JSON.stringify(hist));
+              localStorage.setItem(lsHistoryTsKey(this.baseTopic), String(this.lastHistoryTime));
+            }catch(_e){}
+            this.emit('history', hist);
+          }catch(e){ console.warn('[MQTTManager] history parse error', e); }
         } else if(topic === this.deviceStatusTopic){
           // LWT status: "online" or "offline"
           const status = payload.toString().trim().toLowerCase();
@@ -162,10 +193,24 @@
       });
     }
 
+    _emitCachedHistory(){
+      try{
+        const cached = localStorage.getItem(lsHistoryKey(this.baseTopic));
+        const cachedTs = localStorage.getItem(lsHistoryTsKey(this.baseTopic));
+        const timestamp = cachedTs ? parseInt(cachedTs, 10) : 0;
+        if(cached){
+          const hist = JSON.parse(cached);
+          this.lastHistory = hist;
+          this.lastHistoryTime = timestamp;
+          this.emit('history', hist);
+        }
+      }catch(_e){}
+    }
+
     _emitCachedState(){
       try{
-        const cached = localStorage.getItem(LS_LAST_STATE);
-        const cachedTs = localStorage.getItem(LS_LAST_STATE_TS);
+        const cached = localStorage.getItem(lsStateKey(this.baseTopic));
+        const cachedTs = localStorage.getItem(lsStateTsKey(this.baseTopic));
         const timestamp = cachedTs ? parseInt(cachedTs, 10) : 0;
         
         if(cached){
@@ -196,7 +241,8 @@
     publish(key, val){
       const topic = this.baseTopic ? this.baseTopic + 'set/' + key : null;
       if(!topic) return false;
-      const payload = String(val);
+      const token = (typeof window !== 'undefined' && window.GH_MQTT_CMD_TOKEN) ? window.GH_MQTT_CMD_TOKEN : 'pwa';
+      const payload = token + '\n' + String(val);
       if(!this.connected || !this.client){
         if(this.queue.length < this.maxQueue) this.queue.push({key, val});
         return false;
@@ -212,7 +258,12 @@
 
     resubscribe(){
       if(this.client && this.connected){
-        try { this.client.unsubscribe(this.stateTopic, ()=>{ this.client.subscribe(this.stateTopic); }); } catch(_e) {}
+        try {
+          this.client.unsubscribe(this.stateTopic, ()=>{
+            this.client.subscribe(this.stateTopic);
+            this.client.subscribe(this.historyTopic);
+          });
+        } catch(_e) {}
       }
     }
 
@@ -228,4 +279,5 @@
   }
 
   window.MQTTManager = MQTTManager;
+  purgeLegacyLsCache();
 })();

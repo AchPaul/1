@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -7,27 +7,69 @@
 <link rel="icon" type="image/svg+xml" href="favicon-plant.svg">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#28003c">
+<meta name="referrer" content="no-referrer">
+
 <style>
 :root{--clr-neon:hsl(288,52%,35%);--clr-bg:hsl(295,14%,67%)}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#000;color:#fff;font-family:'Courier New',monospace}
-h2{text-align:center;padding:0 5px}
-.neon-buttom{background:#000;font-size:16px;text-decoration:none;color:#ebebeb;cursor:pointer;border:var(--clr-neon) .125em solid;padding:.35em 2em;border-radius:.25em;width:260px;text-align:center;box-shadow:inset 0 0 .5em 0 var(--clr-neon),0 0 .5em 0 var(--clr-neon);position:relative}
+body{background:#000;color:#fff;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+h2{text-align:center;padding:0 6px;font-size:21px;font-weight:700;letter-spacing:.4px;color:#fff;text-shadow:0 0 18px rgba(201,0,204,.35)}
+p{text-align:center;padding:0 5px;margin-bottom:12px}
+.neon-buttom{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;max-width:300px;margin-left:auto;margin-right:auto;padding:14px 20px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:15px;font-weight:600;letter-spacing:.3px;text-decoration:none;color:#f3d7fa;cursor:pointer;background:linear-gradient(160deg,rgba(34,0,46,.92) 0%,rgba(8,0,14,.92) 100%);border:1px solid rgba(201,0,204,.32);border-radius:14px;box-shadow:0 4px 12px rgba(0,0,0,.5),inset 0 0 12px rgba(201,0,204,.08);transition:transform .14s,border-color .2s,box-shadow .2s,color .2s}
 .neon-buttom:disabled{background:#3d3b3d;color:#fff;cursor:wait}
-.neon-buttom::before{content:"";position:absolute;background:var(--clr-neon);top:120%;left:0;width:100%;height:100%;transform:perspective(3em)rotateX(40deg)scale(1,.35);filter:blur(1em);opacity:.7}
-.neon-buttom::after{content:"";position:absolute;background:var(--clr-neon);top:0;left:0;bottom:0;right:0;box-shadow:0 0 2em .5em var(--clr-neon);opacity:0;z-index:-1;transition:opacity 100ms}
-.neon-buttom:hover,.neon-buttom:focus{color:var(--clr-bg);text-shadow:none}
-.neon-buttom:hover::before,.neon-buttom:focus::before,.neon-buttom:hover::after,.neon-buttom:focus::after{opacity:1}
+.neon-buttom::before{content:none}
+.neon-buttom::after{content:none}
+.neon-buttom:hover,.neon-buttom:focus{border-color:rgba(201,0,204,.65);box-shadow:0 6px 18px rgba(0,0,0,.6),0 0 16px rgba(201,0,204,.28),inset 0 0 14px rgba(201,0,204,.12);color:#fff;outline:none}
+.neon-buttom:active{transform:scale(.97)}
 .icon{position:relative}
-.icon_btn{position:absolute;top:3px;left:10px}
+.icon_btn{position:absolute;top:50%;left:16px;transform:translateY(-50%);display:flex;align-items:center;line-height:0}
 .main{display:flex;margin:20px 0;justify-content:center;align-items:center;flex-direction:column;gap:25px}
+.group{text-align:left;width:260px;margin:0 auto}
+.group h1{font-size:13px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:#b78dc3;margin:0 0 7px 2px}
+.group_input{color:#fff;width:100%;max-width:300px;padding:12px 14px;border:1px solid rgba(201,0,204,.32);border-radius:14px;background:rgba(21,0,26,.72);font-size:16px;transition:border-color .2s,box-shadow .2s,background .2s}
+.group_input::placeholder{color:#d7b7df;opacity:.5}
+.group_input:focus{outline:0;border-color:#c900cc;box-shadow:0 0 0 3px rgba(201,0,204,.18),0 0 14px rgba(201,0,204,.22);background:rgba(40,0,52,.8)}
+.container_clue{width:100%;max-width:300px;padding:10px;font-size:16px;margin:0 auto}
+.trigger_clue{display:block;width:100%;cursor:pointer;font-size:13px;font-weight:600;text-align:center;color:#d8b6e4;background:rgba(26,0,31,.9);border:1px solid rgba(201,0,204,.32);border-radius:999px;padding:11px 14px}
+.content_clue{margin-top:10px;width:100%;padding:14px;border:1px solid rgba(201,0,204,.32);border-radius:14px;background:rgba(12,0,17,.9);color:#d7b7df;font-size:14px;line-height:1.5;display:none}
+.serv-section{width:100%;max-width:320px}
+.serv-section-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:hsl(288,52%,55%);padding:4px 0;border-bottom:1px solid hsl(288,25%,28%);margin-bottom:12px}
+.serv-tabs{display:flex;gap:8px;margin-bottom:14px}
+.serv-tab{flex:1;appearance:none;border:1px solid rgba(201,0,204,.35);border-radius:999px;background:rgba(26,0,31,.92);color:#d7b7df;font-size:12px;font-weight:600;padding:10px 6px;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
+.serv-tab.active{background:rgba(201,0,204,.22);border-color:rgba(201,0,204,.55);color:#fff}
+.serv-panel{display:none;width:100%}
+.serv-panel.active{display:block}
+.wifi-msg{font-size:15px;padding:10px 14px;border-radius:8px;margin:12px auto 0;max-width:300px;text-align:center}
+.wifi-msg--err{color:rgb(239,154,160);border:1px solid rgb(239,154,160);background:rgba(80,20,30,.35)}
+.wifi-msg--ok{color:rgb(185,226,154);border:1px solid rgb(185,226,154);background:rgba(20,60,30,.35)}
+.pass-wrap{position:relative;max-width:300px;margin:0 auto}
+.pass-wrap .group_input{width:100%;padding-right:46px}
+.pass-toggle{position:absolute;top:50%;right:10px;transform:translateY(-50%);width:32px;height:32px;border:0;background:transparent;color:#fedbff;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
+.pass-toggle svg{width:22px;height:22px;pointer-events:none}
+.neon-buttom--danger{border-color:rgba(248,113,113,.5);color:#ffd0d0;background:linear-gradient(160deg,rgba(60,0,18,.5),rgba(10,0,6,.92))}
+.attention{max-width:300px;margin:10px auto;padding:10px 14px;border:2px solid #ff2e63;border-radius:10px;background:rgba(255,0,80,.08);color:#ffb3c4;font-size:14px;text-align:center;line-height:1.25}
+.select-dropdown__button{padding:11px 14px;background:rgba(40,0,52,.9);color:#fff;border:1px solid rgba(201,0,204,.32);border-radius:12px;width:100%;font-size:15px}
+.serv-note{text-align:center;font-size:14px;color:#c4a1c7;margin:8px 0}
+.cal-status-chip{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(34,197,94,.45);background:rgba(34,197,94,.12);font-size:13px;color:#b8f5c0;margin-bottom:10px}
+.cal-status-chip.not-done{border-color:rgba(239,68,68,.45);background:rgba(239,68,68,.12);color:#fecaca}
+.cal-raw{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid rgba(201,0,204,.28);border-radius:12px;background:rgba(21,0,26,.78);margin-bottom:12px}
+.cal-raw-label{font-size:12px;color:#b78dc3;text-transform:uppercase;letter-spacing:.5px}
+.cal-raw-value{font-size:22px;font-weight:700;color:#f3d7fa}
+.cal-field-row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.cal-field-row input{flex:1;min-width:0;padding:10px 12px;border-radius:12px;border:1px solid rgba(201,0,204,.32);background:rgba(21,0,26,.72);color:#fff;font-size:16px}
+.cal-field-row input:focus{outline:0;border-color:#c900cc}
+.cal-capture{appearance:none;flex:none;width:52px;padding:10px 6px;border-radius:12px;border:1px solid rgba(34,197,94,.45);background:rgba(20,60,30,.35);color:#dffae3;font-size:13px;cursor:pointer}
+.cal-hint{font-size:11px;color:#9a7aa8;margin:-4px 0 10px 2px;line-height:1.35}
+.cal-msg{font-size:13px;color:#ef9aa0;text-align:center;margin:8px 0}
+.cal-instruction{font-size:12px;color:#caa2d4;line-height:1.45;margin-bottom:12px}
 header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.5);position:relative;z-index:100}
-.header-transition{height:40px;background:linear-gradient(#370053, #000);margin-top:-10px;margin-bottom:15px}
-.logo{margin-top:2px;display:inline-block}
-.grow{font-size:35px;color:#fff;font-weight:700;letter-spacing:5px}
-.hub{font-size:35px;color:#c900cc;font-weight:700;letter-spacing:5px;border:7px solid #c900cc;border-radius:13px;padding:2px 2px 2px 8px}
-.status-line{font-size:12px;text-align:center;opacity:.85;margin:0 0 10px;color:#e6d8f5}
-.status-line.warn{color:#ff9aa0}
+.header-transition{height:56px;position:relative;overflow:hidden;background:linear-gradient(180deg,rgba(40,0,60,.98) 0%,rgba(31,0,45,.9) 26%,rgba(20,0,31,.72) 55%,rgba(9,0,16,.34) 82%,transparent 100%);margin-top:-8px;margin-bottom:8px}
+.header-transition::before{content:'';position:absolute;inset:-20px 0 0;background:radial-gradient(ellipse at top,rgba(201,0,204,.2) 0%,rgba(120,0,180,.12) 34%,rgba(0,0,0,0) 72%);filter:blur(10px);pointer-events:none}
+.header-transition::after{content:'';position:absolute;left:0;right:0;bottom:-8px;height:26px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,#000 100%);pointer-events:none}
+.logo{margin-top:2px;display:inline-flex;align-items:center;gap:5px}
+.grow{display:inline-block;font-size:30px;color:#fff;font-weight:600;letter-spacing:.2px;line-height:1;-webkit-text-stroke:.45px currentColor;transform:scaleX(1.18)}
+.hub{display:inline-block;font-size:30px;color:#e95eeb;font-weight:600;letter-spacing:.2px;line-height:1;-webkit-text-stroke:.45px currentColor;transform:scaleX(1.18);border:4px solid #e95eeb;border-radius:10px;padding:4px;margin-left:12px}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{display:none!important}
 </style>
 </head>
 <body>
@@ -36,12 +78,217 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </header>
 <div class="header-transition"></div>
 <main class="main">
+<div class="pwa-bar" id="pwa-bar" style="width:100%;max-width:320px;margin:0 auto 10px">
+<div class="greenhouse-select-wrap" id="greenhouse-selector" style="display:none">
+<select class="greenhouse-select" id="greenhouse-select" aria-label="Выбор теплицы" style="flex:1;padding:10px;background:#1a0026;border:1px solid #6d00a6;border-radius:8px;color:#fff;font-size:13px"></select>
+<a href="greenhouses.html" class="greenhouse-manage-btn" title="Теплицы" style="padding:10px 12px;border:1px solid #6d00a6;border-radius:8px;color:#c900cc;text-decoration:none">⚙</a>
+</div>
+<div class="pwa-status" id="pwa-status-line" style="font-size:11px;text-align:center;color:#9a7aa8;min-height:16px">Подключение...</div>
+</div>
+
 <h2>Сервис</h2>
-<a class="neon-buttom icon" href="notifications.html">Уведомления<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M19 13.586V10c0-3.217-2.185-5.927-5.145-6.742C13.562 2.52 12.846 2 12 2s-1.562.52-1.855 1.258C7.185 4.074 5 6.783 5 10v3.586l-1.707 1.707A.996.996 0 0 0 3 16v2a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-2a.996.996 0 0 0-.293-.707L19 13.586zM19 17H5v-.586l1.707-1.707A.996.996 0 0 0 7 14v-4c0-2.757 2.243-5 5-5s5 2.243 5 5v4c0 .266.105.52.293.707L19 16.414V17zm-7 5a2.98 2.98 0 0 0 2.818-2H9.182A2.98 2.98 0 0 0 12 22z"/></svg></div></a>
-<a class="neon-buttom icon" href="time.html">Настройка времени<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M6.995 12c0 2.761 2.246 5.007 5.007 5.007s5.007-2.246 5.007-5.007-2.246-5.007-5.007-5.007S6.995 9.239 6.995 12zM11 19h2v3h-2zm0-17h2v3h-2zm-9 9h3v2H2zm17 0h3v2h-3zM5.637 19.778l-1.414-1.414 2.121-2.121 1.414 1.414zM16.242 6.344l2.122-2.122 1.414 1.414-2.122 2.122zM6.344 7.759 4.223 5.637l1.415-1.414 2.12 2.122zm13.434 10.605-1.414 1.414-2.122-2.122 1.414-1.414z"/></svg></div></a>
-<a class="neon-buttom icon" href="name.html">Задать имя<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M10 11H7.101l.001-.009a4.956 4.956 0 0 1 .752-1.787 5.054 5.054 0 0 1 2.2-1.811c.302-.128.617-.226.938-.291a5.078 5.078 0 0 1 2.018 0 4.978 4.978 0 0 1 2.525 1.361l1.416-1.412a7.036 7.036 0 0 0-2.224-1.501 6.921 6.921 0 0 0-1.315-.408 7.079 7.079 0 0 0-2.819 0 6.94 6.94 0 0 0-1.316.409 7.04 7.04 0 0 0-3.08 2.534 6.978 6.978 0 0 0-1.054 2.505c-.028.135-.043.273-.063.41H2l4 4 4-4zm4 2h2.899l-.001.008a4.976 4.976 0 0 1-2.103 3.138 4.943 4.943 0 0 1-1.787.752 5.073 5.073 0 0 1-2.017 0 4.956 4.956 0 0 1-1.787-.752 5.072 5.072 0 0 1-.74-.61L7.05 16.95a7.032 7.032 0 0 0 2.225 1.5c.424.18.867.317 1.315.408a7.07 7.07 0 0 0 2.818 0 7.031 7.031 0 0 0 4.395-2.945 6.974 6.974 0 0 0 1.053-2.503c.027-.135.043-.273.063-.41H22l-4-4-4 4z"/></svg></div></a>
-<a class="neon-buttom icon" href="ap.html">Настройка AP<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M12 11c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2m6 2a6 6 0 0 0-6.75-5.95c-2.62.32-4.78 2.41-5.18 5.02c-.33 2.15.49 4.11 1.93 5.4c.48.43 1.23.33 1.56-.23l.01-.01c.24-.42.14-.93-.22-1.26a3.997 3.997 0 0 1-1.22-3.94a3.954 3.954 0 0 1 2.9-2.91A3.999 3.999 0 0 1 16 13c0 1.18-.52 2.23-1.33 2.96c-.36.32-.47.84-.23 1.26l.01.01c.31.53 1.03.69 1.5.28A5.996 5.996 0 0 0 18 13m-7.17-9.93c-4.62.52-8.35 4.33-8.78 8.96a9.966 9.966 0 0 0 4.02 9.01c.48.35 1.16.2 1.46-.31c.25-.43.14-.99-.26-1.29c-2.28-1.69-3.65-4.55-3.16-7.7c.54-3.5 3.46-6.29 6.98-6.68C15.91 4.51 20 8.28 20 13c0 2.65-1.29 4.98-3.27 6.44c-.4.3-.51.85-.26 1.29c.3.52.98.66 1.46.31A9.96 9.96 0 0 0 22 13c0-5.91-5.13-10.62-11.17-9.93"/></svg></div></a>
-<a class="neon-buttom icon" href="index.html">Выйти<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M21 11H6.414l5.293-5.293-1.414-1.414L2.586 12l7.707 7.707 1.414-1.414L6.414 13H21z"/></svg></div></a>
+<div class="serv-section" id="network-section">
+<div class="serv-section-label">Сеть</div>
+<div class="serv-tabs" role="tablist">
+<button type="button" class="serv-tab active" data-tab="wifi" role="tab">Wi-Fi</button>
+<button type="button" class="serv-tab" data-tab="mqtt" role="tab">MQTT</button>
+<button type="button" class="serv-tab" data-tab="ap" role="tab">AP</button>
+</div>
+<div id="panel-wifi" class="serv-panel active" role="tabpanel">
+<form action="/send_wifi" method="POST" id="wifi-form">
+<h2 style="margin-bottom:10px">Обновить данные WiFi</h2>
+<p class="serv-note">Статус: <span id="wifi-status" style="font-weight:700">—</span></p>
+<div id="wifi-auth-error" class="wifi-msg wifi-msg--err" style="display:none">Неверный пароль!</div>
+<div id="wifi-form-msg" class="wifi-msg" style="display:none"></div>
+<div class="group"><h1>Имя Wi-Fi</h1><input class="group_input" type="text" name="ssid" id="wifi-ssid" placeholder="пусто — не менять" maxlength="32"></div>
+<div class="group"><h1>Пароль</h1><div class="pass-wrap"><input class="group_input" type="password" id="wifi-pass" name="pass" placeholder="пусто — не менять" maxlength="32" autocomplete="new-password"><button type="button" class="pass-toggle" id="wifi-pass-toggle" aria-label="Показать пароль"><svg id="wifi-pass-eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg><svg id="wifi-pass-eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 5c7 0 11 7 11 7a21.8 21.8 0 0 1-3.17 4.49"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div></div>
+<div style="text-align:center;margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:12px"><input class="neon-buttom icon" type="submit" id="wifi-save-btn" value="Сохранить"><button type="button" class="neon-buttom icon neon-buttom--danger" id="wifi-reset-btn">Сброс WiFi</button></div>
+</form>
+</div>
+<div id="panel-mqtt" class="serv-panel" role="tabpanel">
+<form action="/send_mqtt" method="POST" id="mqtt-form">
+<h2 style="margin-bottom:10px">Настройка MQTT</h2>
+<p class="serv-note">WiFi: <span id="mqtt-wifi-status" style="font-weight:700">—</span></p>
+<p class="serv-note">MQTT: <span id="mqtt-status" style="font-weight:700">—</span></p>
+<p class="serv-note">Топик: <span id="mqtt-topic">—</span></p>
+<div id="pwa-container" style="display:none;text-align:center;margin:12px 0;padding:14px;border:2px solid var(--clr-neon);border-radius:10px;background:rgba(63,0,92,0.3)">
+<p style="font-size:14px;color:#fedaff;margin-bottom:10px">Ссылка для удалённого доступа (перед открытием переключитесь на свой интернет)</p>
+<a id="pwa-link" href="#" target="_blank" style="color:#fff;font-size:16px;text-decoration:underline">Открыть PWA</a>
+</div>
+<div class="container_clue"><p class="trigger_clue" id="clue-mqtt">Как настроить MQTT?</p><div class="content_clue"><p>1) Введите данные брокера.</p><p>2) Используйте 6 цифр MAC для PWA.</p><p>3) При успехе появится ссылка PWA.</p></div></div>
+<div class="group"><h1>Хост</h1><input class="group_input" type="text" name="mqtt_host" placeholder="введите данные"></div>
+<div class="group"><h1>Порт MQTT (TLS)</h1><input class="group_input" type="number" name="mqtt_port" placeholder="8883" min="1" max="65535"></div>
+<div class="group"><h1>Логин</h1><input class="group_input" type="text" name="mqtt_user" placeholder="введите данные"></div>
+<div class="group"><h1>Пароль</h1><input class="group_input" type="text" name="mqtt_pass" placeholder="введите данные"></div>
+<div id="mqtt-error-msg" style="display:none;text-align:center;margin:12px auto;max-width:300px;padding:12px;border:1px solid rgba(239,154,160,.45);border-radius:14px;background:rgba(60,0,10,.55);color:#ef9aa0;font-size:14px">Ошибка подключения</div>
+<div style="text-align:center;margin-top:16px"><input class="neon-buttom icon" type="submit" value="Сохранить MQTT"></div>
+</form>
+<button type="button" id="mqtt-reconnect-btn" class="neon-buttom icon" style="display:none;margin-top:12px">Переподключиться</button>
+</div>
+<div id="panel-ap" class="serv-panel" role="tabpanel">
+<form action="/send_ap" method="POST" id="ap-form">
+<h2 style="margin-bottom:10px">Режим WiFi (AP)</h2>
+<p style="font-size:14px;color:#d7b7df;margin-bottom:10px">«AP включена» — теплица всегда раздаёт Wi‑Fi. «AP переключение» — AP отключается при Wi‑Fi + MQTT.</p>
+<p class="attention">Настройте MQTT, прежде чем отключать AP.</p>
+<p class="serv-note">Режим: <b id="ap-mode">—</b><br>AP: <b id="ap-state">—</b><br>WiFi: <b id="ap-wifi-status">—</b></p>
+<select name="ap_mode" id="ap-mode-select" class="select-dropdown__button" style="margin-top:8px">
+<option value="1">AP включена</option>
+<option value="0">AP переключение</option>
+</select>
+<div style="text-align:center;margin-top:16px"><input class="neon-buttom icon" type="submit" value="Сохранить"></div>
+</form>
+</div>
+</div>
+<div class="serv-section" id="cal-section">
+<div class="serv-section-label">Калибровка почвы</div>
+<div id="cal-status-chip" class="cal-status-chip not-done"><span id="cal-icon">⚠️</span><span id="cal-text">Калибровка не выполнена</span></div>
+<div class="cal-raw"><span class="cal-raw-label">RAW сейчас</span><span class="cal-raw-value" id="raw-up">—</span></div>
+<p class="cal-instruction">Сухой: датчик в воздухе. Мокрый: пролитый субстрат 5–10&nbsp;мин после стока (ПФК).</p>
+<label class="cal-hint" style="text-align:left;display:block">Сухой (воздух)</label>
+<div class="cal-field-row"><input type="number" id="air_up" min="500" max="4095" placeholder="500–4095"><button type="button" class="cal-capture" onclick="captureSoilRaw('air')">⬆️</button></div>
+<label class="cal-hint" style="text-align:left;display:block">Мокрый (ПФК)</label>
+<div class="cal-field-row"><input type="number" id="water_up" min="100" max="4000" placeholder="100–4000"><button type="button" class="cal-capture" onclick="captureSoilRaw('water')">⬇️</button></div>
+<div id="cal-msg" class="cal-msg" style="display:none"></div>
+<button type="button" class="neon-buttom" id="soil-cal-save-btn" onclick="applySoilCal()">Сохранить калибровку</button>
+<p id="soil-cal-status" class="serv-note"></p>
+</div>
+<div class="serv-section">
+<div class="serv-section-label">Заводские</div>
+<a class="neon-buttom icon" href="diag.html">Логи и диагностика<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M19.937 8.68c-.011-.032-.02-.063-.033-.094a.997.997 0 0 0-.196-.293l-6-6a.997.997 0 0 0-.293-.196c-.03-.014-.062-.022-.094-.033a.991.991 0 0 0-.259-.051C13.04 2.011 13.021 2 13 2H6c-1.103 0-2 .897-2 2v16c0 1.103.897 2 2 2h12c1.103 0 2-.897 2-2V9c0-.021-.011-.04-.013-.062a.99.99 0 0 0-.05-.258M16.586 8H14V5.414zM6 20V4h6v5a1 1 0 0 0 1 1h5l.002 10z"/><path d="M8 12h8v2H8zm0 4h8v2H8zm0-8h2v2H8z"/></svg></div></a>
+<a class="neon-buttom icon" href="reset_all.html">Сброс настроек<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M12 16c1.671 0 3-1.331 3-3s-1.329-3-3-3-3 1.331-3 3 1.329 3 3 3z"/><path d="M20.817 11.186a8.94 8.94 0 0 0-1.355-3.219 9.053 9.053 0 0 0-2.43-2.43 8.95 8.95 0 0 0-3.219-1.355 9.028 9.028 0 0 0-1.838-.18V2L8 5l3.975 3V6.002c.484-.002.968.044 1.435.14a6.961 6.961 0 0 1 2.502 1.053 7.005 7.005 0 0 1 1.892 1.892A6.967 6.967 0 0 1 19 13a7.032 7.032 0 0 1-.55 2.725 7.11 7.11 0 0 1-.644 1.188 7.2 7.2 0 0 1-.858 1.039 7.028 7.028 0 0 1-3.536 1.907 7.13 7.13 0 0 1-2.822 0 6.961 6.961 0 0 1-2.503-1.054 7.002 7.002 0 0 1-1.89-1.89A6.996 6.996 0 0 1 5 13H3a9.02 9.02 0 0 0 1.539 5.034 9.096 9.096 0 0 0 2.428 2.428A8.95 8.95 0 0 0 12 22a9.09 9.09 0 0 0 1.814-.183 9.014 9.014 0 0 0 3.218-1.355 8.886 8.886 0 0 0 1.331-1.099 9.228 9.228 0 0 0 1.1-1.332A8.952 8.952 0 0 0 21 13a9.09 9.09 0 0 0-.183-1.814z"/></svg></div></a>
+</div>
+<a class="neon-buttom icon" href="index.html">На дашборд<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M21 11H6.414l5.293-5.293-1.414-1.414L2.586 12l7.707 7.707 1.414-1.414L6.414 13H21z"/></svg></div></a>
 </main>
+
+<script src="plant_config.js"></script>
+<script src="mqtt-simple.js"></script>
+<script src="pwa-bridge.js"></script>
+
+<script>
+(function(){
+function showServTab(tab){
+  document.querySelectorAll('.serv-tab').forEach(function(b){b.classList.toggle('active',b.dataset.tab===tab);});
+  ['wifi','mqtt','ap'].forEach(function(t){
+    var p=document.getElementById('panel-'+t);
+    if(p)p.classList.toggle('active',t===tab);
+  });
+  if(tab)try{history.replaceState(null,'','#'+tab);}catch(e){}
+}
+document.querySelectorAll('.serv-tab').forEach(function(b){b.addEventListener('click',function(){showServTab(b.dataset.tab);});});
+document.querySelectorAll('.trigger_clue').forEach(function(trigger){trigger.addEventListener('click',function(){var c=trigger.nextElementSibling;if(c)c.style.display=c.style.display==='block'?'none':'block';});});
+var hash=(location.hash||'').replace('#','');
+if(hash==='wifi'||hash==='mqtt'||hash==='ap')showServTab(hash);
+if(hash==='cal'){var sec=document.getElementById('cal-section');if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});}
+function applyCalStatusChip(done){
+  var st=document.getElementById('cal-status-chip');var ic=document.getElementById('cal-icon');var tx=document.getElementById('cal-text');
+  if(!st)return;
+  if(done){st.className='cal-status-chip';if(ic)ic.textContent='✅';if(tx)tx.textContent='Калибровка выполнена';}
+  else{st.className='cal-status-chip not-done';if(ic)ic.textContent='⚠️';if(tx)tx.textContent='Калибровка не выполнена';}
+}
+function loadSoilCalConfig(){
+  fetch('/api/soil_raw',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    applyCalStatusChip(!!d.calibrated);
+    var a=document.getElementById('air_up');var w=document.getElementById('water_up');
+    if(a&&d.air_up)a.value=d.air_up;
+    if(w&&d.water_up)w.value=d.water_up;
+  }).catch(function(){});
+}
+function updateSoilRawDisplay(){
+  fetch('/api/soil_raw',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    var el=document.getElementById('raw-up');
+    if(el&&d.raw_up!==undefined)el.textContent=d.raw_up;
+  }).catch(function(){});
+}
+function captureSoilRaw(type){
+  fetch('/api/soil_raw',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    if(d.raw_up==null)return;
+    var el=document.getElementById(type==='air'?'air_up':'water_up');
+    if(el)el.value=d.raw_up;
+  }).catch(function(){});
+}
+function showCalMsg(text){var el=document.getElementById('cal-msg');if(!el)return;el.textContent=text;el.style.display='';}
+function clearCalMsg(){var el=document.getElementById('cal-msg');if(!el)return;el.style.display='none';el.textContent='';}
+function applySoilCal(){
+  clearCalMsg();
+  var a=parseInt(document.getElementById('air_up').value,10);
+  var w=parseInt(document.getElementById('water_up').value,10);
+  var status=document.getElementById('soil-cal-status');
+  var btn=document.getElementById('soil-cal-save-btn');
+  if(!Number.isFinite(a)||a<500||a>4095||!Number.isFinite(w)||w<100||w>4000||a<=w){
+    showCalMsg('Проверьте значения: сухой должен быть больше мокрого');
+    return;
+  }
+  var fd=new FormData();fd.append('air_up',a);fd.append('water_up',w);
+  btn.disabled=true;btn.textContent='Сохраняем...';
+  if(status){status.textContent='';status.style.color='';}
+  fetch('/send_soil_cal',{method:'POST',body:fd}).then(function(r){return r.json().then(function(d){return {ok:r.ok,data:d};});}).then(function(res){
+    if(!res.ok||!res.data||!res.data.ok)throw new Error('fail');
+    applyCalStatusChip(true);
+    if(status){status.textContent='Сохранено';status.style.color='#a8f0b9';}
+    btn.disabled=false;btn.textContent='Сохранить калибровку';
+  }).catch(function(){
+    if(status){status.textContent='Ошибка сохранения';status.style.color='#ffb3b3';}
+    btn.disabled=false;btn.textContent='Сохранить калибровку';
+  });
+}
+loadSoilCalConfig();updateSoilRawDisplay();setInterval(updateSoilRawDisplay,1000);
+var wifiStatus=document.getElementById('wifi-status');
+var wifiAuthErr=document.getElementById('wifi-auth-error');
+var wifiFormMsg=document.getElementById('wifi-form-msg');
+var wifiPass=document.getElementById('wifi-pass');
+var wifiPassToggle=document.getElementById('wifi-pass-toggle');
+function showWifiFormMsg(text,isOk){if(!wifiFormMsg)return;wifiFormMsg.textContent=text;wifiFormMsg.className='wifi-msg '+(isOk?'wifi-msg--ok':'wifi-msg--err');wifiFormMsg.style.display='';}
+function hideWifiFormMsg(){if(wifiFormMsg){wifiFormMsg.style.display='none';wifiFormMsg.textContent='';}}
+function setAuthFailVisible(show){if(wifiAuthErr)wifiAuthErr.style.display=show?'':'none';}
+function loadWifiConfig(){fetch('/api/wifi_config',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){var el=document.getElementById('wifi-ssid');if(el&&d.ssid)el.value=d.ssid;}).catch(function(){});}
+if(wifiPassToggle&&wifiPass){wifiPassToggle.addEventListener('click',function(){var show=wifiPass.type==='password';wifiPass.type=show?'text':'password';var oc=document.getElementById('wifi-pass-eye-closed');var oo=document.getElementById('wifi-pass-eye-open');if(oc)oc.style.display=show?'none':'';if(oo)oo.style.display=show?'':'none';});}
+var wifiForm=document.getElementById('wifi-form');
+if(wifiForm){wifiForm.addEventListener('submit',function(e){e.preventDefault();hideWifiFormMsg();var btn=document.getElementById('wifi-save-btn');if(!btn||btn.disabled)return;var orig=btn.value;btn.disabled=true;btn.value='...';fetch('/send_wifi',{method:'POST',body:new FormData(wifiForm)}).then(function(r){return r.json().then(function(d){return {ok:r.ok,data:d};});}).then(function(res){if(res.ok&&res.data&&res.data.ok){showWifiFormMsg('Сохранено ✓',true);setAuthFailVisible(false);if(wifiPass)wifiPass.value='';updateNetStatus();}else showWifiFormMsg('Неверные данные!',false);}).catch(function(){showWifiFormMsg('Ошибка связи',false);}).finally(function(){setTimeout(function(){btn.value=orig;btn.disabled=false;},2000);});});}
+var wifiResetBtn=document.getElementById('wifi-reset-btn');
+if(wifiResetBtn){wifiResetBtn.addEventListener('click',function(){if(!confirm('Сбросить сохранённые данные WiFi?'))return;hideWifiFormMsg();wifiResetBtn.disabled=true;var orig=wifiResetBtn.textContent;wifiResetBtn.textContent='...';fetch('/send_wifi_reset',{method:'POST'}).then(function(r){return r.json();}).then(function(d){if(d&&d.ok){showWifiFormMsg('WiFi сброшен',true);setAuthFailVisible(false);if(wifiForm){var ssid=wifiForm.querySelector('input[name=ssid]');if(ssid)ssid.value='';if(wifiPass)wifiPass.value='';}updateNetStatus();}else showWifiFormMsg('Ошибка сброса',false);}).catch(function(){showWifiFormMsg('Ошибка связи',false);}).finally(function(){setTimeout(function(){wifiResetBtn.textContent=orig;wifiResetBtn.disabled=false;},2000);});});}
+var mqttStatus=document.getElementById('mqtt-status');
+var mqttWifiStatus=document.getElementById('mqtt-wifi-status');
+var pwaContainer=document.getElementById('pwa-container');
+var pwaLink=document.getElementById('pwa-link');
+var mqttErrorMsg=document.getElementById('mqtt-error-msg');
+var mqttReconnectBtn=document.getElementById('mqtt-reconnect-btn');
+var GH_PWA_BASE='',GH_MQTT_HOST='',GH_MQTT_PORT='8883',GH_MQTT_USER='',GH_MQTT_PASS='',GH_MQTT_TOPIC='';
+var mqttPortInput=document.querySelector('#mqtt-form input[name="mqtt_port"]');
+var mqttHostInput=document.querySelector('#mqtt-form input[name="mqtt_host"]');
+var mqttUserInput=document.querySelector('#mqtt-form input[name="mqtt_user"]');
+var mqttPassInput=document.querySelector('#mqtt-form input[name="mqtt_pass"]');
+function getInputValue(inputEl,fallback){if(inputEl){var raw=String(inputEl.value||'').trim();if(raw.length)return raw;}return fallback;}
+function buildPwaUrl(){var host=encodeURIComponent(getInputValue(mqttHostInput,GH_MQTT_HOST));var port=encodeURIComponent(getInputValue(mqttPortInput,GH_MQTT_PORT));var user=getInputValue(mqttUserInput,GH_MQTT_USER);var pass=getInputValue(mqttPassInput,GH_MQTT_PASS);var params='?host='+host+'&port='+port+'&topic='+encodeURIComponent(GH_MQTT_TOPIC);var cred=[];if(user)cred.push('u='+encodeURIComponent(user));if(pass)cred.push('pw='+encodeURIComponent(pass));return GH_PWA_BASE+params+(cred.length?'#'+cred.join('&'):'');}
+function loadMqttConfig(){fetch('/api/mqtt_config',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){GH_PWA_BASE=d.pwa_url||'';GH_MQTT_HOST=d.host||'';GH_MQTT_PORT=String(d.port||8883);GH_MQTT_USER=d.user||'';GH_MQTT_PASS='';GH_MQTT_TOPIC=d.topic||'';if(mqttHostInput)mqttHostInput.placeholder=d.host||'введите данные';if(mqttPortInput)mqttPortInput.placeholder=GH_MQTT_PORT;if(mqttUserInput)mqttUserInput.placeholder=d.user||'введите данные';if(mqttPassInput)mqttPassInput.placeholder=d.pass_configured?'\u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d':'\u0432\u0432\u0435\u0434\u0438\u0442\u0435 \u0434\u0430\u043d\u043d\u044b\u0435';var topicEl=document.getElementById('mqtt-topic');if(topicEl)topicEl.textContent=GH_MQTT_TOPIC||'—';if(pwaLink)pwaLink.href=buildPwaUrl();}).catch(function(){});}
+['input','change'].forEach(function(ev){if(mqttPortInput)mqttPortInput.addEventListener(ev,function(){if(pwaLink)pwaLink.href=buildPwaUrl();});if(mqttHostInput)mqttHostInput.addEventListener(ev,function(){if(pwaLink)pwaLink.href=buildPwaUrl();});if(mqttUserInput)mqttUserInput.addEventListener(ev,function(){if(pwaLink)pwaLink.href=buildPwaUrl();});if(mqttPassInput)mqttPassInput.addEventListener(ev,function(){if(pwaLink)pwaLink.href=buildPwaUrl();});});
+var mqttForm=document.getElementById('mqtt-form');
+function isClearSubmission(form){return Array.prototype.every.call(form.querySelectorAll('input:not([type="submit"]):not([type="button"])'),function(input){return String(input.value||'').trim().length===0;});}
+if(mqttForm){mqttForm.addEventListener('submit',function(e){e.preventDefault();var btn=mqttForm.querySelector('input[type="submit"]');if(!btn||btn.disabled)return;var orig=btn.value;var cleared=isClearSubmission(mqttForm);btn.disabled=true;btn.value='...';if(mqttErrorMsg)mqttErrorMsg.style.display='none';fetch('/send_mqtt',{method:'POST',body:new FormData(mqttForm)}).then(function(r){return r.json().then(function(d){return {ok:r.ok,data:d};});}).then(function(res){if(res.ok&&res.data&&res.data.ok){btn.value=res.data.cleared?'Данные очищены!':(res.data.verify_started?'Проверка...':(res.data.saved?'Сохранено ✓':'Без изменений'));}else{btn.value='Неверные данные';if(mqttErrorMsg&&res.data&&!res.data.ok)mqttErrorMsg.style.display='block';}setTimeout(function(){btn.value=orig;btn.disabled=false;updateNetStatus();},2000);}).catch(function(){btn.value='Ошибка';setTimeout(function(){btn.value=orig;btn.disabled=false;},2000);});});}
+if(mqttReconnectBtn){mqttReconnectBtn.addEventListener('click',function(){if(mqttReconnectBtn.disabled)return;mqttReconnectBtn.disabled=true;var orig=mqttReconnectBtn.textContent;mqttReconnectBtn.textContent='...';if(mqttErrorMsg)mqttErrorMsg.style.display='none';fetch('/send_mqtt_reconnect',{method:'POST'}).then(function(r){return r.json();}).then(function(d){mqttReconnectBtn.textContent=(d&&d.ok)?'Подключение...':'Ошибка';setTimeout(function(){mqttReconnectBtn.textContent=orig;mqttReconnectBtn.disabled=false;updateNetStatus();},2000);}).catch(function(){mqttReconnectBtn.textContent='Ошибка';setTimeout(function(){mqttReconnectBtn.textContent=orig;mqttReconnectBtn.disabled=false;},2000);});});}
+var apState=document.getElementById('ap-state');
+var apWifiStatus=document.getElementById('ap-wifi-status');
+var apMode=document.getElementById('ap-mode');
+var apSelect=document.getElementById('ap-mode-select');
+function loadApConfig(){fetch('/api/ap_config',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){if(apMode&&d.ap_mode)apMode.textContent=d.ap_mode;if(apSelect&&d.ap_persistent!==undefined)apSelect.value=d.ap_persistent?'1':'0';}).catch(function(){});}
+var apForm=document.getElementById('ap-form');
+if(apForm){apForm.addEventListener('submit',function(e){e.preventDefault();var btn=apForm.querySelector('input[type="submit"]');if(!btn||btn.disabled)return;var orig=btn.value;btn.disabled=true;btn.value='...';fetch('/send_ap',{method:'POST',body:new FormData(apForm)}).then(function(r){return r.json().then(function(d){return {ok:r.ok,data:d};});}).then(function(res){btn.value=(res.ok&&res.data&&res.data.ok)?'Сохранено ✓':'Ошибка';setTimeout(function(){btn.value=orig;btn.disabled=false;loadApConfig();updateNetStatus();},2000);}).catch(function(){btn.value='Ошибка';setTimeout(function(){btn.value=orig;btn.disabled=false;},2000);});});}
+function paintStatus(el,connected,onText,offText){if(!el)return;el.textContent=connected?onText:offText;el.style.color=connected?'rgb(185,226,154)':'rgb(239,154,160)';}
+function updateNetStatus(){fetch('/api/status',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+paintStatus(wifiStatus,d.wifi_connected,'Сеть подключена','Сеть не подключена');
+paintStatus(mqttWifiStatus,d.wifi_connected,'Сеть подключена','Сеть не подключена');
+paintStatus(apWifiStatus,d.wifi_connected,'Сеть подключена','Сеть не подключена');
+if(d.wifi_connected)setAuthFailVisible(false);else setAuthFailVisible(!!d.wifi_auth_failed);
+paintStatus(mqttStatus,d.mqtt_connected,'Подключено','Не подключено');
+if(pwaContainer)pwaContainer.style.display=d.mqtt_connected?'block':'none';
+if(mqttErrorMsg)mqttErrorMsg.style.display=(d.mqtt_verify_failed&&!d.mqtt_connected)?'block':'none';
+if(mqttReconnectBtn)mqttReconnectBtn.style.display=(d.mqtt_reconnect_needed&&!d.mqtt_connected)?'block':'none';
+if(apState){apState.textContent=d.ap_started?'Активна':'Выключена';apState.style.color=d.ap_started?'rgb(185,226,154)':'rgb(239,154,160)';}
+}).catch(function(){});}
+loadWifiConfig();loadMqttConfig();loadApConfig();updateNetStatus();setInterval(updateNetStatus,5000);
+})();
+</script>
+
+<script src="app.js"></script>
+
 </body>
 </html>

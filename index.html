@@ -1,84 +1,199 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GrowHub</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GrowHub - Dashboard</title>
 <link rel="icon" type="image/svg+xml" href="favicon-plant.svg">
 <link rel="manifest" href="manifest.json">
-<link rel="preconnect" href="https://unpkg.com" crossorigin>
-<link rel="dns-prefetch" href="https://unpkg.com">
+<meta name="theme-color" content="#28003c">
+<meta name="referrer" content="no-referrer">
+
 <style>
-:root{--clr-neon:hsl(288,52%,35%);--clr-bg:hsl(295,14%,67%)}
+.pwa-bar{width:100%;max-width:400px;display:flex;flex-direction:column;gap:8px;margin-bottom:4px}
+.pwa-bar .greenhouse-select-wrap{display:flex;gap:10px;align-items:center}
+.pwa-bar .greenhouse-select{flex:1;padding:10px 12px;background:#1a0026;border:1px solid rgba(201,0,204,.35);border-radius:12px;color:#fff;font-family:var(--font-main);font-size:13px}
+.pwa-bar .greenhouse-manage-btn{padding:10px 12px;border:1px solid rgba(201,0,204,.35);border-radius:12px;color:#e95eeb;text-decoration:none;background:rgba(26,0,31,.92)}
+.pwa-status{font-size:11px;text-align:center;color:#9a7aa8;min-height:16px}
+.pwa-status.warn{color:#ffb3b3}
+#service-acks{display:flex;flex-direction:column;gap:10px;width:100%;max-width:400px}
+#service-acks .neon-buttom{font-size:14px;width:100%}
+</style>
+
+<style>
+:root{--clr-neon:#752b88;--clr-neon-brighter:#c900cc;--clr-bg:#000;--clr-card:#15001a;--clr-card-strong:#210028;--font-main:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--bg-body:#000}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#000;color:#fff;font-family:'Courier New',monospace}
-h2{text-align:center;padding:0 5px}
-.neon-buttom{background:#000;font-size:16px;text-decoration:none;color:#ebebeb;cursor:pointer;border:var(--clr-neon) .125em solid;padding:.35em 2em;border-radius:.25em;width:260px;text-align:center;box-shadow:inset 0 0 .5em 0 var(--clr-neon),0 0 .5em 0 var(--clr-neon);position:relative}
-.neon-buttom:disabled{background:#3d3b3d;color:#fff;cursor:wait}
-.neon-buttom::before{content:"";position:absolute;background:var(--clr-neon);top:120%;left:0;width:100%;height:100%;transform:perspective(3em)rotateX(40deg)scale(1,.35);filter:blur(1em);opacity:.7}
-.neon-buttom::after{content:"";position:absolute;background:var(--clr-neon);top:0;left:0;bottom:0;right:0;box-shadow:0 0 2em .5em var(--clr-neon);opacity:0;z-index:-1;transition:opacity 100ms}
-.neon-buttom:hover,.neon-buttom:focus{color:var(--clr-bg);text-shadow:none}
-.neon-buttom:hover::before,.neon-buttom:focus::before,.neon-buttom:hover::after,.neon-buttom:focus::after{opacity:1}
-.icon{position:relative}
-.icon_btn{position:absolute;top:3px;left:10px}
-.main{display:flex;margin:20px 0;justify-content:center;align-items:center;flex-direction:column;gap:25px}
+body{background:var(--bg-body,#000);color:#fff;font-family:var(--font-main);overflow-x:hidden;transition:background 1.5s ease}
 header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.5);position:relative;z-index:100}
-.header-transition{height:40px;background:linear-gradient(180deg,#28003c 0%,#1a0026 50%,#000 100%);margin-top:-5px;margin-bottom:15px}
-.logo{margin-top:2px;display:inline-block}
-.grow{font-size:35px;color:#fff;font-weight:700;letter-spacing:5px}
-.hub{font-size:35px;color:#c900cc;font-weight:700;letter-spacing:5px;border:7px solid #c900cc;border-radius:13px;padding:2px 2px 2px 8px}
-.alerts-section,.device-name-section{width:100%;max-width:320px;margin:0}
-.alerts-container,.device-name-container{background:linear-gradient(135deg,rgba(138,43,226,.1) 0%,rgba(75,0,130,.1) 100%);border:2px solid rgba(138,43,226,.3);border-radius:15px;padding:15px;box-shadow:0 0 20px rgba(138,43,226,.2),inset 0 0 20px rgba(138,43,226,.05);min-height:60px;display:flex;flex-direction:column;gap:8px}
-.device-name-container{align-items:center;justify-content:center}
-.device-name-text{font-size:1.5em;font-weight:normal;color:#fff;text-align:center;text-shadow:0 0 10px rgba(138,43,226,.5);letter-spacing:1px}
-.alerts-container:empty{background:linear-gradient(135deg,rgba(34,197,94,.05) 0%,rgba(21,128,61,.05) 100%);border-color:rgba(34,197,94,.2);min-height:80px;justify-content:center;align-items:center}
-.alert{padding:8px 12px;margin:0;border:1px solid rgba(220,38,127,.4);border-radius:8px;background:linear-gradient(135deg,rgba(139,69,19,.15) 0%,rgba(220,38,127,.1) 100%);color:#fff;font-size:14px;width:100%;display:none;align-items:center;justify-content:center;box-shadow:0 0 8px rgba(220,38,127,.15)}
-.alert span{color:#FFCCCB;font-size:13px;text-align:center;font-weight:500;text-shadow:0 0 3px rgba(0,0,0,.5)}
-.alerts-section{display:none}
-.config-section{width:100%;max-width:320px;margin-bottom:10px}
-.config-toggle{
-  cursor:pointer;
-  font-size:14px;
-  text-align:center;
-  color:#fff;
-  padding:12px 20px;
-  background:linear-gradient(135deg,rgba(138,43,226,.2) 0%,rgba(75,0,130,.2) 100%);
-  border:2px solid var(--clr-neon);
-  border-radius:10px;
-  box-shadow:inset 0 0 10px rgba(138,43,226,.3),0 0 15px rgba(138,43,226,.4);
-  transition:all .2s ease;
-  font-weight:600;
-  letter-spacing:.5px;
-  user-select:none;
-}
-.config-toggle:hover{
-  background:linear-gradient(135deg,rgba(138,43,226,.3) 0%,rgba(75,0,130,.3) 100%);
-  box-shadow:inset 0 0 15px rgba(138,43,226,.4),0 0 20px rgba(138,43,226,.5);
-}
-.config-box{display:none;background:linear-gradient(135deg,rgba(138,43,226,.1) 0%,rgba(75,0,130,.1) 100%);border:2px solid rgba(138,43,226,.3);border-radius:15px;padding:15px;margin-top:10px;box-shadow:0 0 20px rgba(138,43,226,.2)}
-.config-box.visible,.config-box.show{display:block}
-.config-box input{width:100%;padding:10px;margin-bottom:10px;background:#1a0026;border:2px solid #6d00a6;border-radius:8px;color:#fff;font-family:'Courier New',monospace;font-size:14px}
-.config-box input::placeholder{color:#888}
-.config-box input:focus{outline:0;border-color:#c900cc;box-shadow:0 0 8px rgba(201,0,204,.4)}
-.config-actions{display:flex;gap:10px;margin-top:10px}
-.config-actions .neon-buttom{width:auto;flex:1;font-size:14px;padding:.25em 1em}
-.btn-secondary{background:#1a0026!important;border-color:#6d00a6!important}
-.status-line{font-size:12px;text-align:center;opacity:.85;margin-top:5px;min-height:18px;color:#e6d8f5}
-.status-line.warn{color:#ff9aa0}
-.hidden{display:none!important}
-/* Push notification button badge */
-.neon-buttom.has-badge{position:relative}
-.neon-buttom .badge-dot{position:absolute;top:-4px;right:-4px;width:12px;height:12px;background:#22c55e;border-radius:50%;border:2px solid #000;animation:pulse-badge 2s infinite}
-.neon-buttom .badge-dot.pending{background:#f59e0b}
-@keyframes pulse-badge{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.7;transform:scale(1.1)}}
-/* Greenhouse selector */
-.greenhouse-selector{width:100%;max-width:320px;margin-bottom:15px}
-.greenhouse-select-wrap{display:flex;gap:10px;align-items:center}
-.greenhouse-select{flex:1;padding:12px 15px;background:#1a0026;border:2px solid #6d00a6;border-radius:10px;color:#fff;font-family:'Courier New',monospace;font-size:14px;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23c900cc'%3E%3Cpath d='M6 9L1 4h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;box-shadow:inset 0 0 .5em 0 rgba(138,43,226,.3),0 0 .5em 0 rgba(138,43,226,.3)}
-.greenhouse-select:focus{outline:none;border-color:#c900cc;box-shadow:inset 0 0 .5em 0 var(--clr-neon),0 0 .8em 0 rgba(201,0,204,.5)}
-.greenhouse-select option{background:#1a0026;color:#fff}
-.greenhouse-manage-btn{padding:10px 15px;background:#1a0026;border:2px solid #6d00a6;border-radius:10px;color:#c900cc;font-size:16px;cursor:pointer;text-decoration:none;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 .5em 0 rgba(138,43,226,.3),0 0 .5em 0 rgba(138,43,226,.3)}
-.greenhouse-manage-btn:hover{background:#2a0036;border-color:#c900cc;box-shadow:inset 0 0 .5em 0 var(--clr-neon),0 0 .8em 0 rgba(201,0,204,.5)}
+.header-transition{height:56px;position:relative;overflow:hidden;background:linear-gradient(180deg,rgba(40,0,60,.98) 0%,rgba(31,0,45,.9) 26%,rgba(20,0,31,.72) 55%,rgba(9,0,16,.34) 82%,transparent 100%);margin-top:-8px;}
+.header-transition::before{content:'';position:absolute;inset:-20px 0 0;background:radial-gradient(ellipse at top,rgba(201,0,204,.2) 0%,rgba(120,0,180,.12) 34%,rgba(0,0,0,0) 72%);filter:blur(10px);pointer-events:none}
+.header-transition::after{content:'';position:absolute;left:0;right:0;bottom:-8px;height:26px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,var(--bg-body) 100%);pointer-events:none}
+.logo{margin-top:2px;display:inline-flex;align-items:center;gap:5px}
+.grow,.hub{display:inline-block;font-family:var(--font-main);font-size:30px;font-weight:600;letter-spacing:.2px;line-height:1;transform-origin:center;-webkit-text-stroke:.45px currentColor; transform:scaleX(1.18)}
+.grow{color:#fff}
+.hub{color:#e95eeb;border:4px solid #e95eeb;border-radius:10px;padding:4px 4px 4px 4px; margin-left:12px}
+.main{display:flex;flex-direction:column;align-items:center;gap:16px;padding:0 15px 26px}
+.device-name-section,.alerts-section,.dashboard-grid,.actions,#service-acks{width:100%;max-width:400px}
+.alerts-container,.device-name-container,.tile,.bottom-sheet{background:linear-gradient(145deg,var(--clr-card),#000)}
+.alerts-container,.device-name-container{border:2px solid rgba(138,43,226,.3);border-radius:15px;padding:15px;box-shadow:0 0 20px rgba(138,43,226,.2),inset 0 0 20px rgba(138,43,226,.05)}
+.tile{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);background:rgba(21,0,26,.78)}
+.bottom-sheet{backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);background:rgba(8,0,12,.9)}
+.device-name-container{display:flex;align-items:center;justify-content:center;min-height:60px}
+.device-name-text{font-family:var(--font-main),monospace;font-size:1em;color:#FFFF;text-align:center;text-shadow:0 0 10px rgba(138,43,226,.5);font-weight:500;letter-spacing:.2px;line-height:1;transform-origin:center;-webkit-text-stroke:.45px currentColor; transform:scaleX(1.18)}
+.alerts-container{display:flex;flex-direction:column;gap:8px}
+.alert{padding:8px 12px;border:1px solid rgba(220,38,127,.4);border-radius:8px;background:linear-gradient(135deg,rgba(139,69,19,.15) 0%,rgba(220,38,127,.1) 100%);box-shadow:0 0 8px rgba(220,38,127,.15);font-size:14px;text-align:center}
+.alert span{color:#ffcccb;font-weight:500;text-shadow:0 0 3px rgba(0,0,0,.5)}
+.dashboard-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.tile{border:1px solid rgba(201,0,204,.32);border-radius:20px;display:flex;flex-direction:column;align-items:stretch;gap:0;box-shadow:0 4px 10px rgba(0,0,0,.45),inset 0 0 10px rgba(201,0,204,.08);text-align:center;color:#fff;overflow:hidden}
+.tile--wide{grid-column:1/-1}
+.tile-main{appearance:none;background:none;border:0;width:100%;padding:16px 14px 12px;display:flex;flex-direction:column;align-items:center;gap:12px;color:#fff;cursor:pointer;transition:transform .12s,border-color .18s;text-align:center;font-family:var(--font-main);flex:1}
+.tile-main:active{transform:scale(.97)}
+.tile-title{font-size:13px;color:#FFFFFF;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.tile-center{width:96px;height:96px;border-radius:50%;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid var(--clr-neon-brighter);background:#060008;box-shadow:0 0 15px rgba(201,0,204,.35)}
+.tile-center--temp{border-color:#ff4d6d;box-shadow:0 0 15px rgba(255,77,109,.35)}
+.tile-center--air{border-color:#d35cff;box-shadow:0 0 15px rgba(211,92,255,.35)}
+.tile-center--soil{border-color:#33ccff;box-shadow:0 0 15px rgba(51,204,255,.35)}
+.tile-center--light{border-color:#ffcc00;box-shadow:0 0 15px rgba(255,204,0,.35)}
+.tile-center--vent{border-color:#7df9ff;box-shadow:0 0 15px rgba(125,249,255,.35)}
+.tile-center--growth{border-color:#4aff7f;box-shadow:0 0 15px rgba(74,255,127,.35)}
+.tile--growth-locked .tile-main,.tile--growth-locked .tile-drawer-toggle{cursor:not-allowed;pointer-events:none;opacity:.78}
+.tile--growth-locked .tile-main{flex:0 0 auto}
+.tile--growth-locked .tile-main:active{transform:none}
+.tile--growth-locked .tile-actions{display:none}
+.gs-btn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.gs-vpd-stack{display:flex;flex-direction:column;gap:8px}
+.gs-vpd-row{display:flex;gap:6px;align-items:center}
+.gs-vpd-row input{display:flex;flex-direction: column; align-items: flex-start;flex:1;background:#111;color:#fff;border:1px solid #444;border-radius:8px;padding:6px 8px;font-size:14px;max-width:35px}
+.gs-vpd-row span{color:#888;font-size:12px}
+.gs-apply-row{display:flex;width:100%}
+.gs-apply-row .feature-chip{flex:1 1 100%}
+.tile-center--liquid::before,.tile-center--liquid::after{content:'';position:absolute;width:175px;height:175px;top:var(--water-level,45%);left:50%;transform:translateX(-50%);border-radius:38%;animation:wave 4s linear infinite;z-index:1}
+.tile-center--liquid::before{background:rgba(201,0,204,.35)}
+.tile-center--liquid::after{background:rgba(138,43,226,.52);border-radius:42%;animation-duration:5.2s;z-index:2}
+.tile-center--soil.tile-center--liquid::before{background:rgba(51,204,255,.26)}
+.tile-center--soil.tile-center--liquid::after{background:rgba(51,204,255,.5)}
+.tile-center--air.tile-center--liquid::before{background:rgba(211,92,255,.26)}
+.tile-center--air.tile-center--liquid::after{background:rgba(211,92,255,.52)}
+.tile-center--liquid-error::before,.tile-center--liquid-error::after{animation-play-state:paused;opacity:.22;top:50%}
+.tile-center--liquid-error.tile-center--air::before,.tile-center--liquid-error.tile-center--air::after{background:rgba(120,120,130,.35)}
+.tile-center--liquid-error.tile-center--soil::before,.tile-center--liquid-error.tile-center--soil::after{background:rgba(120,120,130,.35)}
+@keyframes wave{0%{transform:translateX(-50%) rotate(0deg)}100%{transform:translateX(-50%) rotate(360deg)}}
+.tile-symbol,.tile-reading{position:relative;z-index:3}
+.tile-symbol{font-size:21px;line-height:1;margin-bottom:4px;display:flex;align-items:center;justify-content:center}
+.tile-reading{display:flex;align-items:flex-end;justify-content:center;gap:3px;max-width:80px;flex-wrap:wrap}
+.tile-value{font-size:22px;font-weight:700;line-height:1.05;word-break:break-word}
+.tile-unit{font-size:12px;color:#f3d7fa;padding-bottom:2px}
+.tile-meta{width:100%;display:flex;flex-direction:column;gap:7px}
+.target-chip{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid rgba(201,0,204,.2);background:rgba(34,0,40,.8);border-radius:12px;padding:8px 10px;font-size:12px;text-align:left}
+.target-chip span{color:#caa2d4}
+.target-chip strong{color:#fff;font-size:13px}
+.tile--compact-main .tile-main{flex:0 0 auto}
+.tile-actions{display:flex;gap:8px;padding:0 14px 14px}
+.tile-drawer-toggle{appearance:none;background:rgba(30,0,38,.92);border:1px solid rgba(201,0,204,.22);border-radius:999px;color:#d8b6e4;padding:8px 12px;width:100%;font-family:var(--font-main);font-size:11px;letter-spacing:.6px;text-transform:uppercase;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
+.tile-drawer-toggle.active{background:rgba(201,0,204,.16);border-color:rgba(201,0,204,.45);color:#fff}
+.feature-drawer{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .38s cubic-bezier(.22,.61,.36,1),opacity .24s ease,padding-bottom .38s cubic-bezier(.22,.61,.36,1);padding:0 14px 0;will-change:grid-template-rows,opacity}
+.feature-drawer>*{min-height:0;overflow:hidden}
+.feature-drawer.active{grid-template-rows:1fr;opacity:1;padding:0 14px 14px}
+.feature-list{width:100%;display:flex;flex-wrap:wrap;gap:8px;padding-top:2px}
+.feature-chip{appearance:none;display:flex;align-items:center;justify-content:center;min-height:34px;flex:1 1 calc(50% - 4px);padding:8px 10px;border-radius:999px;border:1px solid rgba(201,0,204,.25);background:rgba(26,0,31,.92);color:#d7b7df;font-family:var(--font-main);font-size:11px;line-height:1.2;cursor:pointer;transition:background .18s,border-color .18s,color .18s,opacity .18s;text-align:center}
+.feature-chip.active{background:rgba(201,0,204,.18);border-color:rgba(201,0,204,.5);color:#fff;box-shadow:0 0 10px rgba(201,0,204,.18)}
+.feature-chip.pending{opacity:.6;cursor:wait}
+.feature-chip.locked{opacity:.45;cursor:not-allowed;pointer-events:none}
+.feature-chip--wide{flex-basis:100%}
+.feature-chip--info{cursor:default;border-style:dashed;color:#c89fd3;background:rgba(12,0,17,.88)}
+.actions{display:flex;flex-direction:column;gap:20px;margin-top:4px;padding-bottom:30px}
+.actions a.neon-buttom:not(:last-child)::before{display:none}
+.neon-buttom{background:#000;font-size:16px;text-decoration:none;color:#ebebeb;cursor:pointer;border:var(--clr-neon) .125em solid;padding:.65em 1.2em;border-radius:.45em;width:100%;text-align:center;box-shadow:inset 0 0 .5em 0 var(--clr-neon),0 0 .5em 0 var(--clr-neon);position:relative}
+.neon-buttom::before{content:'';position:absolute;background:var(--clr-neon);top:120%;left:0;width:100%;height:100%;transform:perspective(3em) rotateX(40deg) scale(1,.35);filter:blur(1em);opacity:.7}
+.neon-buttom::after{content:'';position:absolute;background:var(--clr-neon);top:0;left:0;bottom:0;right:0;box-shadow:0 0 2em .5em var(--clr-neon);opacity:0;z-index:-1;transition:opacity 100ms}
+.neon-buttom:hover,.neon-buttom:focus{color:#ead7f0;text-shadow:none}
+.neon-buttom:hover::before,.neon-buttom:focus::before,.neon-buttom:hover::after,.neon-buttom:focus::after{opacity:1}
+#service-acks{display:flex;flex-direction:column;gap:10px}
+#service-acks .neon-buttom{font-size:14px}
+.bottom-sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);z-index:999;opacity:0;pointer-events:none;transition:opacity .3s}
+.bottom-sheet-overlay.active{opacity:1;pointer-events:auto}
+.bottom-sheet{position:fixed;left:0;right:0;bottom:-100%;max-width:460px;margin:0 auto;border-top:2px solid var(--clr-neon-brighter);border-radius:25px 25px 0 0;padding:25px 20px 24px;z-index:1000;display:flex;flex-direction:column;align-items:center;box-shadow:0 -5px 25px rgba(201,0,204,.4);transition:bottom .4s cubic-bezier(.175,.885,.32,1.275)}
+.bottom-sheet.active{bottom:0}
+.bs-drag-handle{width:40px;height:5px;background:rgba(255,255,255,.3);border-radius:5px;margin-bottom:16px}
+.bs-title{font-size:20px;font-weight:700;color:#fff;text-shadow:0 0 5px var(--clr-neon-brighter);display:flex;align-items:center;gap:8px;text-align:center}
+.bs-subtitle{font-size:13px;color:#dcb5e7;text-align:center;margin:8px 0 12px}
+.step-panel{display:none;width:100%;flex-direction:column;align-items:center;gap:14px}
+.step-panel.active{display:flex}
+.period-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%}
+.period-grid--single{grid-template-columns:1fr}
+.period-btn{background:linear-gradient(145deg,var(--clr-card-strong),#000);border:1px solid rgba(201,0,204,.35);border-radius:16px;color:#fff;padding:14px 12px;box-shadow:inset 0 0 8px rgba(201,0,204,.08),0 4px 10px rgba(0,0,0,.28);cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center}
+.period-btn strong{font-size:16px}
+.period-label{font-size:12px;color:#d6abdf;text-transform:uppercase;letter-spacing:1px}
+.dial-container{position:relative;width:220px;height:220px;touch-action:none;margin-bottom:6px}
+.dial-svg{width:100%;height:100%;transform:rotate(135deg)}
+.dial-track{fill:none;stroke:rgba(255,255,255,.05);stroke-width:14;stroke-linecap:round}
+.dial-progress{fill:none;stroke:var(--clr-neon-brighter);stroke-width:14;stroke-linecap:round;filter:drop-shadow(0 0 8px var(--clr-neon-brighter));transition:stroke-dashoffset .1s linear}
+.dial-value-container{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.dial-emoji{font-size:28px;margin-bottom:6px}
+.dial-value{font-size:48px;font-weight:700;color:#fff;text-shadow:0 0 15px var(--clr-neon-brighter);line-height:1}
+.dial-unit{font-size:18px;color:#aaa;margin-top:5px}
+.dial-controls{display:flex;justify-content:space-between;width:100%;padding:0 30px;margin-top:-18px;z-index:10}
+.neon-btn-sm{background:#000;color:#fff;border:2px solid var(--clr-neon-brighter);border-radius:50%;width:44px;height:44px;font-size:28px;display:flex;justify-content:center;align-items:center;box-shadow:0 0 8px var(--clr-neon-brighter);cursor:pointer}
+.sheet-actions{display:flex;gap:10px;width:100%;margin-top:10px}
+.ghost-btn,.apply-btn{flex:1;background:#000;color:#fff;border:1px solid var(--clr-neon-brighter);padding:14px;border-radius:12px;font-size:16px;font-weight:700;letter-spacing:1px;cursor:pointer;box-shadow:inset 0 0 10px rgba(201,0,204,.25)}
+.apply-btn:disabled,.ghost-btn:disabled{opacity:.55;cursor:wait}
+.dial-container.dial-readonly{opacity:.55;pointer-events:none}
+.sheet-status{min-height:18px;font-size:13px;color:#a8f0b9;text-align:center}
+@media (max-width:360px){.main{padding:0 10px 24px}.tile-main{padding:14px 10px 10px}.tile-actions{padding:0 10px 10px}.tile-sparkline-wrap{padding:2px 10px 8px}.feature-drawer{padding:0 10px 0}.feature-drawer.active{padding:0 10px 10px}.tile-center{width:90px;height:90px}.tile-value{font-size:19px}.dial-container{width:200px;height:200px}}
+.bs-header{width:100%;display:flex;flex-direction:column;align-items:center;cursor:grab;touch-action:none;padding:2px 0 4px;user-select:none;-webkit-user-select:none}
+.bs-header:active{cursor:grabbing}
+.bs-drag-handle{transition:background .2s,width .2s}
+.bs-header:hover .bs-drag-handle,.bs-header:active .bs-drag-handle{background:rgba(201,0,204,.55);width:54px}
+.bottom-sheet.dragging{transition:none}
+.device-name-section{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.device-name-container{position:relative;transition:border-color .2s,box-shadow .2s,transform .12s}
+.device-name-section:hover .device-name-container,.device-name-section:focus-within .device-name-container{border-color:rgba(201,0,204,.6);box-shadow:0 0 25px rgba(201,0,204,.3),inset 0 0 25px rgba(201,0,204,.08)}
+.device-name-section:active .device-name-container{transform:scale(.98)}
+.device-name-edit-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;opacity:.55;flex-shrink:0;transition:opacity .2s}
+.device-name-section:hover .device-name-edit-icon{opacity:.95}
+.actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:8px;padding-bottom:30px}
+.action-card{appearance:none;cursor:pointer;text-decoration:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:14px 8px;border-radius:18px;border:1px solid rgba(201,0,204,.32);background:linear-gradient(160deg,rgba(34,0,46,.92) 0%,rgba(8,0,14,.92) 100%);color:#f3d7fa;box-shadow:0 4px 12px rgba(0,0,0,.5),inset 0 0 12px rgba(201,0,204,.08);transition:transform .14s ease,border-color .2s ease,box-shadow .2s ease;min-height:96px;font-family:var(--font-main)}
+.action-card:active{transform:scale(.96)}
+.action-card:hover,.action-card:focus{border-color:rgba(201,0,204,.65);box-shadow:0 6px 18px rgba(0,0,0,.6),0 0 14px rgba(201,0,204,.25),inset 0 0 14px rgba(201,0,204,.12);color:#fff;outline:none}
+.action-icon{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:radial-gradient(circle at 30% 30%,rgba(201,0,204,.28),rgba(201,0,204,.08) 70%);border:1px solid rgba(201,0,204,.5);box-shadow:inset 0 0 10px rgba(201,0,204,.18),0 0 8px rgba(201,0,204,.18)}
+.action-icon svg{width:22px;height:22px;display:block}
+.action-card:hover .action-icon{box-shadow:inset 0 0 12px rgba(201,0,204,.3),0 0 14px rgba(201,0,204,.35)}
+.action-label{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;text-align:center;line-height:1.2}
+@media (max-width:360px){.action-card{min-height:84px;padding:12px 6px;gap:7px}.action-icon{width:34px;height:34px}.action-icon svg{width:19px;height:19px}.action-label{font-size:10px;letter-spacing:.4px}}
+.name-edit-row{display:flex;flex-direction:column;gap:6px;width:100%}
+.name-edit-input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(201,0,204,.45);background:rgba(0,0,0,.55);color:#fff;font-size:16px;font-family:var(--font-main);text-align:center;box-shadow:inset 0 0 8px rgba(201,0,204,.18);transition:border-color .2s,box-shadow .2s}
+.name-edit-input:focus{outline:none;border-color:var(--clr-neon-brighter);box-shadow:inset 0 0 10px rgba(201,0,204,.3),0 0 12px rgba(201,0,204,.35)}
+.name-edit-counter{font-size:11px;color:#b78dc3;text-align:right;letter-spacing:.5px}
+/* Bug #22: glow toast для индикаторов сохранения (без перезагрузки страницы) */
+.gh-toast{position:fixed;left:50%;top:18px;transform:translateX(-50%) translateY(-20px);max-width:88vw;padding:10px 18px;border-radius:14px;font-family:var(--font-main);font-size:14px;font-weight:600;color:#fff;background:linear-gradient(135deg,#5a2d82 0%,#380057 100%);border:1px solid rgba(201,0,204,.55);box-shadow:0 8px 22px rgba(0,0,0,.5),0 0 14px rgba(201,0,204,.45);opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s ease;z-index:9999;text-align:center;letter-spacing:.4px}
+.gh-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.gh-toast.ok{border-color:rgba(106,209,128,.7);box-shadow:0 8px 22px rgba(0,0,0,.5),0 0 16px rgba(106,209,128,.45);color:#dffae3}
+.gh-toast.err{border-color:rgba(239,154,160,.7);box-shadow:0 8px 22px rgba(0,0,0,.5),0 0 16px rgba(239,154,160,.45);color:#ffe1e3}
+.history-section{width:100%;max-width:400px;margin:8px 0 18px}
+.history-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;appearance:none;border:1px solid rgba(201,0,204,.3);border-radius:16px;background:linear-gradient(145deg,rgba(22,0,28,.95),#000);color:#f3d7fa;font-family:var(--font-main);font-size:14px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:15px 18px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.4),inset 0 0 12px rgba(201,0,204,.06);transition:border-color .18s,box-shadow .18s,transform .12s,border-radius .18s}
+.history-toggle:hover{border-color:rgba(201,0,204,.55);box-shadow:0 0 22px rgba(201,0,204,.22),inset 0 0 14px rgba(201,0,204,.1)}
+.history-toggle:active{transform:scale(.99)}
+.history-toggle.active{border-color:rgba(201,0,204,.5);border-bottom-left-radius:0;border-bottom-right-radius:0}
+.history-toggle-label{display:inline-flex;align-items:center;gap:9px}
+.history-chevron{transition:transform .22s ease;flex:none}
+.history-toggle.active .history-chevron{transform:rotate(180deg)}
+.history-body{border:1px solid rgba(201,0,204,.28);border-top:0;border-radius:0 0 18px 18px;padding:14px 12px 12px;background:rgba(12,0,17,.9);box-shadow:0 4px 14px rgba(0,0,0,.4),inset 0 0 12px rgba(201,0,204,.05)}
+.history-body[hidden]{display:none}
+.history-range{display:flex;gap:8px;margin-bottom:14px;width:100%}
+.history-range-btn{flex:1;appearance:none;border:1px solid rgba(201,0,204,.35);border-radius:999px;background:rgba(26,0,31,.92);color:#d7b7df;font-family:var(--font-main);font-size:12px;font-weight:600;padding:10px 6px;letter-spacing:.4px;cursor:pointer;transition:background .18s,border-color .18s,color .18s,box-shadow .18s;text-align:center}
+.history-range-btn.active{background:rgba(201,0,204,.22);border-color:rgba(201,0,204,.55);color:#fff;box-shadow:0 0 12px rgba(201,0,204,.22),inset 0 0 8px rgba(201,0,204,.12)}
+.history-range-btn:active{transform:scale(.97)}
+.history-chart-block{margin-bottom:18px}
+.history-chart-block:last-child{margin-bottom:0}
+.history-chart-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px}
+.history-chart-title{font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#f3d7fa}
+.history-sub{font-size:11px;color:#9a7aa8}
+.history-canvas-wrap{width:100%;position:relative}
+.history-canvas-wrap canvas{display:block;width:100%;border-radius:12px;background:rgba(0,0,0,.35)}
+.history-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:9px;font-size:11px;color:#caa2d4}
+.history-legend span{display:inline-flex;align-items:center;gap:5px}
+.history-legend i{display:inline-block;width:10px;height:10px;border-radius:2px}
+.history-empty{margin:10px 0 0;font-size:12px;color:#9a7aa8;text-align:center}
 </style>
 </head>
 <body>
@@ -87,60 +202,1237 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </header>
 <div class="header-transition"></div>
 <main class="main">
-<!-- Селектор теплиц -->
-<div class="greenhouse-selector" id="greenhouse-selector" style="display:none">
-<div class="greenhouse-select-wrap">
-<select class="greenhouse-select" id="greenhouse-select"></select>
-<a href="greenhouses.html" class="greenhouse-manage-btn" title="Управление теплицами">⚙️</a>
+<div class="pwa-bar" id="pwa-bar" style="width:100%;max-width:400px;margin:0 auto 10px">
+<div class="greenhouse-select-wrap" id="greenhouse-selector" style="display:none">
+<select class="greenhouse-select" id="greenhouse-select" aria-label="Выбор теплицы" style="flex:1;padding:10px;background:#1a0026;border:1px solid #6d00a6;border-radius:8px;color:#fff;font-size:13px"></select>
+<a href="greenhouses.html" class="greenhouse-manage-btn" title="Теплицы" style="padding:10px 12px;border:1px solid #6d00a6;border-radius:8px;color:#c900cc;text-decoration:none">⚙</a>
+</div>
+<div class="pwa-status" id="pwa-status-line" style="font-size:11px;text-align:center;color:#9a7aa8;min-height:16px">Подключение...</div>
+</div>
+
+<div id="gh-toast" class="gh-toast" role="status" aria-live="polite"></div>
+<div class="device-name-section" id="device-name-section" role="button" tabindex="0" aria-label="Изменить имя теплицы" onclick="openNameModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openNameModal();}">
+<div class="device-name-container">
+<span class="device-name-text" id="device-name-text">Теплица</span>
+</div>
+</div>
+<div class="alerts-section" id="alerts-section" style="display:none">
+<div class="alerts-container">
+<div class="alert" id="alert-reboot" style="display:none"><span>⚡ Было отключение питания</span></div>
+<div class="alert" id="alert-out-hg" style="display:none"><span>⚠️ Бак для воды пуст!</span></div>
+<div class="alert" id="alert-out-ha" style="display:none"><span>⚠️ Увлажнитель пуст!</span></div>
+<div class="alert" id="alert-hig-t" style="display:none"><span>⚠️ Жарко (воздух)!</span></div>
+<div class="alert" id="alert-low-t" style="display:none"><span>⚠️ Холодно (воздух)!</span></div>
+<div class="alert" id="alert-err-air" style="display:none"><span>⚠️ Ошибка воздушного датчика!</span></div>
+<div class="alert" id="alert-err-hg" style="display:none"><span>⚠️ Ошибка датчика почвы!</span></div>
+<div class="alert" id="alert-err-soil-t" style="display:none"><span>⚠️ Ошибка датчика температуры субстрата!</span></div>
+<div class="alert" id="alert-water" style="display:none;border-color:rgba(59,130,246,.4);background:linear-gradient(135deg,rgba(59,130,246,.15) 0%,rgba(37,99,235,.1) 100%)"><span style="color:#93c5fd">💧 Ваша очередь полить растение!</span></div>
+</div>
+</div>
+<div id="service-acks" style="display:none;flex-direction:column;gap:10px;margin-top:0;width:100%;max-width:320px"></div>
+
+<div class="dashboard-grid">
+<div class="tile tile--compact-main">
+<button class="tile-main" type="button" onclick="openPeriodModal('light')">
+<span class="tile-title">Освещение</span>
+<div class="tile-center tile-center--light">
+<span class="tile-symbol"><svg id="icon-light" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffcc00" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></span>
+<div class="tile-reading"><span class="tile-value" id="light-current-value">—</span><span class="tile-unit">ч</span></div>
+</div>
+<div class="tile-meta">
+<div class="target-chip"><span>Сейчас</span><strong id="status-day-night">—</strong></div>
+<div class="target-chip"><span>Старт</span><strong id="tile-light-start">—:00</strong></div>
+</div>
+</button>
+<div class="tile-actions">
+<button type="button" class="tile-drawer-toggle" id="drawer-toggle-light" aria-expanded="false" onclick="toggleFeatureDrawer(event,'light')">Функции</button>
+</div>
+<div class="feature-drawer" id="drawer-light">
+<div id="light-on-controls">
+<div style="font-size:11px;color:#888;text-align:center;padding:4px 0 8px;letter-spacing:1px;text-transform:uppercase">Включение света</div>
+<div class="gs-vpd-stack">
+<div class="gs-vpd-row"><span>Старт: </span><input type="number" style="margin-left:9px" id="light-on-hour" min="0" max="23" value="0"><span>:00</span></div>
+<div class="gs-vpd-row"><span>Сейчас:</span><input type="number" id="light-cur-hour" min="0" max="23" value="0"><span>:00</span></div>
+<div class="gs-apply-row"><button type="button" class="feature-chip feature-chip--wide" onclick="applyLightOn(this)">Применить</button></div>
+</div>
+</div>
 </div>
 </div>
 
-<div class="device-name-section">
-<div class="device-name-container">
-<span class="device-name-text"><span data-field="name">—</span></span>
+<div class="tile">
+<button class="tile-main" type="button" onclick="openPeriodModal('temp')">
+<span class="tile-title">Темп. грунта</span>
+<div class="tile-center tile-center--temp">
+<span class="tile-symbol"><svg id="icon-temp" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff4d6d" stroke-width="2" stroke-linecap="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg></span>
+<div class="tile-reading"><span class="tile-value" id="temp-current-value">—</span><span class="tile-unit" id="temp-current-unit"></span></div>
 </div>
-<div class="status-line" id="status-line">Подключение...</div>
+<div class="tile-meta">
+<div class="target-chip"><span>День</span><strong id="tile-temp-day">—</strong></div>
+<div class="target-chip"><span>Ночь</span><strong id="tile-temp-night">—</strong></div>
 </div>
-<div class="config-section">
-<div class="config-toggle" id="config-toggle">⚙️ Настройка подключения</div>
-<div class="config-box" id="config-box">
-<input type="text" id="cfg-host" placeholder="Адрес" />
-<input type="text" id="cfg-port" placeholder="Порт" />
-<input type="text" id="cfg-user" placeholder="Логин" />
-<input type="password" id="cfg-pass" placeholder="Пароль" />
-<input type="text" id="cfg-base" placeholder="Топик" />
-<div class="config-actions">
-<button class="neon-buttom" id="cfg-save">Сохранить</button>
-<button class="neon-buttom btn-secondary" id="cfg-clear">Очистить</button>
+</button>
+<div class="tile-actions">
+<button type="button" class="tile-drawer-toggle" id="drawer-toggle-temp" aria-expanded="false" onclick="toggleFeatureDrawer(event,'temp')">Функции</button>
 </div>
-</div>
-</div>
-<div class="alerts-section">
-<div class="alerts-container" id="alerts">
-<div class="alert" data-alert="rebooted"><span>⚡ Было отключение!<a href="time.html" style="color:#fff;text-decoration:underline">Настройте время</a></span></div>
-<div class="alert" data-alert="alert_water"><span>⚠️ Бак для воды пуст!</span></div>
-<div class="alert" data-alert="alert_humid"><span>⚠️ Увлажнитель пуст!</span></div>
-<div class="alert" data-alert="watering_notification_pending" style="border-color:rgba(59,130,246,.4);background:linear-gradient(135deg,rgba(59,130,246,.15) 0%,rgba(37,99,235,.1) 100%)"><span style="color:#93C5FD">💧 Ваша очередь полить растение вручную!</span></div>
-<div class="alert" data-alert="alert_high_temp"><span>⚠️ Слишком жарко!</span></div>
-<div class="alert" data-alert="alert_low_temp"><span>⚠️ Слишком холодно!</span></div>
-<div class="alert" data-alert="err_sensor_temp"><span>⚠️ Ошибка датчика температуры!</span></div>
-<div class="alert" data-alert="err_sensor_hg"><span>⚠️ Ошибка верхнего датчика вл. почвы!</span></div>
-<div class="alert" data-alert="err_sensor_hg2"><span>⚠️ Ошибка нижнего датчика вл. почвы!</span></div>
-<div class="alert" data-alert="err_sensor_dht"><span>⚠️ Ошибка датчика вл. воздуха!</span></div>
-</div>
-<div id="service-acks" style="display:flex;flex-direction:column;gap:10px;margin-top:15px;width:100%">
-<button id="btn_ack_water" class="neon-buttom hidden" style="width:100%;font-size:14px">💧 Бак залит</button>
-<button id="btn_ack_humid" class="neon-buttom hidden" style="width:100%;font-size:14px">💨 Увлажнитель залит</button>
+<div class="feature-drawer" id="drawer-temp">
+<div class="feature-list">
+<button type="button" class="feature-chip feature-chip--wide" id="feat-temp-cooling" data-state="" data-locked="0" data-text-on="Охлаждение: вкл" data-text-off="Охлаждение: выкл" data-text-unavail="Охлаждение: выкл (нет уставки)" onclick="toggleFeature(event,'cooling_enabled',this)">Охлаждение: выкл</button>
 </div>
 </div>
-<a href="state.html" class="neon-buttom icon">Состояние теплицы<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M20 12a2 2 0 0 0-.703.133l-2.398-1.963c.059-.214.101-.436.101-.67C17 8.114 15.886 7 14.5 7S12 8.114 12 9.5c0 .396.1.765.262 1.097l-2.909 3.438A2.06 2.06 0 0 0 9 14c-.179 0-.348.03-.512.074l-2.563-2.563C5.97 11.348 6 11.179 6 11c0-1.108-.892-2-2-2s-2 .892-2 2 .892 2 2 2c.179 0 .348-.03.512-.074l2.563 2.563A1.906 1.906 0 0 0 7 16c0 1.108.892 2 2 2s2-.892 2-2c0-.237-.048-.46-.123-.671l2.913-3.442c.227.066.462.113.71.113a2.48 2.48 0 0 0 1.133-.281l2.399 1.963A2.077 2.077 0 0 0 18 14c0 1.108.892 2 2 2s2-.892 2-2-.892-2-2-2z"/></svg></div></a>
-<a href="settings.html" class="neon-buttom icon">Настройка теплицы<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M10.9 11.77c-.11 0-.21-.02-.31-.06-.1-.04-.19-.1-.26-.18-.07-.08-.12-.17-.15-.27-.03-.1-.04-.21-.03-.32 0-.09 1.23-9.14 9.22-9.14.18 0 .36.07.49.19.14.12.22.29.24.47.24 2.35-.46 4.71-1.95 6.55-1.6 1.85-4.05 2.77-7.27 2.77zm7.76-8.45c-4.81.42-6.39 5-6.85 6.92.97-.01 1.92-.2 2.81-.58.89-.38 1.7-.93 2.38-1.62 1.1-1.33 1.68-3.01 1.66-4.73zM10.9 11.76h-.09c-2.41-.3-7-2.17-7-7.06 0-.18.07-.36.19-.5.13-.14.29-.22.48-.25 1.82-.18 3.65.36 5.08 1.5.74.71 1.31 1.58 1.67 2.54.36.96.51 1.98.43 3.01 0 .11-.02.21-.07.31-.04.1-.11.19-.19.26-.14.12-.31.19-.5.19zm-5.52-6.34c.39 3.12 3.25 4.27 4.73 4.66-.04-1.33-.59-2.59-1.55-3.51-.9-.73-2.02-1.13-3.18-1.15z"/><path d="M10.9 15.9c-.2 0-.39-.08-.53-.22-.14-.14-.22-.33-.22-.53v-4.15c0-.2.08-.39.22-.53.14-.14.33-.22.53-.22.2 0 .39.08.53.22.14.14.22.33.22.53v4.13c0 .1-.02.2-.06.3-.04.09-.09.18-.16.25-.07.07-.16.13-.25.18-.09.04-.19.06-.28.06z"/><path d="M13.5 22.21H8.7c-.99-.02-1.93-.42-2.62-1.12-.69-.7-1.08-1.65-1.08-2.63v-3.31c0-.2.08-.39.22-.53.14-.14.33-.22.53-.22h10.75c.2 0 .39.08.53.22.14.14.22.33.22.53v3.31c0 .99-.39 1.95-1.1 2.65-.71.71-1.66 1.11-2.65 1.11zM6.5 15.9v2.56c0 .59.23 1.15.64 1.57.41.41.98.64 1.56.64h4.8c.6 0 1.17-.24 1.59-.65.42-.42.66-.99.66-1.59V15.9H6.5z"/></svg></div></a>
-<a href="profile.html" class="neon-buttom icon">Выбрать растение<div class="icon_btn"><svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#fff" stroke-width="2"><polyline points="1 10.5 12 1.5 23 10.5"/><polyline points="20 7.5 20 22.5 4 22.5 4 7.5"/><line x1="22" y1="22.5" x2="2" y2="22.5"/><path d="M7 10.5h.77A4.23 4.23 0 0 1 12 14.73v.77h-.77A4.23 4.23 0 0 1 7 11.27V10.5z"/><path d="M16.23 11.5H17v.77a4.23 4.23 0 0 1-4.23 4.23H12v-.77a4.23 4.23 0 0 1 4.23-4.23z" transform="translate(29 28)rotate(180)"/><line x1="12" y1="21.5" x2="12" y2="14.5"/></svg></div></a>
-<a href="service.html" class="neon-buttom icon">Сервисные настройки<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M12 16c2.206 0 4-1.794 4-4s-1.794-4-4-4-4 1.794-4 4 1.794 4 4 4zm0-6c1.084 0 2 .916 2 2s-.916 2-2 2-2-.916-2-2 .916-2 2-2z"/><path d="m2.845 16.136 1 1.73c.531.917 1.809 1.261 2.73.73l.529-.306A8.1 8.1 0 0 0 9 19.402V20c0 1.103.897 2 2 2h2c1.103 0 2-.897 2-2v-.598a8.132 8.132 0 0 0 1.896-1.111l.529.306c.923.53 2.198.188 2.731-.731l.999-1.729a2.001 2.001 0 0 0-.731-2.732l-.505-.292a7.718 7.718 0 0 0 0-2.224l.505-.292a2.002 2.002 0 0 0 .731-2.732l-.999-1.729c-.531-.92-1.808-1.265-2.731-.732l-.529.306A8.1 8.1 0 0 0 15 4.598V4c0-1.103-.897-2-2-2h-2c-1.103 0-2 .897-2 2v.598a8.132 8.132 0 0 0-1.896 1.111l-.529-.306c-.924-.531-2.2-.187-2.731.732l-.999 1.729a2.001 2.001 0 0 0 .731 2.732l.505.292a7.683 7.683 0 0 0 0 2.223l-.505.292a2.003 2.003 0 0 0-.731 2.733zm3.326-2.758A5.703 5.703 0 0 1 6 12c0-.462.058-.926.17-1.378a.999.999 0 0 0-.47-1.108l-1.123-.65.998-1.729 1.145.662a.997.997 0 0 0 1.188-.142 6.071 6.071 0 0 1 2.384-1.399A1 1 0 0 0 11 5.3V4h2v1.3a1 1 0 0 0 .708.956 6.083 6.083 0 0 1 2.384 1.399.999.999 0 0 0 1.188.142l1.144-.661 1 1.729-1.124.649a1 1 0 0 0-.47 1.108c.112.452.17.916.17 1.378 0 .461-.058.925-.171 1.378a1 1 0 0 0 .471 1.108l1.123.649-.998 1.729-1.145-.661a.996.996 0 0 0-1.188.142 6.071 6.071 0 0 1-2.384 1.399A1 1 0 0 0 13 18.7l.002 1.3H11v-1.3a1 1 0 0 0-.708-.956 6.083 6.083 0 0 1-2.384-1.399.992.992 0 0 0-1.188-.141l-1.144.662-1-1.729 1.124-.651a1 1 0 0 0 .471-1.108z"/></svg></div></a>
-<a href="contacts.html" class="neon-buttom icon">Контакты<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M17.707 12.293a.999.999 0 0 0-1.414 0l-1.594 1.594c-.739-.22-2.118-.72-2.992-1.594s-1.374-2.253-1.594-2.992l1.594-1.594a.999.999 0 0 0 0-1.414l-4-4a.999.999 0 0 0-1.414 0L3.581 5.005c-.38.38-.594.902-.586 1.435.023 1.424.4 6.37 4.298 10.268s8.844 4.274 10.269 4.298h.028c.528 0 1.027-.208 1.405-.586l2.712-2.712a.999.999 0 0 0 0-1.414l-4-4.001zm-.127 6.712c-1.248-.021-5.518-.356-8.873-3.712-3.366-3.366-3.692-7.651-3.712-8.874L7 4.414 9.586 7 8.293 8.293a1 1 0 0 0-.272.912c.024.115.611 2.842 2.271 4.502s4.387 2.247 4.502 2.271a.991.991 0 0 0 .912-.271L17 14.414 19.586 17l-2.006 2.005z"/></svg></div></a>
+</div>
+
+<div class="tile">
+<button class="tile-main" type="button" onclick="openPeriodModal('air')">
+<span class="tile-title">Влажность воздуха</span>
+<div class="tile-center tile-center--air tile-center--liquid" id="air-liquid">
+<span class="tile-symbol"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d35cff" stroke-width="2" stroke-linecap="round"><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2M9.6 4.4A2 2 0 1 1 11 8H2M12.6 19.4A2 2 0 1 0 14 16H2"/></svg></span>
+<div class="tile-reading"><span class="tile-value" id="air-current-value">—</span><span class="tile-unit" id="air-current-unit"></span></div>
+</div>
+<div class="tile-meta">
+<div class="target-chip"><span>День</span><strong id="tile-air-day">—</strong></div>
+<div class="target-chip"><span>Ночь</span><strong id="tile-air-night">—</strong></div>
+</div>
+</button>
+<div class="tile-actions">
+<button type="button" class="tile-drawer-toggle" id="drawer-toggle-air" aria-expanded="false" onclick="toggleFeatureDrawer(event,'air')">Функции</button>
+</div>
+<div class="feature-drawer" id="drawer-air">
+<div class="feature-list">
+<button type="button" class="feature-chip feature-chip--wide" id="feat-air-smart" data-state="" data-text-on="Умная влажность: вкл" data-text-off="Умная влажность: выкл" onclick="toggleFeature(event,'smart_humair',this)">Умная влажность: выкл</button>
+<button type="button" class="feature-chip feature-chip--wide" id="feat-air-dehumidify" data-state="" data-text-on="Осушение: вкл" data-text-off="Осушение: выкл" onclick="toggleFeature(event,'dehumidify_enabled',this)">Осушение: выкл</button>
+</div>
+</div>
+</div>
+
+<div class="tile">
+<button class="tile-main" type="button" onclick="openPeriodModal('soil')">
+<span class="tile-title">Влажность почвы</span>
+<div class="tile-center tile-center--soil tile-center--liquid" id="soil-liquid">
+<span class="tile-symbol"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#33ccff" stroke-width="2" stroke-linecap="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></span>
+<div class="tile-reading"><span class="tile-value" id="soil-current-value">—</span><span class="tile-unit" id="soil-current-unit"></span></div>
+</div>
+<div class="tile-meta">
+<div class="target-chip"><span>День</span><strong id="tile-soil-day">—</strong></div>
+<div class="target-chip"><span>Ночь</span><strong id="tile-soil-night">—</strong></div>
+</div>
+</button>
+<div class="tile-actions">
+<button type="button" class="tile-drawer-toggle" id="drawer-toggle-soil" aria-expanded="false" onclick="toggleFeatureDrawer(event,'soil')">Функции</button>
+</div>
+<div class="feature-drawer" id="drawer-soil">
+<div class="feature-list">
+<button type="button" class="feature-chip feature-chip--wide" id="feat-soil-alt" data-state="" data-text-on="Чередование полива: вкл" data-text-off="Чередование полива: выкл" onclick="toggleFeature(event,'alternate_watering',this)">Чередование полива: выкл</button>
+</div>
+</div>
+</div>
+
+<div class="tile" id="tile-growth">
+<button class="tile-main" type="button" onclick="toggleFeatureDrawer(event,'growth')" aria-disabled="false">
+<span class="tile-title">Фаза роста</span>
+<div class="tile-center tile-center--growth">
+<span class="tile-symbol"><svg id="icon-growth" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4aff7f" stroke-width="2" stroke-linecap="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></span>
+<div class="tile-reading"><span class="tile-value" id="growth-stage-value" style="font-size:13px">—</span></div>
+</div>
+<div class="tile-meta">
+<div class="target-chip"><span>VPD</span><strong id="tile-growth-vpd">авто</strong></div>
+</div>
+</button>
+<div class="tile-actions">
+<button type="button" class="tile-drawer-toggle" id="drawer-toggle-growth" aria-expanded="false" onclick="toggleFeatureDrawer(event,'growth')">Функции</button>
+</div>
+<div class="feature-drawer" id="drawer-growth">
+<div id="growth-drawer-body">
+<div id="growth-preset-notice" style="display:none;font-size:12px;color:#888;text-align:center;padding:6px 0">⚙️ Управляется профилем</div>
+<div id="growth-controls">
+<div class="gs-btn-row">
+<button type="button" class="feature-chip" id="gs-0" onclick="pickStage(0)">🍃 Универс.</button>
+<button type="button" class="feature-chip" id="gs-1" onclick="pickStage(1)">🌱 Проращ.</button>
+<button type="button" class="feature-chip" id="gs-2" onclick="pickStage(2)">🌿 Вегетация</button>
+<button type="button" class="feature-chip" id="gs-3" onclick="pickStage(3)">🌸 Цветение</button>
+</div>
+<div class="gs-vpd-stack">
+<div class="gs-vpd-row">
+<span>VPD:</span>
+<input type="number" style="max-width:50px" id="gs-vpd" placeholder="авто" min="0" max="2.5" step="0.1" oninput="onGsVpdInput()">
+<span>kPa</span>
+</div>
+<div style="font-size:11px;color:#888;text-align:center;padding:4px 8px 0;line-height:1.35">При своём VPD фаза не участвует в расчёте порогов. Очистите поле — снова «авто» по фазе.</div>
+<div class="gs-apply-row"><button type="button" class="feature-chip feature-chip--wide" onclick="applyGsSettings()">Применить</button></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="tile">
+<button class="tile-main" type="button" onclick="openPeriodModal('vent')">
+<span class="tile-title">Вентиляция</span>
+<div class="tile-center tile-center--vent">
+<span class="tile-symbol"><svg id="icon-vent" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7df9ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg></span>
+<div class="tile-reading"><span class="tile-value" id="vent-current-value">—</span><span class="tile-unit" id="vent-current-unit"></span></div>
+</div>
+<div class="tile-meta">
+<div class="target-chip"><span>День</span><strong id="tile-vent-day">—</strong></div>
+<div class="target-chip"><span>Ночь</span><strong id="tile-vent-night">—</strong></div>
+</div>
+</button>
+<div class="tile-actions">
+<button type="button" class="tile-drawer-toggle" id="drawer-toggle-vent" aria-expanded="false" onclick="toggleFeatureDrawer(event,'vent')">Функции</button>
+</div>
+<div class="feature-drawer" id="drawer-vent">
+<div class="feature-list">
+<button type="button" class="feature-chip feature-chip--wide" id="feat-vent-day-always" data-state="" data-text-on="День всегда: вкл" data-text-off="День всегда: выкл" onclick="toggleFeature(event,'vent_always',this,'day')">День всегда: выкл</button>
+<button type="button" class="feature-chip feature-chip--wide" id="feat-vent-night-always" data-state="" data-text-on="Ночь всегда: вкл" data-text-off="Ночь всегда: выкл" onclick="toggleFeature(event,'vent_always',this,'night')">Ночь всегда: выкл</button>
+</div>
+</div>
+</div>
+</div>
+
+<section class="history-section" id="history-section" aria-label="История климата" hidden style="display:none">
+<button type="button" class="history-toggle" id="history-toggle" aria-expanded="false" aria-controls="history-body" onclick="toggleHistory()">
+<span class="history-toggle-label">
+<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#e6b8f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+История
+</span>
+<svg class="history-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#d7b7df" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+</button>
+<div class="history-body" id="history-body" hidden>
+<div class="history-range" role="group" aria-label="Период графика">
+<button type="button" class="history-range-btn" data-hours="6" onclick="setHistoryRange(6)">6 ч</button>
+<button type="button" class="history-range-btn active" data-hours="12" onclick="setHistoryRange(12)">12 ч</button>
+<button type="button" class="history-range-btn" data-hours="24" onclick="setHistoryRange(24)">24 ч</button>
+</div>
+<div class="history-chart-block">
+<div class="history-chart-head"><span class="history-chart-title">Температура</span><span class="history-sub" id="history-meta-temp">—</span></div>
+<div class="history-canvas-wrap"><canvas id="history-chart-temp" data-height="190" role="img" aria-label="График температуры воздуха и почвы"></canvas></div>
+<div class="history-legend">
+<span><i style="background:#ff4d6d"></i>Воздух</span>
+<span><i style="background:#ff9f43"></i>Почва</span>
+</div>
+</div>
+<div class="history-chart-block">
+<div class="history-chart-head"><span class="history-chart-title">Влажность</span><span class="history-sub" id="history-meta-hum">—</span></div>
+<div class="history-canvas-wrap"><canvas id="history-chart-hum" data-height="205" role="img" aria-label="График влажности воздуха и почвы"></canvas></div>
+<div class="history-legend">
+<span><i style="background:#d35cff"></i>Воздух</span>
+<span><i style="background:#33ccff"></i>Почва</span>
+</div>
+</div>
+<p class="history-empty" id="history-empty" style="display:none">Данные накапливаются (1 точка/мин). Ось времени — с момента включения</p>
+</div>
+</section>
+
+<div class="actions">
+<a href="profile.html" class="action-card" aria-label="Выбрать растение">
+<span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#e6b8f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V12"/><path d="M12 12c0-4 3-7 7-7-1 5-3 8-7 8z"/><path d="M12 14c0-3-2-6-6-6 .5 4 2 7 6 7z"/></svg></span>
+<span class="action-label">Растение</span>
+</a>
+<a href="service.html" class="action-card" aria-label="Сервисные настройки">
+<span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#e6b8f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+<span class="action-label">Сервис</span>
+</a>
+<a href="contacts.html" class="action-card" aria-label="Контакты">
+<span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#e6b8f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.33 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+<span class="action-label">Контакты</span>
+</a>
+</div>
 </main>
+
+<div class="bottom-sheet-overlay" id="bs-overlay" onclick="closeDialModal()"></div>
+<div class="bottom-sheet" id="bs-modal">
+<div class="bs-header" id="bs-header">
+<div class="bs-drag-handle"></div>
+<div class="bs-title"><span id="bs-emoji"></span><span id="bs-title">Настройка</span></div>
+<div class="bs-subtitle" id="bs-subtitle">Выберите время суток</div>
+</div>
+
+<div class="step-panel active" id="period-step">
+<div class="period-grid" id="period-grid"></div>
+</div>
+
+<div class="step-panel" id="dial-step">
+<div class="dial-container" id="universal-dial">
+<svg class="dial-svg" viewBox="0 0 200 200">
+<circle class="dial-track" cx="100" cy="100" r="80" stroke-dasharray="377 503" stroke-dashoffset="0"></circle>
+<circle class="dial-progress" cx="100" cy="100" r="80" stroke-dasharray="377 503" stroke-dashoffset="377" id="uni-dial-progress"></circle>
+</svg>
+<div class="dial-value-container">
+<div class="dial-emoji" id="uni-dial-emoji"></div>
+<div class="dial-value" id="uni-dial-value">0</div>
+<div class="dial-unit" id="uni-dial-unit">%</div>
+</div>
+</div>
+<div class="dial-controls">
+<button type="button" class="neon-btn-sm" onclick="adjustUniDial(-1)">−</button>
+<button type="button" class="neon-btn-sm" onclick="adjustUniDial(1)">+</button>
+</div>
+<div class="sheet-actions">
+<button type="button" class="ghost-btn" id="back-btn" onclick="showPeriodStep()">Назад</button>
+<button type="button" class="apply-btn" id="apply-btn" onclick="applySetting()">Применить</button>
+</div>
+<div class="sheet-status" id="sheet-status"></div>
+</div>
+</div>
+
+<div class="bottom-sheet-overlay" id="bs-name-overlay" onclick="closeNameModal()"></div>
+<div class="bottom-sheet" id="bs-name-modal">
+<div class="bs-header" id="bs-name-header">
+<div class="bs-drag-handle"></div>
+<div class="bs-title"><span>✏️</span><span>Имя теплицы</span></div>
+<div class="bs-subtitle">Введите новое имя устройства</div>
+</div>
+<div class="step-panel active" style="gap:10px">
+<div class="name-edit-row">
+<input type="text" id="name-edit-input" class="name-edit-input" maxlength="22" autocomplete="off" placeholder="GrowHub" onkeydown="onNameKey(event)" oninput="updateNameCounter()">
+<div class="name-edit-counter"><span id="name-edit-count">0</span>/22</div>
+</div>
+<div class="sheet-actions">
+<button type="button" class="ghost-btn" onclick="closeNameModal()">Отмена</button>
+<button type="button" class="apply-btn" id="name-apply-btn" onclick="applyNameChange()">Сохранить</button>
+</div>
+<div class="sheet-status" id="name-edit-status"></div>
+</div>
+</div>
+
+
+<script src="plant_config.js"></script>
 <script src="mqtt-simple.js"></script>
-<script src="push-notifications.js"></script>
+<script src="pwa-bridge.js"></script>
+
+<script>
+var PARAMS={
+light:{label:'Освещение',unit:'ч',min:0,max:24,step:1,color:'#ffcc00',periods:[{key:'common',label:'Общее значение',value:'0',targetId:'tile-light-common'}]},
+temp:{label:'Темп. грунта',unit:'°C',min:0,max:30,step:1,color:'#ff4d6d',periods:[{key:'day',label:'День',value:'0',targetId:'tile-temp-day'},{key:'night',label:'Ночь',value:'0',targetId:'tile-temp-night'}]},
+air:{label:'Влажность воздуха',unit:'%',min:0,max:80,step:1,color:'#d35cff',periods:[{key:'day',label:'День',value:'0',targetId:'tile-air-day'},{key:'night',label:'Ночь',value:'0',targetId:'tile-air-night'}]},
+soil:{label:'Влажность почвы',unit:'%',min:0,max:90,step:1,color:'#33ccff',periods:[{key:'day',label:'День',value:'0',targetId:'tile-soil-day'},{key:'night',label:'Ночь',value:'0',targetId:'tile-soil-night'}]},
+vent:{label:'Вентиляция',unit:'мин',min:0,max:180,step:1,color:'#7df9ff',periods:[{key:'day',label:'День',value:'0',targetId:'tile-vent-day'},{key:'night',label:'Ночь',value:'0',targetId:'tile-vent-night'}]}
+};
+var FEATURE_STATE={
+smart_humair:'',
+cooling_enabled:'',
+dehumidify_enabled:'',
+alternate_watering:'',
+vent_always_day:'',
+vent_always_night:''
+};
+var activeDial={paramKey:'',periodKey:'',unit:'',min:0,max:100,step:1,value:0,color:'#c900cc',targetId:'',isDragging:false,readOnly:false};
+var lastDashboardData=null;
+function isSmartHumairActive(){return isChecked(FEATURE_STATE.smart_humair);}
+function isSensorErrorValue(value){
+  if(value==null)return true;
+  var s=String(value).trim().toLowerCase();
+  return s===''||s==='--'||s==='ошибка'||s==='error';
+}
+function calcW(value){var n=safeNumeric(value);var p=Math.max(10,Math.min(90,100-n));return p+'%'}
+function applyLiquidGauge(elId,rawValue,forceError){
+  var el=document.getElementById(elId);
+  if(!el)return;
+  if(forceError||isSensorErrorValue(rawValue)){
+    el.classList.add('tile-center--liquid-error');
+    el.style.setProperty('--water-level','50%');
+    return;
+  }
+  el.classList.remove('tile-center--liquid-error');
+  el.style.setProperty('--water-level',calcW(rawValue));
+}
+function resolveAirPeriodNumeric(periodKey,fallback){
+  var fb=safeNumeric(fallback);
+  if(!isSmartHumairActive()||!lastDashboardData||!lastDashboardData.humair_vpd_valid)return fb;
+  if(periodKey==='day'&&lastDashboardData.humair_vpd_day!=null)return safeNumeric(lastDashboardData.humair_vpd_day);
+  if(periodKey==='night'&&lastDashboardData.humair_vpd_night!=null)return safeNumeric(lastDashboardData.humair_vpd_night);
+  return fb;
+}
+function setAirDialReadOnly(locked){
+  var dial=document.getElementById('universal-dial');
+  var controls=document.querySelector('.dial-controls');
+  var applyBtn=document.getElementById('apply-btn');
+  if(dial)dial.classList.toggle('dial-readonly',!!locked);
+  if(controls)controls.style.display=locked?'none':'';
+  if(applyBtn){
+    applyBtn.disabled=!!locked;
+    applyBtn.textContent=locked?'SmartHum':'Применить';
+  }
+  activeDial.readOnly=!!locked;
+}
+var ARC_LENGTH=377;
+var currentDayNight='';
+var EDIT_LOCK_MS=120000;
+var editLocks={};
+
+function safeNumeric(value){var n=parseFloat(value);return isNaN(n)?0:n}
+function isChecked(value){return String(value||'').trim().length>0}
+function markEditLock(key){editLocks[key]=Date.now()+EDIT_LOCK_MS}
+function isEditLocked(key){var until=editLocks[key]||0;if(until<=Date.now()){if(until)delete editLocks[key];return false;}return true}
+function bindEditLock(id,key){
+  var el=document.getElementById(id);
+  if(!el)return;
+  function lock(){markEditLock(key)}
+  el.addEventListener('input',lock);
+  el.addEventListener('change',lock);
+}
+function renderSavedValue(paramKey,value,unit){
+  var num=Math.round(value);
+  if(paramKey!=='light'&&num===0)return 'выкл';
+  if(unit==='%'||unit==='°C')return String(num)+unit;
+  return String(num)+' '+unit;
+}
+function applyLocalPeriodValue(paramKey,periodKey,value){
+  var period=getPeriodConfig(paramKey,periodKey);
+  if(period)period.value=String(value);
+  var target=period?document.getElementById(period.targetId):null;
+  if(!target)return;
+  var numeric=Math.round(safeNumeric(value));
+  if(paramKey==='vent'){
+    target.textContent=numeric>0?String(numeric)+' мин':'выкл';
+    return;
+  }
+  var config=getParamConfig(paramKey);
+  if(config)target.textContent=renderSavedValue(paramKey,numeric,config.unit);
+}
+function getParamConfig(paramKey){return PARAMS[paramKey]||null}
+function getPeriodConfig(paramKey,periodKey){
+  var config=getParamConfig(paramKey);
+  if(!config)return null;
+  for(var i=0;i<config.periods.length;i++){
+    if(config.periods[i].key===periodKey)return config.periods[i];
+  }
+  return null;
+}
+function setAlert(id,show){var el=document.getElementById(id);if(el)el.style.display=show?'':'none'}
+function setTempAlert(id,show,tempC,prefix){
+  var el=document.getElementById(id);if(!el)return;
+  el.style.display=show?'':'none';
+  if(!show)return;
+  var span=el.querySelector('span');if(!span)return;
+  var t=(tempC==null||isNaN(tempC))?'--':String(Math.round(tempC));
+  span.textContent='⚠️ '+prefix+' (воздух '+t+'°C)';
+}
+function setFeatureChipState(chip,enabled){
+  if(!chip)return;
+  chip.dataset.enabled=enabled?'1':'0';
+  chip.classList.toggle('active',enabled);
+  var onText=chip.getAttribute('data-text-on');
+  var offText=chip.getAttribute('data-text-off');
+  if(onText||offText)chip.textContent=enabled?onText:offText;
+}
+function syncCoolingChip(data){
+  var chip=document.getElementById('feat-temp-cooling');
+  if(!chip||chip.classList.contains('pending'))return;
+  var available=!!(data&&data.cooling_available);
+  chip.dataset.locked=available?'0':'1';
+  chip.classList.toggle('locked',!available);
+  if(!available){
+    setFeatureChipState(chip,false);
+    var unavail=chip.getAttribute('data-text-unavail');
+    if(unavail)chip.textContent=unavail;
+    return;
+  }
+  setFeatureChipState(chip,!!(data&&data.cooling_ui_enabled));
+}
+function closeAllFeatureDrawers(exceptKey){
+  var drawers=document.querySelectorAll('.feature-drawer');
+  for(var i=0;i<drawers.length;i++){
+    var drawer=drawers[i];
+    var key=drawer.id.replace('drawer-','');
+    var toggle=document.getElementById('drawer-toggle-'+key);
+    var open=(exceptKey&&key===exceptKey);
+    drawer.classList.toggle('active',!!open);
+    if(toggle){
+      toggle.classList.toggle('active',!!open);
+      toggle.setAttribute('aria-expanded',open?'true':'false');
+      toggle.textContent=open?'Скрыть функции':'Функции';
+    }
+  }
+}
+function toggleFeatureDrawer(event,key){
+  if(key==='growth'&&gsPreset)return;
+  if(event){event.preventDefault();event.stopPropagation();}
+  var drawer=document.getElementById('drawer-'+key);
+  if(!drawer)return;
+  if(navigator.vibrate)navigator.vibrate(8);
+  var shouldOpen=!drawer.classList.contains('active');
+  closeAllFeatureDrawers(shouldOpen?key:'');
+}
+function initFeatureChips(){
+  var chips=document.querySelectorAll('.feature-chip[data-state]');
+  for(var i=0;i<chips.length;i++){
+    var chip=chips[i];
+    if(chip.id==='feat-temp-cooling'&&chip.dataset.locked==='1'){
+      syncCoolingChip({cooling_available:false,cooling_ui_enabled:false});
+      continue;
+    }
+    setFeatureChipState(chip,isChecked(chip.getAttribute('data-state')));
+  }
+}
+function computeVentDisplay(periodKey){
+  if(periodKey==='day'&&isChecked(FEATURE_STATE.vent_always_day))return{value:'вкл',suffix:''};
+  if(periodKey==='night'&&isChecked(FEATURE_STATE.vent_always_night))return{value:'вкл',suffix:''};
+  var period=getPeriodConfig('vent',periodKey);
+  var numeric=period?safeNumeric(period.value):0;
+  if(numeric===0)return{value:'выкл',suffix:''};
+  return{value:String(Math.round(numeric)),suffix:' мин'};
+}
+function updateFeatureState(field,period,enabled){
+  if(field==='vent_always'){
+    FEATURE_STATE[period==='night'?'vent_always_night':'vent_always_day']=enabled?'checked':'';
+    return;
+  }
+  FEATURE_STATE[field]=enabled?'checked':'';
+}
+// Bug #22: единая функция показа индикатора сохранения (без перезагрузки страницы).
+var __ghToastTimer=null;
+function showToast(text,kind){
+  var t=document.getElementById('gh-toast');
+  if(!t)return;
+  t.textContent=text;
+  t.classList.remove('ok','err');
+  if(kind==='ok')t.classList.add('ok');
+  if(kind==='err')t.classList.add('err');
+  t.classList.add('show');
+  if(__ghToastTimer)clearTimeout(__ghToastTimer);
+  __ghToastTimer=setTimeout(function(){t.classList.remove('show');},1800);
+}
+function toggleFeature(event,field,chip,period){
+  if(event){event.preventDefault();event.stopPropagation();}
+  if(!chip||chip.classList.contains('pending'))return;
+  if(chip.dataset.locked==='1'){
+    showToast('Задайте температуру > 0 для текущего периода','err');
+    return;
+  }
+  if(navigator.vibrate)navigator.vibrate(10);
+  var enabled=chip.dataset.enabled==='1';
+  var nextValue=enabled?0:1;
+  var requestBody=new FormData();
+  requestBody.append('field',field);
+  requestBody.append('value',String(nextValue));
+  if(period)requestBody.append('period',period);
+  chip.classList.add('pending');
+  fetch('/settings',{method:'POST',body:requestBody}).then(function(response){
+    return response.json().then(function(d){return {ok:response.ok,data:d};});
+  }).then(function(res){
+    if(!res.ok||!res.data||!res.data.ok)throw new Error('toggle failed');
+    chip.classList.remove('pending');
+    updateFeatureState(field,period,!!nextValue);
+    setFeatureChipState(chip,!!nextValue);
+    showToast('Сохранено','ok');
+    return fetchDashboardState();
+  }).catch(function(){
+    chip.classList.remove('pending');
+    showToast('Ошибка сохранения','err');
+  });
+}
+function syncServiceAcks(d){
+  var el=document.getElementById('service-acks');
+  if(!el)return;
+  var html='';
+  if(d.out_hg)html+='<a class="neon-buttom" href="/ok_hg" style="width:100%;font-size:14px">💧 Бак залит</a>';
+  if(d.out_ha)html+='<a class="neon-buttom" href="/ok_ha" style="width:100%;font-size:14px">💨 Увлажнитель залит</a>';
+  el.innerHTML=html;
+  el.style.display=(d.out_hg||d.out_ha)?'flex':'none';
+}
+function updateAlerts(){
+  fetch('/api/status',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
+    setAlert('alert-reboot',d.reboot_alert);
+    setAlert('alert-out-hg',d.out_hg);
+    setAlert('alert-out-ha',d.out_ha);
+    setTempAlert('alert-hig-t',d.hig_temp,d.temp_air,'Жарко');
+    setTempAlert('alert-low-t',d.low_temp,d.temp_air,'Холодно');
+    setAlert('alert-err-air',d.err_sensor_dht);
+    setAlert('alert-err-hg',d.err_sensor_hg);
+    setAlert('alert-err-soil-t',d.err_sensor_soil_t);
+    setAlert('alert-water',d.water_pending);
+    syncServiceAcks(d);
+    var hasAlerts=d.reboot_alert||d.out_hg||d.out_ha||d.hig_temp||d.low_temp||d.err_sensor_dht||d.err_sensor_hg||d.err_sensor_soil_t||d.water_pending;
+    var sec=document.getElementById('alerts-section');if(sec)sec.style.display=hasAlerts?'':'none';
+  }).catch(function(){})
+}
+function setText(id,value){
+  var el=document.getElementById(id);
+  if(el)el.textContent=value;
+}
+function setFeatureChipById(id,enabled){
+  var chip=document.getElementById(id);
+  if(!chip||chip.classList.contains('pending'))return;
+  setFeatureChipState(chip,enabled);
+}
+function updatePeriodState(paramKey,periodKey,rawValue,displayValue){
+  if(isEditLocked(paramKey))return;
+  var period=getPeriodConfig(paramKey,periodKey);
+  if(period)period.value=String(rawValue);
+  var target=period?document.getElementById(period.targetId):null;
+  if(target&&typeof displayValue==='string')target.textContent=displayValue;
+}
+function syncDashboardState(data){
+  if(!data)return;
+  lastDashboardData=data;
+
+  if(data.device_name)setText('device-name-text',data.device_name);
+  currentDayNight=data.day_night||currentDayNight;
+  setText('status-day-night',currentDayNight);
+  setText('light-current-value',String(data.light_h||'0'));
+  if(PARAMS.light&&PARAMS.light.periods[0])PARAMS.light.periods[0].value=String(data.light_h||'0');
+  if(data.light_on!==undefined){var s=document.getElementById('tile-light-start');if(s)s.textContent=String(data.light_on)+':00';var inp=document.getElementById('light-on-hour');if(inp&&!isEditLocked('light-schedule')&&document.activeElement!==inp)inp.value=data.light_on;}
+
+  setText('temp-current-value',data.temp_display||'--');
+  setText('temp-current-unit',data.temp_unit||'');
+  updatePeriodState('temp','day',data.temp_day||'0',data.temp_day_display||'--');
+  updatePeriodState('temp','night',data.temp_nig||'0',data.temp_nig_display||'--');
+
+  setText('air-current-value',data.h_a_now||'--');
+  setText('air-current-unit',data.h_a_unit||'');
+  updatePeriodState('air','day',String(resolveAirPeriodNumeric('day',data.h_a_day||'0')),data.h_a_day_display||'--');
+  updatePeriodState('air','night',String(resolveAirPeriodNumeric('night',data.h_a_nig||'0')),data.h_a_nig_display||'--');
+
+  setText('soil-current-value',data.h_g_now||'--');
+  setText('soil-current-unit',data.h_g_unit||'');
+  updatePeriodState('soil','day',data.h_g_day||'0',data.h_g_day_display||'--');
+  updatePeriodState('soil','night',data.h_g_nig||'0',data.h_g_nig_display||'--');
+
+  updatePeriodState('vent','day',data.vent_int_d||'0',(data.vent_always_day?'вкл':(parseInt(data.vent_int_d||'0')>0?String(data.vent_int_d||'0')+' мин':'выкл')));
+  updatePeriodState('vent','night',data.vent_int_n||'0',(data.vent_always_night?'вкл':(parseInt(data.vent_int_n||'0')>0?String(data.vent_int_n||'0')+' мин':'выкл')));
+
+  FEATURE_STATE.smart_humair=(data.smart_humair? 'checked' : '');
+  FEATURE_STATE.cooling_enabled=(data.cooling_ui_enabled? 'checked' : '');
+  FEATURE_STATE.dehumidify_enabled=(data.dehumidify_enabled? 'checked' : '');
+  FEATURE_STATE.alternate_watering=(data.alternate_watering? 'checked' : '');
+  FEATURE_STATE.vent_always_day=(data.vent_always_day? 'checked' : '');
+  FEATURE_STATE.vent_always_night=(data.vent_always_night? 'checked' : '');
+
+  syncCoolingChip(data);
+  setFeatureChipById('feat-air-smart',!!data.smart_humair);
+  setFeatureChipById('feat-air-dehumidify',!!data.dehumidify_enabled);
+  setFeatureChipById('feat-soil-alt',!!data.alternate_watering);
+  setFeatureChipById('feat-vent-day-always',!!data.vent_always_day);
+  setFeatureChipById('feat-vent-night-always',!!data.vent_always_night);
+
+  if(data.growth_stage!==undefined){
+    updateGrowthTile(parseInt(data.growth_stage||0),parseInt(data.vpd_target_x10||0),!!data.is_stage_preset,isEditLocked('growth-vpd'));
+  }
+  applyLiquidGauge('soil-liquid',data.h_g_now);
+  applyLiquidGauge('air-liquid',data.h_a_now);
+  syncVentCurrent();
+
+  var modalOpen=document.getElementById('bs-modal').classList.contains('active');
+  var periodStepOpen=document.getElementById('period-step').classList.contains('active');
+  if(modalOpen&&periodStepOpen&&activeDial.paramKey&&!isEditLocked(activeDial.paramKey)){
+    var config=getParamConfig(activeDial.paramKey);
+    if(config)buildPeriodButtons(activeDial.paramKey,config);
+  }
+  if(modalOpen&&activeDial.paramKey==='air'&&activeDial.periodKey&&!isEditLocked('air')&&!activeDial.isDragging){
+    var airPeriod=getPeriodConfig('air',activeDial.periodKey);
+    if(airPeriod){
+      activeDial.value=resolveAirPeriodNumeric(activeDial.periodKey,airPeriod.value);
+      updateUniDialUI();
+      setAirDialReadOnly(isSmartHumairActive());
+      if(isSmartHumairActive())document.getElementById('bs-subtitle').textContent='Рассчитывается автоматически (SmartHum)';
+    }
+  }
+  pushSpark('temp',parseFloat(data.temp_display));
+  pushSpark('air',parseFloat(data.h_a_now));
+  pushSpark('soil',parseFloat(data.h_g_now));
+  drawSpark('spark-temp',sparkHistory.temp,'#ff4d6d');
+  drawSpark('spark-air',sparkHistory.air,'#d35cff');
+  drawSpark('spark-soil',sparkHistory.soil,'#33ccff');
+}
+function fetchDashboardState(){
+  return fetch('/api/state',{cache:'no-store'}).then(function(r){return r.json();}).then(function(data){
+    syncDashboardState(data);
+    return data;
+  }).catch(function(){})
+}
+function syncVentCurrent(){
+  var valueEl=document.getElementById('vent-current-value');
+  var unitEl=document.getElementById('vent-current-unit');
+  if(!valueEl||!unitEl)return;
+  var display=currentDayNight==='Ночь'?computeVentDisplay('night'):computeVentDisplay('day');
+  valueEl.textContent=display.value;
+  unitEl.textContent=display.suffix;
+}
+function openPeriodModal(paramKey){
+  var config=getParamConfig(paramKey);
+  if(!config)return;
+  closeAllFeatureDrawers('');
+  activeDial.paramKey=paramKey;
+  activeDial.periodKey='';
+  document.getElementById('bs-title').textContent=config.label;
+  document.getElementById('bs-emoji').textContent=config.emoji;
+  document.getElementById('sheet-status').textContent='';
+  document.getElementById('bs-overlay').classList.add('active');
+  document.getElementById('bs-modal').classList.add('active');
+  if(config.periods.length===1){
+    selectPeriod(paramKey,config.periods[0].key);
+  } else {
+    document.getElementById('bs-subtitle').textContent='Выберите время суток';
+    buildPeriodButtons(paramKey,config);
+    document.getElementById('period-step').classList.add('active');
+    document.getElementById('dial-step').classList.remove('active');
+  }
+}
+function buildPeriodButtons(paramKey,config){
+  var grid=document.getElementById('period-grid');
+  grid.innerHTML='';
+  grid.className=config.periods.length===1?'period-grid period-grid--single':'period-grid';
+  for(var i=0;i<config.periods.length;i++){
+    var period=config.periods[i];
+    var btn=document.createElement('button');
+    btn.type='button';
+    btn.className='period-btn';
+    var btnValue=(paramKey==='air')?resolveAirPeriodNumeric(period.key,period.value):safeNumeric(period.value);
+    btn.innerHTML='<span class="period-label">'+period.label+'</span><strong>'+renderSavedValue(paramKey,btnValue,config.unit)+'</strong>';
+    btn.onclick=(function(key,pKey){return function(){selectPeriod(key,pKey);};})(paramKey,period.key);
+    grid.appendChild(btn);
+  }
+}
+function selectPeriod(paramKey,periodKey){
+  var config=getParamConfig(paramKey);
+  var period=getPeriodConfig(paramKey,periodKey);
+  if(!config||!period)return;
+  var dialValue=(paramKey==='air')?resolveAirPeriodNumeric(periodKey,period.value):safeNumeric(period.value);
+  activeDial={paramKey:paramKey,periodKey:periodKey,unit:config.unit,min:config.min,max:config.max,step:config.step,value:dialValue,color:config.color,targetId:period.targetId,isDragging:false};
+  document.getElementById('bs-title').textContent=config.label+' · '+period.label;
+  document.getElementById('bs-emoji').textContent=config.emoji;
+  document.getElementById('bs-subtitle').textContent='Потяните круг или используйте кнопки';
+  document.getElementById('uni-dial-emoji').textContent=config.emoji;
+  document.getElementById('uni-dial-unit').textContent=config.unit;
+  document.getElementById('uni-dial-progress').style.stroke=config.color;
+  document.getElementById('uni-dial-progress').style.filter='drop-shadow(0 0 8px '+config.color+')';
+  document.getElementById('period-step').classList.remove('active');
+  document.getElementById('dial-step').classList.add('active');
+  updateUniDialUI();
+  setAirDialReadOnly(paramKey==='air'&&isSmartHumairActive());
+  if(paramKey==='air'&&isSmartHumairActive()){
+    document.getElementById('bs-subtitle').textContent='Рассчитывается автоматически (SmartHum)';
+  }
+}
+function showPeriodStep(){
+  if(!activeDial.paramKey)return;
+  var config=getParamConfig(activeDial.paramKey);
+  if(!config)return;
+  if(config.periods.length===1){closeDialModal();return;}
+  document.getElementById('bs-title').textContent=config.label;
+  document.getElementById('bs-emoji').textContent=config.emoji;
+  document.getElementById('bs-subtitle').textContent='Выберите время суток';
+  document.getElementById('sheet-status').textContent='';
+  document.getElementById('dial-step').classList.remove('active');
+  document.getElementById('period-step').classList.add('active');
+}
+function closeDialModal(){
+  activeDial.isDragging=false;
+  setAirDialReadOnly(false);
+  document.getElementById('bs-overlay').classList.remove('active');
+  document.getElementById('bs-modal').classList.remove('active');
+  document.getElementById('sheet-status').textContent='';
+  document.getElementById('apply-btn').disabled=false;
+  document.getElementById('apply-btn').textContent='Применить';
+}
+function adjustUniDial(direction){
+  if(activeDial.readOnly)return;
+  if(navigator.vibrate)navigator.vibrate(10);
+  if(activeDial.paramKey)markEditLock(activeDial.paramKey);
+  var newVal=activeDial.value+(activeDial.step*direction);
+  if(newVal<activeDial.min)newVal=activeDial.min;
+  if(newVal>activeDial.max)newVal=activeDial.max;
+  activeDial.value=Math.round(newVal/activeDial.step)*activeDial.step;
+  updateUniDialUI();
+}
+function updateUniDialUI(){
+  document.getElementById('uni-dial-value').textContent=String(Math.round(activeDial.value));
+  var percent=(activeDial.value-activeDial.min)/(activeDial.max-activeDial.min||1);
+  var offset=ARC_LENGTH-(ARC_LENGTH*percent);
+  if(offset<0)offset=0;
+  if(offset>ARC_LENGTH)offset=ARC_LENGTH;
+  document.getElementById('uni-dial-progress').style.strokeDashoffset=offset;
+}
+function applySetting(){
+  if(!activeDial.paramKey||!activeDial.periodKey)return;
+  if(activeDial.readOnly){
+    document.getElementById('sheet-status').textContent='Заблокировано: умная влажность (SmartHum)';
+    return;
+  }
+  var btn=document.getElementById('apply-btn');
+  var status=document.getElementById('sheet-status');
+  var requestBody=new FormData();
+  requestBody.append('field',activeDial.paramKey);
+  requestBody.append('period',activeDial.periodKey);
+  requestBody.append('value',String(Math.round(activeDial.value)));
+  btn.disabled=true;
+  btn.textContent='Сохраняем...';
+  status.textContent='';
+  fetch('/settings',{method:'POST',body:requestBody}).then(function(response){
+    return response.json().then(function(d){return {ok:response.ok,data:d};});
+  }).then(function(res){
+    if(!res.ok||!res.data||!res.data.ok)throw new Error('save failed');
+    applyLocalPeriodValue(activeDial.paramKey,activeDial.periodKey,activeDial.value);
+    return fetchDashboardState();
+  }).then(function(){
+    status.textContent='Сохранено';
+    showToast('Сохранено','ok');
+    setTimeout(function(){closeDialModal();},320);
+  }).catch(function(){
+    status.textContent='Ошибка сохранения';
+    showToast('Ошибка сохранения','err');
+    btn.disabled=false;
+    btn.textContent='Применить';
+  });
+}
+function doDrag(e){
+  if(!activeDial.isDragging||activeDial.readOnly)return;
+  if(activeDial.paramKey)markEditLock(activeDial.paramKey);
+  var rect=dialEl.getBoundingClientRect();
+  var x=e.clientX-(rect.left+rect.width/2);
+  var y=e.clientY-(rect.top+rect.height/2);
+  var angle=(Math.atan2(y,x)*(180/Math.PI))-135;
+  if(angle<0)angle+=360;
+  if(angle>270)angle=(angle>315)?0:270;
+  var percent=angle/270;
+  var rawValue=activeDial.min+percent*(activeDial.max-activeDial.min);
+  var steppedValue=Math.round(rawValue/activeDial.step)*activeDial.step;
+  if(steppedValue<activeDial.min)steppedValue=activeDial.min;
+  if(steppedValue>activeDial.max)steppedValue=activeDial.max;
+  activeDial.value=steppedValue;
+  updateUniDialUI();
+}
+var dialEl=document.getElementById('universal-dial');
+var dialPointerId=null;
+function endDialDrag(e){
+  if(dialPointerId===null)return;
+  if(e&&e.pointerId!==undefined&&e.pointerId!==dialPointerId)return;
+  var pid=dialPointerId;
+  dialPointerId=null;
+  activeDial.isDragging=false;
+  try{dialEl.releasePointerCapture(pid);}catch(ex){}
+}
+dialEl.addEventListener('pointerdown',function(e){
+  if(activeDial.readOnly)return;
+  if(e.pointerType==='mouse'&&e.button!==0)return;
+  activeDial.isDragging=true;
+  dialPointerId=e.pointerId;
+  try{dialEl.setPointerCapture(e.pointerId);}catch(ex){}
+  doDrag(e);
+  e.preventDefault();
+});
+dialEl.addEventListener('pointermove',function(e){
+  if(!activeDial.isDragging||e.pointerId!==dialPointerId)return;
+  doDrag(e);
+  e.preventDefault();
+});
+dialEl.addEventListener('pointerup',endDialDrag);
+dialEl.addEventListener('pointercancel',endDialDrag);
+dialEl.addEventListener('lostpointercapture',function(e){
+  if(e.pointerId===dialPointerId){dialPointerId=null;activeDial.isDragging=false;}
+});
+var gsPreset=false;
+var GS_NAMES=['Универсальный','Проращивание','Вегетация','Цветение'];
+function setGrowthTileLocked(locked){
+  var tile=document.getElementById('tile-growth');
+  if(tile)tile.classList.toggle('tile--growth-locked',!!locked);
+  var main=tile?tile.querySelector('.tile-main'):null;
+  if(main)main.setAttribute('aria-disabled',locked?'true':'false');
+  if(locked){
+    var drawer=document.getElementById('drawer-growth');
+    if(drawer)drawer.classList.remove('active');
+    var toggle=document.getElementById('drawer-toggle-growth');
+    if(toggle){toggle.classList.remove('active');toggle.setAttribute('aria-expanded','false');toggle.textContent='Функции';}
+  }
+}
+function updateGrowthTile(stage,vpdX10,isPreset,skipControls){
+  gsPreset=!!isPreset;
+  setGrowthTileLocked(gsPreset);
+  setText('growth-stage-value',GS_NAMES[stage]||GS_NAMES[0]);
+  var vDisp=(!vpdX10||vpdX10===0)?'авто':(Math.floor(vpdX10/10)+'.'+(vpdX10%10)+' kPa');
+  setText('tile-growth-vpd',vDisp);
+  if(skipControls)return;
+  var note=document.getElementById('growth-preset-notice');
+  var ctrl=document.getElementById('growth-controls');
+  if(isPreset){if(note)note.style.display='';if(ctrl)ctrl.style.opacity='0.4';}
+  else{if(note)note.style.display='none';if(ctrl)ctrl.style.opacity='';}
+  var hasManual=!isPreset&&vpdX10>0;
+  for(var i=0;i<4;i++){
+    var b=document.getElementById('gs-'+i);
+    if(b){b.classList.toggle('active',i===stage);b.disabled=isPreset||hasManual;}
+  }
+  var inp=document.getElementById('gs-vpd');
+  if(inp){
+    inp.disabled=isPreset;
+    if(!isPreset&&vpdX10>0){inp.value=(vpdX10/10).toFixed(1);}
+    else if(!isPreset&&vpdX10===0){inp.value='';}
+  }
+}
+function parseGsVpdInput(raw){
+  if(!raw||raw.length===0)return {ok:true,auto:true};
+  var vpd=parseFloat(raw);
+  if(isNaN(vpd)||vpd<0||vpd>2.5)return {ok:false};
+  if(vpd===0)return {ok:true,auto:true};
+  return {ok:true,auto:false,x10:Math.round(vpd*10)};
+}
+function onGsVpdInput(){
+  markEditLock('growth-vpd');
+  var inp=document.getElementById('gs-vpd');
+  var has=inp&&inp.value.trim().length>0&&parseFloat(inp.value)>0;
+  for(var i=0;i<4;i++){var b=document.getElementById('gs-'+i);if(b)b.disabled=gsPreset||has;}
+}
+function pickStage(stage){
+  if(gsPreset)return;
+  if(navigator.vibrate)navigator.vibrate(10);
+  var inp=document.getElementById('gs-vpd');if(inp)inp.value='';
+  var d=new URLSearchParams();
+  d.append('growth_stage',stage);
+  d.append('vpd_target_x10','');
+  fetch('/send_vpd_stage',{method:'POST',body:d}).then(function(r){return r.json().then(function(j){return {ok:r.ok,data:j};});}).then(function(res){if(!res.ok||!res.data||!res.data.ok)throw new Error();fetchDashboardState();showToast('Сохранено','ok');}).catch(function(){showToast('Ошибка сохранения','err');});
+}
+function applyGsSettings(){
+  if(gsPreset)return;
+  markEditLock('growth-vpd');
+  var inp=document.getElementById('gs-vpd');
+  var raw=inp?inp.value.trim():'';
+  var parsed=parseGsVpdInput(raw);
+  if(!parsed.ok){
+    showToast('Недопустимое значение VPD (0.0–2.5)','err');
+    return;
+  }
+  var d=new URLSearchParams();
+  if(parsed.auto){
+    d.append('vpd_target_x10','');
+    var st=0;for(var i=0;i<4;i++){var b=document.getElementById('gs-'+i);if(b&&b.classList.contains('active')){st=i;break;}}
+    d.append('growth_stage',st);
+  } else {
+    d.append('vpd_target_x10',parsed.x10);
+  }
+  fetch('/send_vpd_stage',{method:'POST',body:d}).then(function(r){return r.json().then(function(j){return {ok:r.ok,data:j};});}).then(function(res){if(!res.ok||!res.data||!res.data.ok)throw new Error();fetchDashboardState();showToast('Сохранено','ok');}).catch(function(){showToast('Ошибка сохранения','err');});
+}
+function applyLightOn(btn){
+  var onHour=parseInt(document.getElementById('light-on-hour').value);
+  var curHour=parseInt(document.getElementById('light-cur-hour').value);
+  if(isNaN(onHour)||onHour<0||onHour>23||isNaN(curHour)||curHour<0||curHour>23)return;
+  markEditLock('light-schedule');
+  var fd=new FormData();
+  fd.append('light_on_hour',String(onHour));
+  fd.append('current_hour',String(curHour));
+  if(btn){btn.disabled=true;btn.textContent='...';}
+  fetch('/send_day',{method:'POST',body:fd}).then(function(r){
+    return r.json().then(function(d){return {ok:r.ok,data:d};});
+  }).then(function(res){
+    if(!res.ok||!res.data||!res.data.ok)throw new Error();
+    var s=document.getElementById('tile-light-start');
+    if(s)s.textContent=String(onHour)+':00';
+    if(btn){btn.textContent='✓';setTimeout(function(){btn.textContent='Применить';btn.disabled=false;},1500);}
+    showToast('Сохранено','ok');
+    return fetchDashboardState();
+  }).catch(function(){
+    if(btn){btn.textContent='Ошибка';setTimeout(function(){btn.textContent='Применить';btn.disabled=false;},1500);}
+    showToast('Ошибка сохранения','err');
+  });
+}
+var sparkHistory={temp:[],air:[],soil:[]};
+var SPARK_MAX=15;
+function pushSpark(key,val){var n=parseFloat(val);if(isNaN(n))return;sparkHistory[key].push(n);if(sparkHistory[key].length>SPARK_MAX)sparkHistory[key].shift();}
+function drawSpark(id,data,color){var c=document.getElementById(id);if(!c||data.length<2)return;var ctx=c.getContext('2d');var w=c.width,h=c.height;ctx.clearRect(0,0,w,h);var mn=data[0],mx=data[0];for(var j=1;j<data.length;j++){if(data[j]<mn)mn=data[j];if(data[j]>mx)mx=data[j];}var rng=mx-mn||1;ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.lineJoin='round';for(var i=0;i<data.length;i++){var x=i/(data.length-1)*w;var y=h-2-(data[i]-mn)/rng*(h-4);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();}
+var HIST_INVALID=255;
+var GH_HISTORY_UI=false;
+var historyHours=12;
+var historyOpen=false;
+var __historyFetchCtrl=null;
+// Биты алармов из прошивки (rec.alarms). На каждом графике показываем только профильные ошибки.
+var HIST_ALARM_DS18B20=0x40; // ошибка датчиков температуры DS18B20
+var HIST_ALARM_DHT22=0x10;   // ошибка датчика воздуха DHT22
+var HIST_ALARM_SOIL=0x20;    // ошибка датчика влажности почвы
+function applyHistoryRangeUi(){
+  var btns=document.querySelectorAll('.history-range-btn');
+  for(var i=0;i<btns.length;i++){
+    var h=parseInt(btns[i].getAttribute('data-hours'),10);
+    btns[i].classList.toggle('active',h===historyHours);
+  }
+}
+function loadHistoryRangePref(){
+  try{
+    var s=localStorage.getItem('gh_history_hours');
+    if(s){
+      var h=parseInt(s,10);
+      if(h===6||h===12||h===24){historyHours=h;}
+    }
+  }catch(e){}
+  applyHistoryRangeUi();
+}
+function toggleHistory(){
+  if(!GH_HISTORY_UI)return;
+  historyOpen=!historyOpen;
+  var body=document.getElementById('history-body');
+  var btn=document.getElementById('history-toggle');
+  if(body)body.hidden=!historyOpen;
+  if(btn){btn.classList.toggle('active',historyOpen);btn.setAttribute('aria-expanded',historyOpen?'true':'false');}
+  if(navigator.vibrate)navigator.vibrate(8);
+  if(historyOpen)fetchHistoryChart();
+}
+function setHistoryRange(h){
+  if(!GH_HISTORY_UI)return;
+  h=parseInt(h,10);
+  if(h!==6&&h!==12&&h!==24)return;
+  historyHours=h;
+  applyHistoryRangeUi();
+  try{localStorage.setItem('gh_history_hours',String(h));}catch(e){}
+  if(navigator.vibrate)navigator.vibrate(8);
+  fetchHistoryChart();
+}
+function setupHistoryCanvas(canvas){
+  var dpr=window.devicePixelRatio||1;
+  var wrap=canvas.parentElement;
+  var w=wrap?Math.max(wrap.clientWidth,280):320;
+  var h=parseInt(canvas.getAttribute('data-height')||'200',10);
+  canvas.style.width=w+'px';
+  canvas.style.height=h+'px';
+  canvas.width=Math.floor(w*dpr);
+  canvas.height=Math.floor(h*dpr);
+  var ctx=canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx:ctx,w:w,h:h};
+}
+function histValOk(v){return v!==undefined&&v!==null&&v!==HIST_INVALID;}
+function histParseRows(payload){
+  // Колоночный формат: {step,t0,ta:[],tsl:[],ha:[],hg:[]}
+  if(payload&&payload.ta&&typeof payload.ta.length==='number'){
+    var step=Number(payload.step)||600;
+    var t0=Number(payload.t0)||0;
+    var ta=payload.ta,tsl=payload.tsl||[],ha=payload.ha||[],hg=payload.hg||[];
+    var out=[];
+    for(var i=0;i<ta.length;i++){
+      out.push({t:t0+i*step,ta:ta[i],tsl:tsl[i],ha:ha[i],hg:hg[i],al:0});
+    }
+    return out;
+  }
+  // Старый пер-точечный формат (на всякий случай).
+  var rows=(payload&&payload.points)?payload.points:(Array.isArray(payload)?payload:[]);
+  return rows.map(function(r){
+    return {
+      t:Number(r.t!==undefined?r.t:r.ts)||0,
+      ta:r.ta,tsl:r.tsl,ha:r.ha,hg:r.hg,
+      al:r.al!==undefined?r.al:0
+    };
+  });
+}
+// Линия одного датчика с ФИКСИРОВАННОЙ шкалой Y. Значения вне диапазона обрезаются,
+// пропуски (датчик недоступен) разрывают линию.
+function drawHistLine(ctx,rows,t0,span,key,x0,y0,w,h,yMin,yMax,color){
+  ctx.strokeStyle=color;ctx.lineWidth=2;ctx.lineJoin='round';ctx.lineCap='round';
+  var rng=(yMax-yMin)||1;var started=false;ctx.beginPath();
+  for(var i=0;i<rows.length;i++){
+    var v=rows[i][key];
+    if(!histValOk(v)){started=false;continue;}
+    if(v<yMin)v=yMin;if(v>yMax)v=yMax;
+    var fx=span>0?(rows[i].t-t0)/span:0;if(fx<0)fx=0;if(fx>1)fx=1;
+    var x=x0+fx*w;
+    var y=y0+h-(v-yMin)/rng*h;
+    if(!started){ctx.moveTo(x,y);started=true;}else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+}
+// Универсальный климатический график: фикс. шкала значений справа, ось времени снизу,
+// под графиком — дорожки алертов профильных датчиков.
+function drawClimateChart(cfg){
+  var canvas=document.getElementById(cfg.canvasId);
+  if(!canvas)return;
+  var S=setupHistoryCanvas(canvas);
+  var ctx=S.ctx,w=S.w,h=S.h;
+  ctx.clearRect(0,0,w,h);
+  var rows=cfg.rows||[];
+  var lanes=cfg.lanes||[];
+  var laneH=9,laneGap=4,laneBlock=lanes.length?(lanes.length*(laneH+laneGap)+6):0;
+  var padL=10,padR=42,padT=12,padB=18+laneBlock;
+  var cW=w-padL-padR,cH=h-padT-padB;
+  if(cW<10||cH<10)return;
+  var yMin=cfg.yMin,yMax=cfg.yMax,yStep=cfg.yStep,rng=(yMax-yMin)||1;
+  ctx.textBaseline='middle';
+  ctx.font='10px sans-serif';
+  for(var v=yMin;v<=yMax+0.001;v+=yStep){
+    var gy=padT+cH-(v-yMin)/rng*cH;
+    ctx.strokeStyle=(v===yMin||v===yMax)?'rgba(255,255,255,.16)':'rgba(255,255,255,.07)';
+    ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(padL,gy);ctx.lineTo(padL+cW,gy);ctx.stroke();
+    ctx.fillStyle='rgba(200,170,220,.62)';
+    ctx.textAlign='left';
+    ctx.fillText(v+cfg.unit,padL+cW+5,gy);
+  }
+  var t0=cfg.t0,span=cfg.span;
+  for(var s=0;s<cfg.series.length;s++){
+    var ser=cfg.series[s];
+    drawHistLine(ctx,rows,t0,span,ser.key,padL,padT,cW,cH,yMin,yMax,ser.color);
+  }
+  if(lanes.length){
+    var laneTop=padT+cH+5;
+    var stepX=cW/Math.max(rows.length,1);
+    for(var li=0;li<lanes.length;li++){
+      var lane=lanes[li];
+      var ly=laneTop+li*(laneH+laneGap);
+      ctx.fillStyle='rgba(255,255,255,.05)';
+      ctx.fillRect(padL,ly,cW,laneH);
+      ctx.fillStyle=lane.color;
+      for(var j=0;j<rows.length;j++){
+        if(!(rows[j].al&lane.bit))continue;
+        var fx=span>0?(rows[j].t-t0)/span:0;if(fx<0)fx=0;if(fx>1)fx=1;
+        var bx=padL+fx*cW;
+        ctx.fillRect(bx-stepX/2,ly,Math.max(stepX,2),laneH);
+      }
+    }
+  }
+  ctx.fillStyle='rgba(154,122,168,.78)';
+  ctx.font='10px sans-serif';
+  ctx.textBaseline='alphabetic';
+  ctx.textAlign='left';
+  ctx.fillText('−'+cfg.chartHours+' ч',padL,h-4);
+  ctx.textAlign='center';
+  ctx.fillText('−'+Math.round(cfg.chartHours/2)+' ч',padL+cW/2,h-4);
+  ctx.textAlign='right';
+  ctx.fillText('сейчас',padL+cW,h-4);
+}
+function drawHistoryChart(payload){
+  var rows=histParseRows(payload);
+  var chartHours=(payload&&payload.hours)?parseInt(payload.hours,10):historyHours;
+  if(chartHours!==6&&chartHours!==12&&chartHours!==24)chartHours=historyHours;
+  var emptyEl=document.getElementById('history-empty');
+  var metaTemp=document.getElementById('history-meta-temp');
+  var metaHum=document.getElementById('history-meta-hum');
+  var tempCanvas=document.getElementById('history-chart-temp');
+  var humCanvas=document.getElementById('history-chart-hum');
+  function clearOne(c){if(c){var z=setupHistoryCanvas(c);z.ctx.clearRect(0,0,z.w,z.h);}}
+  if(!rows.length){
+    clearOne(tempCanvas);clearOne(humCanvas);
+    if(emptyEl)emptyEl.style.display='block';
+    if(metaTemp)metaTemp.textContent='нет данных';
+    if(metaHum)metaHum.textContent='нет данных';
+    return;
+  }
+  if(emptyEl)emptyEl.style.display='none';
+  var t0=rows[0].t,tN=rows[rows.length-1].t;
+  var span=(tN>t0)?(tN-t0):1;
+  var hasTemp=false,hasHum=false;
+  for(var i=0;i<rows.length;i++){
+    if(histValOk(rows[i].ta)||histValOk(rows[i].tsl))hasTemp=true;
+    if(histValOk(rows[i].ha)||histValOk(rows[i].hg))hasHum=true;
+  }
+  drawClimateChart({
+    canvasId:'history-chart-temp',rows:rows,t0:t0,span:span,chartHours:chartHours,
+    yMin:0,yMax:50,yStep:10,unit:'°',
+    series:[{key:'ta',color:'#ff4d6d'},{key:'tsl',color:'#ff9f43'}],
+  });
+  drawClimateChart({
+    canvasId:'history-chart-hum',rows:rows,t0:t0,span:span,chartHours:chartHours,
+    yMin:0,yMax:100,yStep:20,unit:'%',
+    series:[{key:'ha',color:'#d35cff'},{key:'hg',color:'#33ccff'}],
+  });
+  var meta=rows.length+' точек · '+chartHours+' ч';
+  if(metaTemp)metaTemp.textContent=hasTemp?meta:'датчик недоступен';
+  if(metaHum)metaHum.textContent=hasHum?meta:'датчик недоступен';
+}
+function fetchHistoryChart(){
+  if(!GH_HISTORY_UI)return Promise.resolve();
+  if(!historyOpen)return Promise.resolve();
+  if(document.hidden)return Promise.resolve();
+  if(__historyFetchCtrl){try{__historyFetchCtrl.abort();}catch(e){}}
+  __historyFetchCtrl=new AbortController();
+  var sig=__historyFetchCtrl.signal;
+  return fetch('/api/history?hours='+historyHours,{cache:'no-store',signal:sig}).then(function(r){
+    if(r.status===503)return null;
+    return r.json();
+  }).then(function(data){
+    if(data===null){drawHistoryChart({points:[]});return;}
+    if(data&&(data.ta||data.points))drawHistoryChart(data);
+    else if(Array.isArray(data))drawHistoryChart({points:data});
+    else drawHistoryChart({points:[]});
+  }).catch(function(err){
+    if(err&&err.name==='AbortError')return;
+    drawHistoryChart({points:[]});
+  });
+}
+var __historyResizeTimer=null;
+window.addEventListener('resize',function(){
+  if(!historyOpen)return;
+  if(__historyResizeTimer)clearTimeout(__historyResizeTimer);
+  __historyResizeTimer=setTimeout(fetchHistoryChart,200);
+});
+window.addEventListener('pagehide',function(){
+  if(__historyFetchCtrl){try{__historyFetchCtrl.abort();}catch(e){}}
+});
+function attachSheetDrag(sheetId,headerId,closeFn){
+  var sheet=document.getElementById(sheetId);
+  var header=document.getElementById(headerId);
+  if(!sheet||!header)return;
+  var startY=0,delta=0,dragging=false;
+  function start(y){if(!sheet.classList.contains('active'))return;dragging=true;startY=y;delta=0;sheet.classList.add('dragging');}
+  function move(y){if(!dragging)return;delta=y-startY;if(delta<0)delta=0;sheet.style.transform='translateY('+delta+'px)';}
+  function end(){if(!dragging)return;dragging=false;sheet.classList.remove('dragging');sheet.style.transform='';if(delta>90){closeFn();}delta=0;}
+  header.addEventListener('touchstart',function(e){start(e.touches[0].clientY);},{passive:true});
+  header.addEventListener('touchmove',function(e){if(!dragging)return;move(e.touches[0].clientY);if(delta>0)e.preventDefault();},{passive:false});
+  header.addEventListener('touchend',end);
+  header.addEventListener('touchcancel',end);
+  header.addEventListener('mousedown',function(e){start(e.clientY);e.preventDefault();});
+  document.addEventListener('mousemove',function(e){if(dragging)move(e.clientY);});
+  document.addEventListener('mouseup',end);
+}
+attachSheetDrag('bs-modal','bs-header',closeDialModal);
+attachSheetDrag('bs-name-modal','bs-name-header',closeNameModal);
+
+function updateNameCounter(){var i=document.getElementById('name-edit-input');var c=document.getElementById('name-edit-count');if(i&&c)c.textContent=String((i.value||'').length);}
+function openNameModal(){
+  var input=document.getElementById('name-edit-input');
+  var current=(document.getElementById('device-name-text').textContent||'').trim();
+  input.value=current;
+  updateNameCounter();
+  document.getElementById('name-edit-status').textContent='';
+  document.getElementById('bs-name-overlay').classList.add('active');
+  document.getElementById('bs-name-modal').classList.add('active');
+  if(navigator.vibrate)navigator.vibrate(8);
+  setTimeout(function(){try{input.focus();input.select();}catch(e){}},340);
+}
+function closeNameModal(){
+  document.getElementById('bs-name-overlay').classList.remove('active');
+  document.getElementById('bs-name-modal').classList.remove('active');
+  var btn=document.getElementById('name-apply-btn');
+  if(btn){btn.disabled=false;btn.textContent='Сохранить';}
+}
+function applyNameChange(){
+  var input=document.getElementById('name-edit-input');
+  var btn=document.getElementById('name-apply-btn');
+  var status=document.getElementById('name-edit-status');
+  var newName=(input.value||'').trim();
+  // Bug #6: пустое имя = сброс к дефолту "Теплица".
+  if(newName.length>22){status.textContent='Не более 22 символов';status.style.color='#ffb3b3';return;}
+  var fd=new FormData();
+  fd.append('gh_name',newName);
+  btn.disabled=true;btn.textContent='Сохраняем...';
+  status.textContent='';status.style.color='';
+  fetch('/send_name',{method:'POST',body:fd}).then(function(r){
+    return r.json().then(function(d){return {ok:r.ok,data:d};});
+  }).then(function(res){
+    if(!res.ok||!res.data||!res.data.ok)throw new Error('save failed');
+    var displayed=newName.length>0?newName:'Теплица';
+    document.getElementById('device-name-text').textContent=displayed;
+    status.textContent='Сохранено';status.style.color='#a8f0b9';
+    showToast('Сохранено','ok');
+    setTimeout(closeNameModal,400);
+  }).catch(function(){
+    status.textContent='Ошибка сохранения';status.style.color='#ffb3b3';
+    showToast('Ошибка сохранения','err');
+    btn.disabled=false;btn.textContent='Сохранить';
+  });
+}
+function onNameKey(e){if(e.key==='Enter'){e.preventDefault();applyNameChange();}else if(e.key==='Escape'){e.preventDefault();closeNameModal();}}
+
+bindEditLock('light-on-hour','light-schedule');
+bindEditLock('light-cur-hour','light-schedule');
+bindEditLock('gs-vpd','growth-vpd');
+initFeatureChips();
+syncVentCurrent();
+updateAlerts();
+(function(){
+  var tg=document.getElementById('tile-growth');
+  if(tg&&tg.classList.contains('tile--growth-locked'))gsPreset=true;
+})();
+loadHistoryRangePref();
+fetchDashboardState();
+setInterval(updateAlerts,5000);
+setInterval(fetchDashboardState,10000);
+</script>
+
 <script src="app.js"></script>
+
 </body>
 </html>

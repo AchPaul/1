@@ -6,6 +6,7 @@
 <title>Мои теплицы - GrowHub</title>
 <link rel="icon" type="image/svg+xml" href="favicon-plant.svg">
 <link rel="manifest" href="manifest.json">
+<meta name="referrer" content="no-referrer">
 <style>
 :root{--clr-neon:hsl(288,52%,35%);--clr-bg:hsl(295,14%,67%)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -61,6 +62,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 .hidden{display:none!important}
 .back-link{margin-top:20px}
 </style>
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <header>
@@ -69,7 +71,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <div class="header-transition"></div>
 
 <main class="main">
-<h2 class="section-title">🌱 Мои теплицы</h2>
+<h2 class="section-title">🌿 Мои теплицы</h2>
 
 <div id="greenhouse-list" class="greenhouse-list">
 <!-- Заполняется динамически -->
@@ -112,7 +114,11 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </div>
 <div class="form-group">
 <label>Топик</label>
-<input type="text" id="inp-base" placeholder="abc123">
+<input type="text" id="inp-base" placeholder="abc123/">
+</div>
+<div class="form-group">
+<label>HTTP устройства (опционально)</label>
+<input type="text" id="inp-device-url" placeholder="http://192.168.1.50 — WiFi, логи, OTA">
 </div>
 <div class="form-actions">
 <button id="btn-cancel">Отмена</button>
@@ -124,7 +130,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </main>
 
 <script src="mqtt-simple.js"></script>
-<script src="push-notifications.js"></script>
+<script src="plant_config.js"></script>
 <script src="app.js"></script>
 <script>
 (function(){
@@ -142,6 +148,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
   const inpUser = document.getElementById('inp-user');
   const inpPass = document.getElementById('inp-pass');
   const inpBase = document.getElementById('inp-base');
+  const inpDeviceUrl = document.getElementById('inp-device-url');
   
   function renderList(){
     const greenhouses = window.ghGreenhouses.getAll();
@@ -165,6 +172,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
         <div class="greenhouse-info">
           <span>🌐 ${escapeHtml(gh.host)}:${gh.port}</span>
           <span>📡 ${escapeHtml(gh.base)}</span>
+          ${gh.deviceUrl ? `<span>🔗 ${escapeHtml(gh.deviceUrl)}</span>` : ''}
         </div>
         <div class="greenhouse-actions">
           ${gh.id !== activeId ? `<button class="btn-primary" onclick="selectGreenhouse('${gh.id}')">Выбрать</button>` : ''}
@@ -194,6 +202,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
         inpUser.value = gh.user || '';
         inpPass.value = gh.pass || '';
         inpBase.value = gh.base || '';
+        if(inpDeviceUrl) inpDeviceUrl.value = gh.deviceUrl || '';
       }
     } else {
       formTitle.textContent = 'Новая теплица';
@@ -203,6 +212,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
       inpUser.value = '';
       inpPass.value = '';
       inpBase.value = '';
+      if(inpDeviceUrl) inpDeviceUrl.value = '';
     }
   }
   
@@ -241,6 +251,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
     const user = inpUser.value.trim();
     const pass = inpPass.value.trim();
     let base = inpBase.value.trim();
+    const deviceUrl = inpDeviceUrl ? inpDeviceUrl.value.trim() : '';
     
     if(!host){
       alert('Введите адрес брокера');
@@ -256,7 +267,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
     // Нормализуем base topic
     if(!base.endsWith('/')) base += '/';
     
-    const config = { host, port, user, pass, base, proto: 'wss' };
+    const config = { host, port, user, pass, base, proto: 'wss', deviceUrl };
     
     const editId = inpId.value;
     if(editId){

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GrowHub — Диагностика</title>
+<link rel="icon" type="image/svg+xml" href="favicon-plant.svg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#28003c">
+<meta name="referrer" content="no-referrer">
+
+<style>
+:root{--clr-neon:#752b88;--clr-neon-brighter:#c900cc;--font-main:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:var(--font-main);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.5);position:relative;z-index:100}
+.header-transition{height:56px;position:relative;overflow:hidden;background:linear-gradient(180deg,rgba(40,0,60,.98) 0%,rgba(31,0,45,.9) 26%,rgba(20,0,31,.72) 55%,rgba(9,0,16,.34) 82%,transparent 100%);margin-top:-8px;margin-bottom:8px}
+.header-transition::before{content:'';position:absolute;inset:-20px 0 0;background:radial-gradient(ellipse at top,rgba(201,0,204,.2) 0%,rgba(120,0,180,.12) 34%,rgba(0,0,0,0) 72%);filter:blur(10px);pointer-events:none}
+.header-transition::after{content:'';position:absolute;left:0;right:0;bottom:-8px;height:26px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,#000 100%);pointer-events:none}
+.logo{margin-top:2px;display:inline-flex;align-items:center;gap:5px}
+.grow,.hub{display:inline-block;font-size:30px;font-weight:600;letter-spacing:.2px;line-height:1;transform:scaleX(1.18);-webkit-text-stroke:.45px currentColor}
+.grow{color:#fff}
+.hub{color:#e95eeb;border:4px solid #e95eeb;border-radius:10px;padding:4px;margin-left:12px}
+.main{display:flex;flex-direction:column;align-items:center;gap:16px;padding:0 15px 28px}
+.page-title{text-align:center;font-size:21px;font-weight:700;letter-spacing:.4px;color:#fff;text-shadow:0 0 18px rgba(201,0,204,.35)}
+.diag-wrap{width:100%;max-width:400px}
+.diag-tabs{display:flex;gap:8px;margin-bottom:14px}
+.diag-tab{flex:1;appearance:none;border:1px solid rgba(201,0,204,.35);border-radius:999px;background:rgba(26,0,31,.92);color:#d7b7df;font-size:12px;font-weight:600;padding:10px 6px;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
+.diag-tab.active{background:rgba(201,0,204,.22);border-color:rgba(201,0,204,.55);color:#fff;box-shadow:0 0 12px rgba(201,0,204,.18)}
+.diag-panel{display:none;width:100%}
+.diag-panel.active{display:block}
+.status-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.status-pill{border:1px solid rgba(201,0,204,.35);border-radius:14px;padding:12px 14px;background:rgba(21,0,26,.78);box-shadow:0 4px 10px rgba(0,0,0,.35),inset 0 0 10px rgba(201,0,204,.08);text-align:center}
+.status-pill--wide{grid-column:1/-1}
+.status-label{display:block;font-size:11px;color:#b78dc3;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.status-value{font-size:16px;font-weight:700;color:#fff;line-height:1.3}
+.status-value.ok{color:#b8f5c0}
+.status-value.warn{color:#fecaca}
+.status-value.info{color:#93c5fd}
+.logs-container{width:100%;border:1px solid rgba(201,0,204,.32);border-radius:16px;padding:14px;background:linear-gradient(145deg,rgba(22,0,28,.95),#000);max-height:420px;overflow-y:auto;box-shadow:0 4px 14px rgba(0,0,0,.4),inset 0 0 12px rgba(201,0,204,.06)}
+.log-entry{padding:8px 12px;margin:6px 0;border-radius:8px;font-size:13px;line-height:1.4;border-left:3px solid rgba(201,0,204,.55);background:rgba(0,0,0,.35)}
+.log-entry.warn{border-left-color:#fbbf24}
+.log-entry.error,.log-entry.critical{border-left-color:#f87171}
+.log-meta{font-size:11px;color:#9a7aa8;margin-bottom:4px}
+.empty-state{text-align:center;padding:24px 12px;color:#9a7aa8;font-size:14px}
+.diag-actions{display:flex;gap:10px;margin-top:12px}
+.diag-btn{flex:1;appearance:none;border:1px solid rgba(201,0,204,.45);border-radius:12px;padding:12px 10px;font-family:var(--font-main);font-size:13px;font-weight:600;color:#f3d7fa;background:linear-gradient(160deg,rgba(34,0,46,.92),rgba(8,0,14,.92));cursor:pointer}
+.diag-btn--danger{border-color:rgba(248,113,113,.55);color:#ffd0d0}
+.neon-buttom{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;max-width:300px;margin:8px auto 0;padding:14px 20px;font-size:15px;font-weight:600;text-decoration:none;color:#f3d7fa;background:linear-gradient(160deg,rgba(34,0,46,.92),rgba(8,0,14,.92));border:1px solid rgba(201,0,204,.32);border-radius:14px;box-shadow:0 4px 12px rgba(0,0,0,.5),inset 0 0 12px rgba(201,0,204,.08)}
+.icon{position:relative}
+.icon_btn{position:absolute;top:50%;left:16px;transform:translateY(-50%);display:flex;align-items:center;line-height:0}
+</style>
+</head>
+<body>
+<header><div class="logo"><span class="grow">Grow</span><span class="hub">Hub</span></div></header>
+<div class="header-transition"></div>
+<main class="main">
+<div class="pwa-bar" id="pwa-bar" style="width:100%;max-width:320px;margin:0 auto 10px">
+<div class="greenhouse-select-wrap" id="greenhouse-selector" style="display:none">
+<select class="greenhouse-select" id="greenhouse-select" aria-label="Выбор теплицы" style="flex:1;padding:10px;background:#1a0026;border:1px solid #6d00a6;border-radius:8px;color:#fff;font-size:13px"></select>
+<a href="greenhouses.html" class="greenhouse-manage-btn" title="Теплицы" style="padding:10px 12px;border:1px solid #6d00a6;border-radius:8px;color:#c900cc;text-decoration:none">⚙</a>
+</div>
+<div class="pwa-status" id="pwa-status-line" style="font-size:11px;text-align:center;color:#9a7aa8;min-height:16px">Подключение...</div>
+</div>
+
+<h1 class="page-title">Логи и диагностика</h1>
+<div class="diag-wrap">
+<div class="diag-tabs" role="tablist">
+<button type="button" class="diag-tab active" data-tab="status" role="tab">Статус</button>
+<button type="button" class="diag-tab" data-tab="logs" role="tab">Логи</button>
+</div>
+<div id="panel-status" class="diag-panel active" role="tabpanel">
+<div class="status-grid">
+<div class="status-pill"><span class="status-label">Аптайм</span><span class="status-value info" id="stat-uptime">—</span></div>
+<div class="status-pill"><span class="status-label">Heap своб.</span><span class="status-value" id="stat-heap-free">—</span></div>
+<div class="status-pill status-pill--wide"><span class="status-label">Причина перезагрузки</span><span class="status-value" id="stat-reset">—</span></div>
+</div>
+</div>
+<div id="panel-logs" class="diag-panel" role="tabpanel">
+<div class="logs-container" id="logs-box"><div class="empty-state">Загрузка логов...</div></div>
+<div class="diag-actions">
+<button type="button" class="diag-btn" onclick="refreshDiag()">Обновить</button>
+<button type="button" class="diag-btn diag-btn--danger" onclick="clearDiagLogs()">Очистить логи</button>
+</div>
+</div>
+</div>
+<a class="neon-buttom icon" href="index.html">На дашборд<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M21 11H6.414l5.293-5.293-1.414-1.414L2.586 12l7.707 7.707 1.414-1.414L6.414 13H21z"/></svg></div></a>
+</main>
+
+<script src="plant_config.js"></script>
+<script src="mqtt-simple.js"></script>
+<script src="pwa-bridge.js"></script>
+
+<script>
+function showDiagTab(tab){
+  document.querySelectorAll('.diag-tab').forEach(function(b){b.classList.toggle('active',b.dataset.tab===tab);});
+  ['status','logs'].forEach(function(t){
+    var p=document.getElementById('panel-'+t);
+    if(p)p.classList.toggle('active',t===tab);
+  });
+  if(tab)try{history.replaceState(null,'','#'+tab);}catch(e){}
+}
+document.querySelectorAll('.diag-tab').forEach(function(b){b.addEventListener('click',function(){showDiagTab(b.dataset.tab);});});
+function formatUptime(sec){
+  sec=Number(sec)||0;
+  var d=Math.floor(sec/86400);sec%=86400;
+  var h=Math.floor(sec/3600);sec%=3600;
+  var m=Math.floor(sec/60);var s=sec%60;
+  if(d>0)return d+'д '+h+'ч '+m+'м';
+  if(h>0)return h+'ч '+m+'м';
+  if(m>0)return m+'м '+s+'с';
+  return s+'с';
+}
+function paintResetReason(el,text,code){
+  if(!el)return;
+  el.textContent=text||'—';
+  el.className='status-value';
+  if(code===1||code===3||code===4||code===6)el.classList.add('warn');
+  else if(code===0||code===5)el.classList.add('ok');
+  else el.classList.add('info');
+}
+function renderLogs(entries,truncated){
+  var box=document.getElementById('logs-box');
+  if(!box)return;
+  if(!entries||!entries.length){box.innerHTML='<div class="empty-state">Логов пока нет</div>';return;}
+  var html='';
+  entries.forEach(function(ev){
+    var cls='log-entry';
+    if(ev.type==='warn')cls+=' warn';
+    if(ev.type==='error'||ev.type==='critical')cls+=' error';
+    var t=ev.t!=null?Math.round(ev.t/1000)+'s':'—';
+    html+='<div class="'+cls+'"><div class="log-meta">'+ev.type+' · '+t+'</div>'+(ev.msg||'')+'</div>';
+  });
+  if(truncated)html+='<div class="empty-state">Список обрезан — слишком много записей</div>';
+  box.innerHTML=html;
+}
+function loadDiag(){
+  fetch('/api/diag',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    var u=document.getElementById('stat-uptime');if(u)u.textContent=formatUptime(d.uptime);
+    var hf=document.getElementById('stat-heap-free');if(hf)hf.textContent=(d.heap_free!=null?d.heap_free+' B':'—');
+    paintResetReason(document.getElementById('stat-reset'),d.reset_reason,d.reset_code);
+    var logs=d.logs||d.events||[];
+    renderLogs(logs,d.truncated);
+  }).catch(function(){
+    var box=document.getElementById('logs-box');
+    if(box)box.innerHTML='<div class="empty-state">Не удалось загрузить диагностику</div>';
+  });
+}
+function refreshDiag(){loadDiag();}
+
+var hash=(location.hash||'').replace('#','');
+if(hash==='events')hash='logs';
+if(hash==='logs'||hash==='status')showDiagTab(hash);
+refreshDiag();
+setInterval(loadDiag,10000);
+</script>
+
+<script src="app.js"></script>
+
+</body>
+</html>

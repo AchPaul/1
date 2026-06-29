@@ -1,11 +1,12 @@
 /* GrowHub Remote UI - MQTT over WebSockets
  * Assumptions:
  *  - MQTT state topic: <base>state/json (retained)
- *  - Commands: <base>set/<key> (payload = plain value)
+ *  - MQTT history topic: <base>history/json (retained, 24h climate)
+ *  - Commands: <base>set/<key> (payload = token\\nvalue)
  *  - JSON fields per firmware publish_state_core() in mqtt.cpp
- *    Keys: name, profile_id, profile_name, day_time, lig_type, lig_hours, lig_pwm,
+ *    Keys: name, profile_id, profile_name, day_time, lig_hours,
  *          temp_day, temp_night, humgr_day, humgr_night, humair_day, humair_night,
- *          temp_now, humgr_now, humair_now, alert_* flags
+ *          temp_soil, humgr_now, humair_now, alert_* flags
  */
 
 const LS_KEY = 'gh_remote_cfg_v1';
@@ -93,7 +94,8 @@ function addGreenhouse(config){
     pass: config.pass || '',
     base: config.base,
     path: config.path || '/mqtt',
-    proto: config.proto || 'wss'
+    proto: config.proto || 'wss',
+    deviceUrl: config.deviceUrl || ''
   };
   greenhouses.push(gh);
   if(!activeGreenhouseId){
@@ -184,9 +186,9 @@ let setBase = '';
 let lastState = null;
 let lastPubMap = {}; // key -> timestamp
 const PUB_THROTTLE_MS = 400; // minimal interval per key
-const FORCE_STATE_INTERVAL = 25000; // if no state for this long -> show stale (должен быть > STATE_INTERVAL на ESP32)
-const STALE_DATA_THRESHOLD = 35000; // 20 seconds - data older than this is stale
-const DEVICE_OFFLINE_CHECK_DELAY = 20000; // 20 seconds to wait for fresh data before showing offline
+const STALE_DATA_THRESHOLD = (typeof window.GH_STALE_DATA_MS === 'number') ? window.GH_STALE_DATA_MS : 120000;
+const FORCE_STATE_INTERVAL = 90000; // мягкое предупреждение до порога STALE (2 мин)
+const DEVICE_OFFLINE_CHECK_DELAY = STALE_DATA_THRESHOLD;
 let lastStateTs = 0;
 let cachedDataWasStale = false; // Flag to track if initial cached data was stale
 let deviceCheckTimer = null; // Timer to check if device is offline
@@ -242,6 +244,12 @@ function formatVpdTargetX10(x10){
   return (n / 10).toFixed(1) + ' kPa';
 }
 
+function getEffectiveHumairValue(js, period){
+  if(!js) return undefined;
+  // Firmware publishes effective setpoints in humair_day/night (manual or SmartHum).
+  return period === 'day' ? js.humair_day : js.humair_night;
+}
+
 function setGrowthStageRadiosLockedByVpd(rawVpdValue){
   const raw = String(rawVpdValue || '').trim();
   let vv = raw.length ? parseInt(raw, 10) : 0;
@@ -256,10 +264,13 @@ function setGrowthStageRadiosLockedByVpd(rawVpdValue){
 }
 
 function isStagePresetProfileId(profileId){
+  if(typeof window.isStagePresetProfileId === 'function' && window.isStagePresetProfileId !== isStagePresetProfileId){
+    return window.isStagePresetProfileId(profileId);
+  }
   const id = Number(profileId);
-  // Firmware uses PLANT_NUMS=337; stage presets are the last 3 entries: 334..336.
-  // Use numeric id instead of profile_name to avoid localization/rename fragility.
-  return Number.isFinite(id) && id >= 334 && id <= 336;
+  const n = Number(window.GH_PLANT_NUMS);
+  if(!Number.isFinite(id) || !Number.isFinite(n)) return false;
+  return id === n - 3 || id === n - 2 || id === n - 1;
 }
 
 // Система логирования
@@ -373,10 +384,9 @@ const ALERT_KEYS = [
   'alert_humid',
   'alert_high_temp',
   'alert_low_temp',
-  'err_sensor_temp',
-  'err_sensor_hg',
-  'err_sensor_hg2',
   'err_sensor_dht',
+  'err_sensor_hg',
+  'err_sensor_soil',
   'watering_notification_pending'
 ];
 
@@ -414,16 +424,53 @@ const formCfg = {
   clear: document.getElementById('cfg-clear')
 };
 
-// Raw URL parameter dump (long & short forms) for diagnostics
+// Raw URL parameter dump (long & short forms) for diagnostics — без секретов
 function extractUrlRaw(){
   const sp = new URLSearchParams(window.location.search);
   const raw = {
-    host: sp.get('host'), port: sp.get('port'), user: sp.get('user'), pass: sp.get('pass'), topic: sp.get('topic'),
+    host: sp.get('host'), port: sp.get('port'), topic: sp.get('topic'),
     path: sp.get('path'), proto: sp.get('proto'),
-    h: sp.get('h'), p: sp.get('p'), u: sp.get('u'), pw: sp.get('pw'), b: sp.get('b'), pt: sp.get('pt'), pr: sp.get('pr')
+    h: sp.get('h'), p: sp.get('p'), b: sp.get('b'), pt: sp.get('pt'), pr: sp.get('pr'),
+    hasUser: !!(sp.get('user') || sp.get('u')),
+    hasPass: !!(sp.get('pass') || sp.get('pw'))
   };
-  console.log('[GrowHub:PWA] URL params raw:', raw);
+  if(window.location.hash){
+    const hp = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    raw.hasUser = raw.hasUser || !!hp.get('u');
+    raw.hasPass = raw.hasPass || !!hp.get('pw');
+  }
+  console.log('[GrowHub:PWA] URL params (redacted):', raw);
   return raw;
+}
+
+function readCredentialParams(){
+  const sp = new URLSearchParams(window.location.search);
+  let user = sp.get('user') || sp.get('u') || '';
+  let pass = sp.get('pass') || sp.get('pw') || '';
+  if(window.location.hash){
+    const hp = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    if(!user) user = hp.get('u') || hp.get('user') || '';
+    if(!pass) pass = hp.get('pw') || hp.get('pass') || '';
+  }
+  return { user, pass };
+}
+
+function stripSensitiveUrlParams(){
+  const url = new URL(window.location.href);
+  let changed = false;
+  ['pass','pw','user','u','tg_token','tt','tg_chat_id','ci'].forEach(k=>{
+    if(url.searchParams.has(k)){ url.searchParams.delete(k); changed = true; }
+  });
+  if(url.hash){
+    const hp = new URLSearchParams(url.hash.replace(/^#/, ''));
+    if(hp.has('pw') || hp.has('pass') || hp.has('u') || hp.has('user')){
+      url.hash = '';
+      changed = true;
+    }
+  }
+  if(!changed) return;
+  const clean = url.pathname + url.search + url.hash;
+  history.replaceState(null, '', clean);
 }
 
 const ackBox = document.getElementById('service-acks');
@@ -434,9 +481,7 @@ const ackButtons = {
 
 // Control inputs
 const inputs = {
-  lig_type: document.getElementById('inp_lig_type'),
   lig_hours: document.getElementById('inp_lig_hours'),
-  lig_pwm: document.getElementById('inp_lig_pwm'),
   temp_day: document.getElementById('inp_temp_day'),
   temp_night: document.getElementById('inp_temp_night'),
   humgr_day: document.getElementById('inp_humgr_day'),
@@ -449,12 +494,10 @@ const inputs = {
   vent_night_always: document.getElementById('chk_vent_night_always'),
   smart_humair_day: document.getElementById('chk_smart_humair_day'),
   smart_humair_night: document.getElementById('chk_smart_humair_night'),
-  vent_interval: document.getElementById('inp_vent_interval'),
   cooling: document.getElementById('chk_cooling'),
   dehumidify: document.getElementById('chk_dehumidify'),
   alternate_watering: document.getElementById('chk_alternate_watering'),
   btn_save_advanced: document.getElementById('btn_save_advanced'),
-  btn_watered: document.getElementById('btn_watered'),
   growth_stage_0: document.getElementById('gs_0'),
   growth_stage_1: document.getElementById('gs_1'),
   growth_stage_2: document.getElementById('gs_2'),
@@ -501,16 +544,17 @@ function setStoredMqttStatus(status){
 function loadConfig(){
   const url = new URL(window.location.href);
   const p = (k)=> url.searchParams.get(k) || '';
+  const creds = readCredentialParams();
   
   // Загружаем список теплиц
   loadGreenhouses();
   
-  // Support both short (h,p,u,pw,b) and long (host,port,user,pass,topic) parameter styles
+  // host/port/topic в query; user/pass — в hash (#u=&pw=) или legacy query
   const longParams = {
     host: p('host'),
     port: p('port'),
-    user: p('user'),
-    pass: p('pass'),
+    user: creds.user,
+    pass: creds.pass,
     base: p('topic'),
     path: p('path'),
     proto: p('proto')
@@ -518,8 +562,8 @@ function loadConfig(){
   const shortParams = {
     host: p('h'),
     port: p('p'),
-    user: p('u'),
-    pass: p('pw'),
+    user: creds.user,
+    pass: creds.pass,
     base: p('b'),
     path: p('pt'),
     proto: p('pr')
@@ -540,6 +584,7 @@ function loadConfig(){
     const existing = greenhouses.find(g => g.host === chosen.host && g.base === chosen.base);
     if(existing){
       setActiveGreenhouse(existing.id);
+      if(creds.user || creds.pass) stripSensitiveUrlParams();
       return existing;
     } else {
       // Добавляем новую теплицу из URL
@@ -548,6 +593,7 @@ function loadConfig(){
         ...chosen
       });
       setActiveGreenhouse(newGh.id);
+      if(creds.user || creds.pass) stripSensitiveUrlParams();
       return newGh;
     }
   }
@@ -565,6 +611,9 @@ function loadConfig(){
   
   // Merge with stored config (URL params override stored when non-empty)
   const merged = Object.assign({}, cfg||{}, Object.fromEntries(Object.entries(chosen).filter(([,v])=>v)));
+  if(configFromUrl && (creds.user || creds.pass)){
+    stripSensitiveUrlParams();
+  }
   return merged;
 }
 
@@ -678,7 +727,7 @@ function attachManagerEvents(){
       clearDeviceCheckTimer();
       // Не показываем 'Отключено' если недавно получали данные
       const timeSinceLastState = lastStateTs ? (Date.now() - lastStateTs) : Infinity;
-      if(timeSinceLastState > 60000){
+      if(timeSinceLastState > STALE_DATA_THRESHOLD){
         logStatus('Отключено', true);
         setStoredMqttStatus('disconnected');
         addLog('MQTT отключен', 'connection', 'warning');
@@ -745,28 +794,15 @@ function attachManagerEvents(){
       }
     }
     
-    // Генерируем CustomEvent для других страниц (time.html и т.д.)
+    // Генерируем CustomEvent для других страниц (service.html и т.д.)
     window.dispatchEvent(new CustomEvent('gh-state-update', { detail: js }));
     
     renderState(js);
-    // Логирование изменений состояния систем
     trackSystemChanges(js, previousState);
-    // Проверяем алерты для push-уведомлений
-    checkAlertsForPush(js, previousState);
-    // Сохраняем логи из ESP32 если они есть (с дедупликацией по ID)
-    // Логи отключены в MQTT, обрабатываются только локально
-    if(false && js.logs && Array.isArray(js.logs)){
-      // Если мы на странице логов - обновляем отображение
-      if(window.location.pathname.includes('logs.html') && typeof updateLogsDisplay === 'function'){
-        updateLogsDisplay();
-      }
-    } else {
-      console.warn('[GrowHub] Логи не получены из MQTT state:', typeof js.logs, js.logs);
-    }
   });
-  manager.on('alert', (alertData)=>{
-    // Критические уведомления от ESP32
-    handleBrowserAlert(alertData);
+  manager.on('history', (hist)=>{
+    window.dispatchEvent(new CustomEvent('gh-history-update', { detail: hist }));
+    if(typeof window.ghOnMqttHistory === 'function') window.ghOnMqttHistory(hist);
   });
   manager.on('cached', (info)=>{
     // Track if cached data was stale for connection status logic
@@ -869,6 +905,21 @@ document.addEventListener('visibilitychange', ()=>{
   }
 });
 function renderState(js){
+  if(typeof window.ghOnMqttState === 'function') window.ghOnMqttState(js);
+  const pwaStatus = document.getElementById('pwa-status-line');
+  if(pwaStatus){
+    if(!connected){
+      pwaStatus.textContent = 'Нет связи с MQTT';
+      pwaStatus.classList.add('warn');
+    } else if(deviceOnline === false){
+      pwaStatus.textContent = 'Теплица не в сети';
+      pwaStatus.classList.add('warn');
+    } else {
+      pwaStatus.textContent = js && js.name ? ('Подключено · ' + js.name) : 'Подключено';
+      pwaStatus.classList.remove('warn');
+    }
+  }
+  if(window.__ghDashboardMode || document.getElementById('pwa-bar')) return;
   // Пропускаем обновление UI если пользователь активно настраивает
   const locked = isUIUpdateLocked();
   if(locked){
@@ -909,8 +960,22 @@ function renderState(js){
       el.textContent = isFlagActive(js[k]) ? 'вкл' : 'выкл';
     } else if(k === 'smart_humair'){
       el.textContent = isFlagActive(js.smart_humair) ? 'вкл' : 'выкл';
+    } else if(k === 'humidifier_state'){
+      el.textContent = isFlagActive(js.humidifier_on) ? 'вкл' : 'выкл';
     } else if(k === 'vpd_target_x10'){
       el.textContent = formatVpdTargetX10(js.vpd_target_x10);
+    // Показ "Ошибка" при ошибке датчиков (многократных ошибках подряд)
+    } else if(k === 'temp_soil'){
+      const hasError = isFlagActive(js.err_sensor_soil);
+      el.textContent = hasError ? 'Ошибка' : js[k];
+    } else if(k === 'humgr_now'){
+      // Ошибка датчика влажности почвы
+      const hasError = isFlagActive(js.err_sensor_hg);
+      el.textContent = hasError ? 'Ошибка' : js[k];
+    } else if(k === 'humair_now'){
+      // Ошибка DHT22 влажности воздуха
+      const hasError = isFlagActive(js.err_sensor_dht);
+      el.textContent = hasError ? 'Ошибка' : js[k];
     } else if(k in js){
       // humair_now показываем без "(авто)" - авто показывается только в целевых значениях день/ночь
       if(k === 'growth_stage_name'){
@@ -923,27 +988,30 @@ function renderState(js){
       }
     }
   });
+  // Скрываем единицы измерения при ошибке датчика (для элементов с data-unit)
+  document.querySelectorAll('[data-unit]').forEach(el=>{
+    const k = el.getAttribute('data-unit');
+    let hasError = false;
+    if(k === 'temp_soil') hasError = isFlagActive(js.err_sensor_soil);
+    else if(k === 'humgr_now') hasError = isFlagActive(js.err_sensor_hg);
+    else if(k === 'humair_now') hasError = isFlagActive(js.err_sensor_dht);
+    el.style.display = hasError ? 'none' : '';
+  });
   // Device name special case
   if(js.name && deviceNameEls.length){ deviceNameEls.forEach(el=> el.textContent = js.name); }
-  // Live slider labels (used in settings.html and state.html)
+  // Live slider labels (dashboard period modal)
   document.querySelectorAll('[data-live]').forEach(el=>{
     const k = el.getAttribute('data-live');
     if(k in js){
       const suffix = el.getAttribute('data-suffix') || '';
       let val = js[k];
-      // Smart humidity: show calculated target humidity derived from VPD.
-      // Firmware publishes these as humair_vpd_day/night + humair_vpd_valid.
-      if(isFlagActive(js.smart_humair) && isFlagActive(js.humair_vpd_valid)){
-        if(k === 'humair_day' && js.humair_vpd_day !== null && js.humair_vpd_day !== undefined) val = js.humair_vpd_day;
-        if(k === 'humair_night' && js.humair_vpd_night !== null && js.humair_vpd_night !== undefined) val = js.humair_vpd_night;
-      }
       if ((k === 'vent_day' && ventDayAlways) || (k === 'vent_night' && ventNightAlways)) {
         el.textContent = 'вкл';
       } else if (suffix && (val === 0 || val === '0')) {
-        // Для state.html: показываем "выкл" вместо "0" когда есть суффикс
+        // Показываем «выкл» вместо «0», когда есть суффикс
         el.textContent = 'выкл';
       } else if (suffix) {
-        // Для state.html: добавляем суффикс (°C, %, мин)
+        // Добавляем суффикс (°C, %, мин)
         let text = val + suffix;
         // Добавляем (авто) если включен умный контроль влажности воздуха
         if ((k === 'humair_day' || k === 'humair_night') && isFlagActive(js.smart_humair)) {
@@ -987,10 +1055,7 @@ function renderState(js){
   // Влажность воздуха display: "выкл" при 0, иначе "X%"
   document.querySelectorAll('[data-field="humair_day_display"]').forEach(el=>{
     if('humair_day' in js){
-      let v = js.humair_day;
-      if(isFlagActive(js.smart_humair) && isFlagActive(js.humair_vpd_valid) && js.humair_vpd_day !== null && js.humair_vpd_day !== undefined){
-        v = js.humair_vpd_day;
-      }
+      const v = js.humair_day;
       let text = (v === 0 || v === '0') ? 'выкл' : v + '%';
       if(isFlagActive(js.smart_humair)) text += ' (авто)';
       el.textContent = text;
@@ -998,10 +1063,7 @@ function renderState(js){
   });
   document.querySelectorAll('[data-field="humair_night_display"]').forEach(el=>{
     if('humair_night' in js){
-      let v = js.humair_night;
-      if(isFlagActive(js.smart_humair) && isFlagActive(js.humair_vpd_valid) && js.humair_vpd_night !== null && js.humair_vpd_night !== undefined){
-        v = js.humair_vpd_night;
-      }
+      const v = js.humair_night;
       let text = (v === 0 || v === '0') ? 'выкл' : v + '%';
       if(isFlagActive(js.smart_humair)) text += ' (авто)';
       el.textContent = text;
@@ -1021,18 +1083,17 @@ function renderState(js){
   }
   // Update control values if user not dragging AND UI not locked
   if(!locked){
-    syncInputIfIdle(inputs.lig_type, js.lig_type);
+    // syncInputIfIdle(inputs.lig_type, js.lig_type);  // PWM/spectrum removed
     syncInputIfIdle(inputs.lig_hours, js.lig_hours);
-    syncInputIfIdle(inputs.lig_pwm, js.lig_pwm);
+    // syncInputIfIdle(inputs.lig_pwm, js.lig_pwm);    // PWM/spectrum removed
     syncInputIfIdle(inputs.temp_day, js.temp_day);
     syncInputIfIdle(inputs.temp_night, js.temp_night);
     syncInputIfIdle(inputs.humgr_day, js.humgr_day);
     syncInputIfIdle(inputs.humgr_night, js.humgr_night);
-    syncInputIfIdle(inputs.humair_day, js.humair_day);
-    syncInputIfIdle(inputs.humair_night, js.humair_night);
+    syncInputIfIdle(inputs.humair_day, getEffectiveHumairValue(js, 'day'), {skipLive: isFlagActive(js.smart_humair)});
+    syncInputIfIdle(inputs.humair_night, getEffectiveHumairValue(js, 'night'), {skipLive: isFlagActive(js.smart_humair)});
     syncInputIfIdle(inputs.vent_day, js.vent_day);
     syncInputIfIdle(inputs.vent_night, js.vent_night);
-    syncInputIfIdle(inputs.vent_interval, js.vent_interval);
     syncCheckbox(inputs.vent_day_always, js.vent_day_always, inputs.vent_day);
     syncCheckbox(inputs.vent_night_always, js.vent_night_always, inputs.vent_night);
   }
@@ -1040,10 +1101,6 @@ function renderState(js){
   // Синхронизация режима чередования полива (только если UI не заблокирован)
   if(!locked && inputs.alternate_watering && js.alternate_watering !== undefined){
     inputs.alternate_watering.checked = isFlagActive(js.alternate_watering);
-    // Активируем кнопку "Полив выполнен" если режим включён
-    if(inputs.btn_watered){
-      inputs.btn_watered.disabled = !inputs.alternate_watering.checked;
-    }
   }
   // Синхронизация режима осушения
   if(!locked && inputs.dehumidify && js.dehumidify !== undefined){
@@ -1083,8 +1140,20 @@ function renderState(js){
     if(dayBox) syncCheckbox(dayBox, js.smart_humair, inputs.humair_day);
     if(nightBox) syncCheckbox(nightBox, js.smart_humair, inputs.humair_night);
     const lock = isFlagActive(js.smart_humair);
-    if(inputs.humair_day){ inputs.humair_day.classList.toggle('locked', lock); inputs.humair_day.disabled = lock; }
-    if(inputs.humair_night){ inputs.humair_night.classList.toggle('locked', lock); inputs.humair_night.disabled = lock; }
+    if(inputs.humair_day){
+      inputs.humair_day.classList.toggle('locked', lock);
+      inputs.humair_day.disabled = lock;
+      inputs.humair_day.title = lock ? 'Рассчитывается SmartHum по VPD' : '';
+    }
+    if(inputs.humair_night){
+      inputs.humair_night.classList.toggle('locked', lock);
+      inputs.humair_night.disabled = lock;
+      inputs.humair_night.title = lock ? 'Рассчитывается SmartHum по VPD' : '';
+    }
+    if(typeof updateSliderValue === 'function'){
+      if(inputs.humair_day) updateSliderValue(inputs.humair_day);
+      if(inputs.humair_night) updateSliderValue(inputs.humair_night);
+    }
   }
   // Показываем статус ожидания полива (всегда обновляем - это не мешает настройке)
   const wateringStatus = document.getElementById('watering-status');
@@ -1121,9 +1190,7 @@ function renderState(js){
   }
   const typeEls = document.querySelectorAll('[data-field="lig_type_name"]');
   if(typeEls.length){
-    const typeMap = {0:'Авто',1:'Рост',2:'Цветение'};
-    const typeValue = (js.lig_type !== undefined && js.lig_type in typeMap) ? typeMap[js.lig_type] : js.lig_type;
-    typeEls.forEach(el=> el.textContent = typeValue ?? '—');
+    typeEls.forEach(el=> el.textContent = 'Релейный');
   }
   // AP mode derived fields
   const apModeLabelEls = document.querySelectorAll('[data-field="ap_mode_label"]');
@@ -1181,10 +1248,11 @@ function renderState(js){
   if(lastUpdateEl) lastUpdateEl.textContent = 'Обновлено: ' + new Date().toLocaleTimeString();
 }
 
-function syncInputIfIdle(input, value){
+function syncInputIfIdle(input, value, opts){
   if(!input) return;
   if(document.activeElement === input) return; // user editing
-  if(String(input.value) !== String(value)) input.value = value;
+  if(value !== undefined && value !== null && String(input.value) !== String(value)) input.value = value;
+  if(opts && opts.skipLive) return;
   const live = document.querySelector(`[data-live="${input.id.replace('inp_','')}"]`);
   if(live) live.textContent = value;
 }
@@ -1207,6 +1275,7 @@ function publish(key, val){
 }
 // Expose for inline forms on other pages
 window.ghPublish = publish;
+window.ghIsMqttConnected = function(){ return connected && lastState !== null; };
 
 // Helper function to show "Saved" state on buttons
 function showSavedState(button, savedText = 'Сохранено ✓', originalText = null, duration = 2000, isError = false){
@@ -1289,14 +1358,12 @@ function flashPub(msg){
 function bindControls(){
   const ranged = [
     ['lig_hours','inp_lig_hours'],
-    ['lig_pwm','inp_lig_pwm'],
     ['temp_day','inp_temp_day'],
     ['temp_night','inp_temp_night'],
     ['humgr_day','inp_humgr_day'],
     ['humgr_night','inp_humgr_night'],
     ['humair_day','inp_humair_day'],
     ['humair_night','inp_humair_night']
-    ,['vent_interval','inp_vent_interval']
   ];
   ranged.forEach(([key,id])=>{
     const el = document.getElementById(id);
@@ -1311,15 +1378,6 @@ function bindControls(){
     el.addEventListener('focus', markUserInteraction);
     // Убрана автоматическая отправка - только при нажатии кнопки "Сохранить"
   });
-  
-  // Отслеживаем взаимодействие с другими контролами
-  if(inputs.lig_type){
-    inputs.lig_type.addEventListener('change', ()=>{
-      markUserInteraction();
-      publish('lig_type', inputs.lig_type.value);
-    });
-    inputs.lig_type.addEventListener('focus', markUserInteraction);
-  }
   
   // Отслеживаем вентиляцию
   if(inputs.vent_day){
@@ -1387,7 +1445,7 @@ function bindControls(){
   }
 
   const hasAdvancedSave = !!inputs.btn_save_advanced;
-  // Для settings.html: если есть кнопка "Сохранить" в дополнительных опциях,
+  // Кнопка «Сохранить» в drawer дополнительных опций
   // то не публикуем изменения сразу (как в локальном site_settings).
   if(inputs.cooling){
     inputs.cooling.addEventListener('change', function(){
@@ -1574,21 +1632,21 @@ function init(){
   
   // Определяем текущую страницу для управления блокировкой UI
   const pathname = window.location.pathname;
-  isOnSettingsPage = pathname.endsWith('settings.html');
-  if(isOnSettingsPage){
-    console.log('[GrowHub:UI] Settings page detected - UI lock enabled');
-  }
-  
+  (void)pathname;
+
   addLog('PWA запущено', 'system', 'info');
-  
+
   const rawParams = extractUrlRaw();
   const cfg = loadConfig();
+  const creds = readCredentialParams();
+  const urlSp = new URLSearchParams(window.location.search);
+  const qp = (k)=> urlSp.get(k) || '';
   // Force fill from URL (prefer long names) before merging display
-  if(formCfg.host && (rawParams.host || rawParams.h)) formCfg.host.value = rawParams.host || rawParams.h || '';
-  if(formCfg.port && (rawParams.port || rawParams.p)) formCfg.port.value = rawParams.port || rawParams.p || '';
-  if(formCfg.user && (rawParams.user || rawParams.u)) formCfg.user.value = rawParams.user || rawParams.u || '';
-  if(formCfg.pass && (rawParams.pass || rawParams.pw)) formCfg.pass.value = rawParams.pass || rawParams.pw || '';
-  if(formCfg.base && (rawParams.topic || rawParams.b)) formCfg.base.value = (rawParams.topic || rawParams.b || '');
+  if(formCfg.host && (rawParams.host || qp('h'))) formCfg.host.value = rawParams.host || qp('h') || '';
+  if(formCfg.port && (rawParams.port || qp('p'))) formCfg.port.value = rawParams.port || qp('p') || '';
+  if(formCfg.user && creds.user) formCfg.user.value = creds.user;
+  if(formCfg.pass && creds.pass) formCfg.pass.value = creds.pass;
+  if(formCfg.base && (rawParams.topic || qp('b'))) formCfg.base.value = rawParams.topic || qp('b') || '';
   // Now overwrite with merged cfg only for fields still empty (avoid clobbering URL intention)
   if(formCfg.host && !formCfg.host.value) formCfg.host.value = cfg.host || '';
   if(formCfg.port && !formCfg.port.value) formCfg.port.value = cfg.port || '';
@@ -1623,11 +1681,18 @@ function init(){
   const isMainPage = window.location.pathname.endsWith('index.html') || 
                      window.location.pathname.endsWith('/') ||
                      window.location.pathname === '';
+  const isDashboard = !!window.__ghDashboardMode;
   if(!ensureValidConfig(cfg)) {
-    if(isMainPage) {
-      // На главной странице показать форму настроек
+    if(isMainPage && !isDashboard) {
+      // На старой главной показать форму настроек
       if(cfgBox) cfgBox.classList.add('visible');
       logStatus('MQTT не настроен', true);
+    } else if(isDashboard) {
+      const pwaStatus = document.getElementById('pwa-status-line');
+      if(pwaStatus){
+        pwaStatus.textContent = 'MQTT не настроен — откройте ⚙';
+        pwaStatus.classList.add('warn');
+      }
     } else {
       // На остальных страницах просто показать статус
       logStatus('MQTT не настроен', true);
@@ -1644,127 +1709,6 @@ function init(){
     navigator.serviceWorker.register('service-worker.js').catch(()=>{});
   }
 }
-
-// Handle browser alerts from MQTT
-function handleBrowserAlert(alertData){
-  const {type, message, timestamp} = alertData;
-  console.log('[GrowHub:Alert]', type, message);
-
-  // Показываем push-уведомление если доступно
-  if(window.pushManager && window.pushManager.config && window.pushManager.config.enabled){
-    window.pushManager.showGrowHubAlert(type, alertData);
-  }
-
-  // Также показываем в статус-строке
-  logStatus(`⚠️ ${message}`, true);
-}
-
-// Инициализация push-уведомлений при изменении состояния
-function checkAlertsForPush(state, previousState){
-  if(!window.pushManager || !window.pushManager.config || !window.pushManager.config.enabled) return;
-  if(!previousState) return; // Первый рендер - пропускаем
-  
-  const alertKeys = ['alert_water', 'alert_humid', 'alert_high_temp', 'alert_low_temp', 
-                     'err_sensor_temp', 'err_sensor_hg', 'err_sensor_hg2', 'err_sensor_dht'];
-  
-  const alertNames = {
-    alert_water: 'Пустой бак для полива',
-    alert_humid: 'Пустой бак увлажнителя',
-    alert_high_temp: 'Высокая температура',
-    alert_low_temp: 'Низкая температура',
-    err_sensor_temp: 'Ошибка датчика температуры',
-    err_sensor_hg: 'Ошибка датчика влажности почвы №1',
-    err_sensor_hg2: 'Ошибка датчика влажности почвы №2',
-    err_sensor_dht: 'Ошибка датчика DHT22'
-  };
-  
-  alertKeys.forEach(key => {
-    const wasActive = isFlagActive(previousState[key]);
-    const isActive = isFlagActive(state[key]);
-    
-    // Отправляем уведомление только при переходе из неактивного в активное
-    if(!wasActive && isActive){
-      console.log('[GrowHub:Push] Alert activated:', key);
-      addLog(`Алерт: ${alertNames[key] || key}`, 'alert', 'warning');
-      window.pushManager.showGrowHubAlert(key, {
-        temp: state.temp_now,
-        humgr: state.humgr_now,
-        humair: state.humair_now
-      });
-    }
-  });
-  
-  // Обработка уведомления о необходимости ручного полива (чередование)
-  const wasWateringPending = isFlagActive(previousState.watering_notification_pending);
-  const isWateringPending = isFlagActive(state.watering_notification_pending);
-  if(!wasWateringPending && isWateringPending){
-    console.log('[GrowHub:Push] Manual watering turn (alternate mode)');
-    window.pushManager.showGrowHubAlert('watering_notification_pending', {
-      humgr: state.humgr_now
-    });
-  }
-  
-  // Специальная обработка rebooted (инвертированная логика)
-  const wasRebooted = !isFlagActive(previousState.rebooted);
-  const isRebooted = !isFlagActive(state.rebooted);
-  const ligHours = Number(state.lig_hours);
-  
-  if(!wasRebooted && isRebooted && ligHours !== 0 && ligHours !== 24){
-    console.log('[GrowHub:Push] Reboot detected');
-    window.pushManager.showGrowHubAlert('rebooted', {});
-  }
-}
-
-// Обработка сообщений от Service Worker
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.addEventListener('message', (event) => {
-    const data = event.data;
-    
-    if(data.type === 'REFILL_ACTION'){
-      // Обработка нажатия кнопки "Залито" в уведомлении
-      const refillType = data.payload.refillType;
-      console.log('[GrowHub:SW] Refill action:', refillType);
-      if(window.ghPublish){
-        window.ghPublish('refill', refillType);
-      }
-    }
-    
-    if(data.type === 'NOTIFICATION_CLICKED'){
-      console.log('[GrowHub:SW] Notification clicked:', data.payload);
-      // Можно добавить навигацию к нужной странице
-    }
-  });
-}
-
-// Обновление индикатора кнопки уведомлений
-function updateNotificationButtonBadge(){
-  const btn = document.getElementById('btn-notifications');
-  if(!btn || !window.pushManager) return;
-  
-  const config = window.pushManager.loadConfig();
-  const caps = window.pushManager.getCapabilities();
-  
-  // Удаляем существующий badge
-  const existingBadge = btn.querySelector('.badge-dot');
-  if(existingBadge) existingBadge.remove();
-  
-  btn.classList.add('has-badge');
-  
-  if(config.enabled){
-    // Уведомления включены - зеленый индикатор
-    const badge = document.createElement('span');
-    badge.className = 'badge-dot';
-    btn.appendChild(badge);
-  } else if(caps.supported && caps.permission !== 'denied'){
-    // Уведомления доступны, но не включены - оранжевый индикатор
-    const badge = document.createElement('span');
-    badge.className = 'badge-dot pending';
-    btn.appendChild(badge);
-  }
-}
-
-// Вызываем обновление badge после инициализации pushManager
-setTimeout(updateNotificationButtonBadge, 500);
 
 // Инициализация селектора теплиц на главной странице
 function initGreenhouseSelector(){

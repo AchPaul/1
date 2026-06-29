@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GrowHub — Настройка</title>
+<link rel="icon" type="image/svg+xml" href="favicon-plant.svg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#28003c">
+<meta name="referrer" content="no-referrer">
+
+<style>
+:root{--clr-neon:hsl(288,52%,35%);--clr-bg:hsl(295,14%,67%)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+h2{text-align:center;padding:0 6px;font-size:21px;font-weight:700;letter-spacing:.4px;color:#fff;text-shadow:0 0 18px rgba(201,0,204,.35)}
+header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.5);position:relative;z-index:100}
+.header-transition{height:56px;position:relative;overflow:hidden;background:linear-gradient(180deg,rgba(40,0,60,.98) 0%,rgba(31,0,45,.9) 26%,rgba(20,0,31,.72) 55%,rgba(9,0,16,.34) 82%,transparent 100%);margin-top:-8px;margin-bottom:8px}
+.header-transition::before{content:'';position:absolute;inset:-20px 0 0;background:radial-gradient(ellipse at top,rgba(201,0,204,.2) 0%,rgba(120,0,180,.12) 34%,rgba(0,0,0,0) 72%);filter:blur(10px);pointer-events:none}
+.header-transition::after{content:'';position:absolute;left:0;right:0;bottom:-8px;height:26px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,#000 100%);pointer-events:none}
+.logo{margin-top:2px;display:inline-flex;align-items:center;gap:5px}
+.grow{display:inline-block;font-size:30px;color:#fff;font-weight:600;letter-spacing:.2px;line-height:1;-webkit-text-stroke:.45px currentColor;transform:scaleX(1.18)}
+.hub{display:inline-block;font-size:30px;color:#e95eeb;font-weight:600;letter-spacing:.2px;line-height:1;-webkit-text-stroke:.45px currentColor;transform:scaleX(1.18);border:4px solid #e95eeb;border-radius:10px;padding:4px;margin-left:12px}
+.wiz-wrap{display:flex;justify-content:center}
+.wiz{max-width:340px;width:100%;padding:20px 15px}
+.step{display:none}
+.step.active{display:block}
+label{display:block;margin:12px 0 4px;font-size:14px;color:#ccc}
+input[type=text],input[type=password],select{width:100%;padding:10px;background:#1a001f;color:#fff;border:2px solid #5a2d82;border-radius:8px;font-size:15px;font-family:inherit}
+input[type=text]:focus,input[type=password]:focus,select:focus{outline:none;border-color:#b040e0;box-shadow:0 0 8px rgba(176,64,224,0.4)}
+.neon-buttom{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:18px 0 8px;padding:14px 20px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:15px;font-weight:600;letter-spacing:.3px;text-decoration:none;color:#f3d7fa;cursor:pointer;background:linear-gradient(160deg,rgba(34,0,46,.92) 0%,rgba(8,0,14,.92) 100%);border:1px solid rgba(201,0,204,.32);border-radius:14px;box-shadow:0 4px 12px rgba(0,0,0,.5),inset 0 0 12px rgba(201,0,204,.08);transition:transform .14s,border-color .2s,box-shadow .2s,color .2s}
+.neon-buttom::before{content:none}
+.neon-buttom::after{content:none}
+.neon-buttom:hover,.neon-buttom:focus{border-color:rgba(201,0,204,.65);box-shadow:0 6px 18px rgba(0,0,0,.6),0 0 16px rgba(201,0,204,.28),inset 0 0 14px rgba(201,0,204,.12);color:#fff;outline:none}
+.neon-buttom:active{transform:scale(.97)}
+.neon-buttom:hover::before,.neon-buttom:focus::before,.neon-buttom:hover::after,.neon-buttom:focus::after{opacity:1}
+.btn-back{border-color:rgba(255,255,255,.18);color:#b9a3c4;background:linear-gradient(160deg,rgba(20,0,28,.7),rgba(4,0,8,.9));box-shadow:none;font-size:14px;margin-top:5px}
+.btn-back:hover{border-color:rgba(255,255,255,.35);color:#fff}
+.step .neon-buttom:not(:last-child)::before,.step .neon-buttom:not(:last-child)::after{display:none}
+.progress{display:flex;justify-content:center;gap:8px;margin-bottom:20px}
+.dot{width:12px;height:12px;border-radius:50%;background:#333;transition:background 0.3s}
+.dot.done{background:#5a2d82}
+.dot.cur{background:#b040e0;box-shadow:0 0 6px #b040e0}
+.emoji{font-size:40px;text-align:center;margin:10px 0 5px}
+.desc{text-align:center;color:#aaa;font-size:13px;margin-bottom:15px}
+.opt{display:flex;flex-direction:column;gap:8px}
+.opt label.card{display:flex;align-items:center;gap:10px;padding:12px;background:#1a001f;border:2px solid #333;border-radius:10px;cursor:pointer;transition:border-color 0.2s}
+.opt input[type=radio]{display:none}
+.opt input[type=radio]:checked+label.card{border-color:#b040e0;box-shadow:0 0 8px rgba(176,64,224,0.3)}
+.card-icon{font-size:24px}
+.card-text{font-size:14px}
+.card-text b{display:block;margin-bottom:2px}
+.slider-container{margin-top:10px;font-size:18px;color:#fff;margin-bottom:20px}
+.slider-title{display:flex;flex-direction:column}
+.slider-title div{display:flex;justify-content:space-evenly;margin-bottom:5px}
+.slider-value{font-weight:700;color:#e95eeb}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:999px;background:rgba(201,0,204,.18);outline:0;margin-top:12px;touch-action:none;-webkit-tap-highlight-color:transparent;padding:14px 0;box-sizing:content-box}
+input[type=range]:hover{opacity:1}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#c900cc;box-shadow:0 0 10px rgba(201,0,204,.6);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radius:50%;background:#c900cc;box-shadow:0 0 10px rgba(201,0,204,.6);cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+<div class="logo"><span class="grow">Grow</span><span class="hub">Hub</span></div>
+</header>
+<div class="header-transition"></div>
+<div class="wiz-wrap">
+<div class="wiz">
+<h2 style="margin-bottom:20px">🌱 GrowHub Setup</h2>
+<div class="progress"><div class="dot cur" id="d0"></div><div class="dot" id="d1"></div><div class="dot" id="d2"></div><div class="dot" id="d3"></div><div class="dot" id="d4"></div></div>
+
+<form id="wf">
+
+<!-- Step 0: WiFi -->
+<div class="step active" id="s0">
+<div class="emoji">📶</div>
+<div class="desc">Подключите контроллер к домашнему Wi-Fi</div>
+<label>SSID (имя сети)</label>
+<input type="text" name="ssid" maxlength="32">
+<label>Пароль</label>
+<input type="password" name="pass" maxlength="32">
+<div class="neon-buttom" onclick="go(1)">Далее →</div>
+</div>
+
+<!-- Step 1: Name -->
+<div class="step" id="s1">
+<div class="emoji">🏷️</div>
+<div class="desc">Дайте имя контроллеру (до 22 символов)</div>
+<label>Название</label>
+<input type="text" name="gh_name" maxlength="22" placeholder="GrowHub" value="GrowHub">
+<div class="neon-buttom" onclick="go(2)">Далее →</div>
+<div class="neon-buttom btn-back" onclick="go(0)">← Назад</div>
+</div>
+
+<!-- Step 2: Profile -->
+<div class="step" id="s2">
+<div class="emoji">🌿</div>
+<div class="desc">Выберите стадию роста или пропустите</div>
+<div class="opt">
+<input type="radio" name="profile" value="376" id="p0" checked>
+<label class="card" for="p0"><span class="card-icon">🌱</span><span class="card-text"><b>Рассада</b>T 25°C, RH 70%, VPD 0.4-0.8</span></label>
+<input type="radio" name="profile" value="377" id="p1">
+<label class="card" for="p1"><span class="card-icon">🌿</span><span class="card-text"><b>Вегетация</b>T 26°C, RH 60%, VPD 0.8-1.2</span></label>
+<input type="radio" name="profile" value="378" id="p2">
+<label class="card" for="p2"><span class="card-icon">🌸</span><span class="card-text"><b>Цветение</b>T 24°C, RH 50%, VPD 1.0-1.6</span></label>
+<input type="radio" name="profile" value="0" id="p3">
+<label class="card" for="p3"><span class="card-icon">⚙️</span><span class="card-text"><b>Свой профиль</b>Настрою вручную потом</span></label>
+</div>
+<div class="neon-buttom" onclick="go(3)">Далее →</div>
+<div class="neon-buttom btn-back" onclick="go(1)">← Назад</div>
+</div>
+
+<!-- Step 3: Light timing -->
+<div class="step" id="s3">
+<div class="emoji">☀️</div>
+<div class="desc">Настройте время включения освещения и текущий час</div>
+<div class="slider-container">
+<div class="slider-title"><div><span>Включение освещения в</span></div></div>
+<span class="slider-value" id="light-on-val">9</span>:00
+<input type="range" min="0" max="23" value="9" name="light_on_hour" id="light-on" oninput="document.getElementById('light-on-val').textContent=this.value">
+</div>
+<div class="slider-container">
+<div class="slider-title"><div><span>Текущее время:</span></div></div>
+<span class="slider-value" id="current-time-val">12</span>:00
+<input type="range" min="0" max="23" value="12" name="current_hour" id="current-time" oninput="document.getElementById('current-time-val').textContent=this.value">
+</div>
+<div class="neon-buttom" onclick="go(4)">Далее →</div>
+<div class="neon-buttom btn-back" onclick="go(2)">← Назад</div>
+</div>
+
+<!-- Step 4: Confirm -->
+<div class="step" id="s4">
+<div class="emoji">✅</div>
+<div class="desc">Всё готово! Нажмите для сохранения настроек.</div>
+<div id="summary" style="background:#1a001f;padding:15px;border-radius:10px;font-size:13px;margin:10px 0;line-height:1.6"></div>
+<div class="neon-buttom" id="saveBtn" onclick="doSave()">Сохранить и запустить 🚀</div>
+<div class="neon-buttom btn-back" onclick="go(3)">← Назад</div>
+</div>
+
+</form>
+</div>
+</div>
+
+
+<script src="plant_config.js"></script>
+<script src="mqtt-simple.js"></script>
+<script src="pwa-bridge.js"></script>
+
+<script>
+var cur=0,STEPS=5;
+function go(n){
+  document.getElementById('s'+cur).classList.remove('active');
+  document.getElementById('s'+n).classList.add('active');
+  for(var i=0;i<STEPS;i++){
+    var d=document.getElementById('d'+i);
+    d.className='dot'+(i<n?' done':'')+(i==n?' cur':'');
+  }
+  if(n==4){
+    var f=document.getElementById('wf');
+    var ssid=f.ssid.value||'(не указано)';
+    var nm=f.gh_name.value||'GrowHub';
+    var pr=f.querySelector('input[name=profile]:checked');
+    var pl=pr?pr.nextElementSibling.querySelector('b').textContent:'—';
+    var lon=f.light_on_hour.value;
+    var ch=f.current_hour.value;
+    document.getElementById('summary').innerHTML=
+      '📶 WiFi: <b>'+ssid+'</b><br>'+
+      '🏷️ Имя: <b>'+nm+'</b><br>'+
+      '🌿 Профиль: <b>'+pl+'</b><br>'+
+      '☀️ Свет вкл: <b>'+lon+':00</b>, сейчас: <b>'+ch+':00</b>';
+  }
+  cur=n;
+}
+function doSave(){
+  var btn=document.getElementById('saveBtn');
+  btn.style.pointerEvents='none';btn.style.opacity='0.5';
+  btn.textContent='Сохранение...';
+  var fd=new FormData(document.getElementById('wf'));
+  var url='/setup_complete';
+  try{
+    if(typeof window.getDeviceHttpBase==='function'){
+      var base=window.getDeviceHttpBase();
+      if(base) url=base+url;
+    }
+  }catch(e){}
+  var dest=location.pathname.indexOf('.html')>=0?'index.html':'/';
+  fetch(url,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    btn.textContent='Сохранено ✓';
+    btn.style.borderColor='#22c55e';
+    try{localStorage.setItem('gh_wizard_done','1');}catch(e){}
+    setTimeout(function(){location.href=dest},1200);
+  }).catch(function(){
+    btn.style.pointerEvents='';
+    btn.style.opacity='1';
+    btn.textContent='Ошибка — повторить';
+    btn.style.borderColor='#ef4444';
+  });
+}
+</script>
+
+<script src="app.js"></script>
+
+</body>
+</html>
