@@ -1,5 +1,5 @@
 /**
- * PWA handoff — переход с локальной сети теплицы на облачную PWA.
+ * PWA handoff — сохранение ссылки до отключения от Wi‑Fi теплицы.
  */
 (function(global){
   'use strict';
@@ -18,6 +18,11 @@
     if(p[0] === 172 && p[1] >= 16 && p[1] <= 31) return true;
     if(p[0] === 169 && p[1] === 254) return true;
     return false;
+  }
+
+  function isLikelyCaptivePortal(){
+    var ua = navigator.userAgent || '';
+    return /Android/i.test(ua) || /iPhone|iPad|iPod/i.test(ua);
   }
 
   function probeInternet(probeBase){
@@ -69,6 +74,16 @@
     if(inp) inp.value = url || '';
   }
 
+  function updateCaptiveHint(){
+    var hint = document.getElementById('pwa-captive-hint');
+    if(!hint) return;
+    if(isLikelyCaptivePortal()){
+      hint.innerHTML = 'На телефоне встроенный браузер (Captive Portal) <strong>закроется</strong> при отключении от Wi‑Fi теплицы. Сохраните ссылку <strong>сейчас</strong>:';
+    } else {
+      hint.innerHTML = 'Сейчас нет интернета — PWA не откроется напрямую. Сохраните ссылку <strong>до</strong> отключения от Wi‑Fi теплицы:';
+    }
+  }
+
   function refreshUI(cfg){
     cfg = cfg || activeCfg || {};
     var getUrl = cfg.getUrl;
@@ -86,24 +101,25 @@
 
     updateUrlDisplay(url);
     if(link) link.href = url || '#';
+    updateCaptiveHint();
 
     if(local && !state.online){
       if(offlineBlock) offlineBlock.style.display = '';
       if(onlineBlock) onlineBlock.style.display = 'none';
       if(netStatus){
-        netStatus.textContent = '⏳ Ожидаем интернет… Не закрывайте эту вкладку';
-        netStatus.style.color = '#caa2d4';
+        netStatus.textContent = isLikelyCaptivePortal()
+          ? 'После сохранения ссылки можно отключаться от Wi‑Fi теплицы'
+          : 'Если вкладка останется открытой — появится кнопка PWA при появлении интернета';
+        netStatus.style.color = '#9a7aa8';
       }
     } else {
       if(offlineBlock) offlineBlock.style.display = local ? '' : 'none';
       if(onlineBlock) onlineBlock.style.display = '';
-      if(netStatus){
-        if(local && state.online){
-          netStatus.textContent = '🌐 Интернет доступен — можно открыть PWA';
-          netStatus.style.color = '#a8f0b9';
-        } else if(!local){
-          netStatus.textContent = '';
-        }
+      if(netStatus && local && state.online){
+        netStatus.textContent = '🌐 Интернет доступен — можно открыть PWA';
+        netStatus.style.color = '#a8f0b9';
+      } else if(netStatus && !local){
+        netStatus.textContent = '';
       }
     }
   }
@@ -127,12 +143,7 @@
     }
   }
 
-  function init(cfg){
-    cfg = cfg || {};
-    activeCfg = cfg;
-    var container = document.getElementById('pwa-container');
-    if(!container) return;
-
+  function bindHandoffButtons(cfg){
     var shareBtn = document.getElementById('pwa-btn-share');
     var copyBtn = document.getElementById('pwa-btn-copy');
     var copyStatus = document.getElementById('pwa-copy-status');
@@ -141,7 +152,7 @@
 
     if(shareBtn && !shareBtn.dataset.bound){
       shareBtn.dataset.bound = '1';
-      shareBtn.style.display = (navigator.share ? '' : 'none');
+      if(!navigator.share) shareBtn.style.display = 'none';
       shareBtn.addEventListener('click', function(){
         var url = state.lastUrl || (cfg.getUrl && cfg.getUrl());
         if(!url) return;
@@ -178,11 +189,18 @@
       link.addEventListener('click', function(e){
         if(isPrivateHost(global.location.hostname) && !state.online){
           e.preventDefault();
-          toast(document.getElementById('pwa-net-status'), 'Сначала переключитесь на домашний Wi‑Fi или мобильный интернет', false);
+          toast(copyStatus, 'Сначала сохраните ссылку, затем переключите Wi‑Fi', false);
         }
       });
     }
+  }
 
+  function init(cfg){
+    cfg = cfg || {};
+    activeCfg = cfg;
+    if(!document.getElementById('pwa-container')) return;
+
+    bindHandoffButtons(cfg);
     global.GHPwaHandoffRefresh = function(){ refreshUI(cfg); };
     startProbe(cfg);
     refreshUI(cfg);

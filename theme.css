@@ -128,5 +128,6 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
 .pwa-handoff-btn{max-width:none!important;margin:0!important;font-size:14px;padding:12px}
 .pwa-handoff-btn--secondary{border-color:rgba(255,255,255,.22)!important;color:#e9d8f0!important;background:linear-gradient(160deg,rgba(20,0,28,.7),rgba(4,0,8,.9))!important}
 .pwa-copy-status,.pwa-net-status{font-size:12px;text-align:center;margin-top:8px;color:#caa2d4;min-height:16px}
+.pwa-net-status--hint{font-size:11px;color:#9a7aa8;margin-top:12px}
 .pwa-handoff-open{max-width:none!important;margin:10px 0 0!important;text-decoration:none!important}
 .hidden{display:none!important}

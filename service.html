@@ -115,13 +115,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <p class="serv-note">Топик: <span id="mqtt-topic">—</span></p>
 <div id="pwa-container" class="pwa-handoff" style="display:none">
 <p class="pwa-handoff-title">✅ MQTT подключён</p>
-<p class="pwa-handoff-lead">Откройте PWA для удалённого доступа к теплице</p>
+<p class="pwa-handoff-lead">Сохраните ссылку для удалённого доступа (PWA)</p>
 <div id="pwa-handoff-offline" class="pwa-handoff-block">
-<p class="pwa-handoff-warn">Сейчас вы в Wi‑Fi теплицы — интернета нет. Прямое открытие ссылки не сработает.</p>
+<p class="pwa-handoff-warn" id="pwa-captive-hint">Сохраните ссылку <strong>сейчас</strong>, до отключения от Wi‑Fi теплицы:</p>
 <ol class="pwa-handoff-steps">
-<li>Не закрывайте эту вкладку</li>
-<li>Отключитесь от Wi‑Fi теплицы и подключитесь к домашнему интернету</li>
-<li>Когда интернет появится — нажмите «Открыть PWA» (кнопка включится сама)</li>
+<li><strong>Отправить себе</strong> → Telegram, заметки, почта</li>
+<li>или нажмите <strong>Копировать</strong></li>
+<li>Отключитесь от Wi‑Fi теплицы → откройте ссылку</li>
 </ol>
 <label class="pwa-url-label" for="pwa-url-display">Ссылка PWA</label>
 <input type="text" id="pwa-url-display" class="pwa-url-display" readonly aria-label="Ссылка PWA">
@@ -130,7 +130,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <button type="button" id="pwa-btn-copy" class="neon-buttom pwa-handoff-btn pwa-handoff-btn--secondary">📋 Копировать</button>
 </div>
 <p id="pwa-copy-status" class="pwa-copy-status"></p>
-<p id="pwa-net-status" class="pwa-net-status">⏳ Ожидаем интернет…</p>
+<p id="pwa-net-status" class="pwa-net-status pwa-net-status--hint"></p>
 </div>
 <div id="pwa-handoff-online" class="pwa-handoff-block" style="display:none">
 <a id="pwa-link" class="neon-buttom pwa-handoff-open" href="#" target="_blank" rel="noopener">🚀 Открыть PWA</a>
