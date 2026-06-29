@@ -25,6 +25,13 @@ function generateGreenhouseId(){
   return 'gh_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 }
 
+function pwaPortFromMqtt(raw){
+  const p = parseInt(String(raw || '8883'), 10);
+  if(!Number.isFinite(p) || p <= 0) return '8884';
+  if(p === 8883) return '8884';
+  return String(p);
+}
+
 function loadGreenhouses(){
   try {
     const stored = localStorage.getItem(LS_GREENHOUSES_KEY);
@@ -40,6 +47,13 @@ function loadGreenhouses(){
       activeGreenhouseId = greenhouses.length > 0 ? greenhouses[0].id : null;
       localStorage.setItem(LS_ACTIVE_GH_KEY, activeGreenhouseId || '');
     }
+    let portMigrated = false;
+    greenhouses.forEach(gh=>{
+      const fixed = pwaPortFromMqtt(gh.port);
+      if(gh.port !== fixed){ gh.port = fixed; portMigrated = true; }
+      if(gh.base && !gh.base.endsWith('/')){ gh.base += '/'; portMigrated = true; }
+    });
+    if(portMigrated) saveGreenhouses();
     // Миграция старой конфигурации если теплицы пусты
     if(greenhouses.length === 0){
       const oldCfg = localStorage.getItem(LS_KEY);
@@ -51,7 +65,7 @@ function loadGreenhouses(){
               id: generateGreenhouseId(),
               name: 'Теплица 1',
               host: cfg.host,
-              port: cfg.port || '',
+              port: pwaPortFromMqtt(cfg.port || '8884'),
               user: cfg.user || '',
               pass: cfg.pass || '',
               base: cfg.base,
@@ -173,7 +187,8 @@ window.ghGreenhouses = {
   setActive: setActiveGreenhouse,
   switch: switchGreenhouse,
   getAll: () => greenhouses,
-  getActiveId: () => activeGreenhouseId
+  getActiveId: () => activeGreenhouseId,
+  refreshSelector: () => initGreenhouseSelector()
 };
 // === Конец системы управления теплицами ===
 
@@ -512,10 +527,10 @@ const inputs = {
 };
 
 function logStatus(msg, warn=false){
-  if(statusLine){
-    statusLine.textContent = msg;
-    statusLine.classList.toggle('warn', !!warn);
-  }
+  [statusLine, document.getElementById('pwa-status-line')].filter(Boolean).forEach(el=>{
+    el.textContent = msg;
+    el.classList.toggle('warn', !!warn);
+  });
 }
 
 function getStoredMqttStatus(){
@@ -577,6 +592,7 @@ function loadConfig(){
   // Normalize base topic trailing slash
   if(chosen.base && !chosen.base.endsWith('/')) chosen.base += '/';
   if(chosen.path && !chosen.path.startsWith('/')) chosen.path = '/' + chosen.path;
+  if(chosen.port) chosen.port = pwaPortFromMqtt(chosen.port);
   
   // Если есть URL параметры - используем их и добавляем как новую теплицу
   if(configFromUrl && chosen.host && chosen.base){
@@ -785,12 +801,7 @@ function attachManagerEvents(){
       const activeGh = getActiveGreenhouse();
       if(activeGh && activeGh.name !== js.name){
         updateGreenhouse(activeGreenhouseId, { name: js.name });
-        // Обновляем селектор на главной странице
-        const selectEl = document.getElementById('greenhouse-select');
-        if(selectEl){
-          const option = selectEl.querySelector(`option[value="${activeGreenhouseId}"]`);
-          if(option) option.textContent = js.name;
-        }
+        initGreenhouseSelector();
       }
     }
     
@@ -1688,11 +1699,7 @@ function init(){
       if(cfgBox) cfgBox.classList.add('visible');
       logStatus('MQTT не настроен', true);
     } else if(isDashboard) {
-      const pwaStatus = document.getElementById('pwa-status-line');
-      if(pwaStatus){
-        pwaStatus.textContent = 'MQTT не настроен — откройте ⚙';
-        pwaStatus.classList.add('warn');
-      }
+      logStatus('MQTT не настроен — добавьте теплицу', true);
     } else {
       // На остальных страницах просто показать статус
       logStatus('MQTT не настроен', true);
@@ -1705,55 +1712,51 @@ function init(){
   }
   bindControls();
   periodic();
+  initGreenhouseSelector();
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('service-worker.js').catch(()=>{});
   }
 }
 
+let greenhouseSelectBound = false;
+
 // Инициализация селектора теплиц на главной странице
 function initGreenhouseSelector(){
   const selectorWrap = document.getElementById('greenhouse-selector');
   const selectEl = document.getElementById('greenhouse-select');
-  const countEl = document.getElementById('greenhouse-count');
+  const addBtn = document.getElementById('greenhouse-add-btn');
   
-  if(!selectorWrap || !selectEl) return;
+  if(!selectorWrap) return;
   
-  const greenhouses = window.ghGreenhouses.getAll();
+  const ghs = window.ghGreenhouses.getAll();
   const activeId = window.ghGreenhouses.getActiveId();
   
-  // Показываем селектор только если есть теплицы
-  if(greenhouses.length === 0){
-    selectorWrap.style.display = 'none';
-    return;
-  }
+  selectorWrap.style.display = 'flex';
   
-  selectorWrap.style.display = 'block';
-  
-  // Заполняем select
-  selectEl.innerHTML = greenhouses.map(gh => {
-    const displayName = gh.name || 'Новая теплица';
-    return `<option value="${gh.id}" ${gh.id === activeId ? 'selected' : ''}>${escapeHtmlSelector(displayName)}</option>`;
-  }).join('');
-  
-  // Показываем количество теплиц
-  if(countEl){
-    countEl.textContent = `${greenhouses.length} ${pluralize(greenhouses.length, 'теплица', 'теплицы', 'теплиц')}`;
-  }
-  
-  // Обработчик переключения
-  selectEl.addEventListener('change', ()=>{
-    const newId = selectEl.value;
-    const currentActiveId = window.ghGreenhouses.getActiveId();
-    if(newId && newId !== currentActiveId){
-      window.ghGreenhouses.switch(newId);
-      // Обновляем счётчик и UI
-      if(countEl){
-        const activeGh = window.ghGreenhouses.getActive();
-        const displayName = activeGh && activeGh.name ? activeGh.name : 'Новая теплица';
-        countEl.textContent = activeGh ? `Подключено к: ${displayName}` : '';
-      }
+  if(ghs.length === 0){
+    if(selectEl) selectEl.style.display = 'none';
+    if(addBtn) addBtn.style.display = '';
+  } else {
+    if(addBtn) addBtn.style.display = 'none';
+    if(selectEl){
+      selectEl.style.display = '';
+      selectEl.innerHTML = ghs.map(gh => {
+        const displayName = gh.name || 'Новая теплица';
+        return `<option value="${gh.id}" ${gh.id === activeId ? 'selected' : ''}>${escapeHtmlSelector(displayName)}</option>`;
+      }).join('');
     }
-  });
+  }
+  
+  if(selectEl && !greenhouseSelectBound){
+    greenhouseSelectBound = true;
+    selectEl.addEventListener('change', ()=>{
+      const newId = selectEl.value;
+      if(newId && newId !== window.ghGreenhouses.getActiveId()){
+        window.ghGreenhouses.switch(newId);
+        initGreenhouseSelector();
+      }
+    });
+  }
 }
 
 function escapeHtmlSelector(str){
@@ -1770,7 +1773,7 @@ function pluralize(n, one, few, many){
   return many;
 }
 
-// Вызываем инициализацию селектора после загрузки
-setTimeout(initGreenhouseSelector, 100);
+// Вызываем инициализацию селектора после загрузки (init() тоже вызывает)
+setTimeout(initGreenhouseSelector, 50);
 
 init();

@@ -34,7 +34,8 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 .pwa-status.warn{color:#ffb3b3}
 .greenhouse-select-wrap{display:flex;gap:10px;align-items:center}
 .greenhouse-select{flex:1;font-family:var(--font-main);padding:11px 13px;background:rgba(26,0,38,.92);border:1px solid var(--border-soft);border-radius:12px;color:#fff;font-size:13px}
-.greenhouse-manage-btn{padding:11px 13px;border:1px solid var(--border-soft);border-radius:12px;color:var(--clr-accent);text-decoration:none;background:rgba(26,0,31,.92)}
+.greenhouse-add-btn{flex:1;padding:11px 13px;border:1px solid var(--border-soft);border-radius:12px;color:var(--clr-accent);text-decoration:none;background:rgba(26,0,31,.92);font-family:var(--font-main);font-size:13px;text-align:center;display:none}
+.greenhouse-manage-btn{padding:11px 13px;border:1px solid var(--border-soft);border-radius:12px;color:var(--clr-accent);text-decoration:none;background:rgba(26,0,31,.92);flex:none;line-height:1.2}
 
 /* ---- Titles ---- */
 h2{font-family:var(--font-main);text-align:center;font-size:21px;font-weight:700;letter-spacing:.4px;color:#fff;padding:0 6px;text-shadow:0 0 18px rgba(201,0,204,.35)}
@@ -90,3 +91,42 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
 
 /* Misc dividers */
 .section-divider{width:100%;max-width:300px;border:0;border-top:1px solid var(--border-soft);margin:6px auto}
+
+/* ---- Greenhouses page ---- */
+.greenhouse-list{width:100%;display:flex;flex-direction:column;gap:12px}
+.greenhouse-card{background:linear-gradient(145deg,var(--clr-card),#000);border:1px solid var(--border-soft);border-radius:16px;padding:16px;box-shadow:0 4px 14px rgba(0,0,0,.4),inset 0 0 12px rgba(201,0,204,.06)}
+.greenhouse-card.active{border-color:rgba(201,0,204,.55);box-shadow:0 0 22px rgba(201,0,204,.22),inset 0 0 14px rgba(201,0,204,.1)}
+.greenhouse-card-header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.greenhouse-name{font-size:16px;font-weight:700;color:#fff}
+.greenhouse-active-badge{background:rgba(201,0,204,.35);color:#fff;font-size:11px;padding:3px 9px;border-radius:999px;border:1px solid rgba(201,0,204,.45)}
+.greenhouse-info{font-size:13px;color:#caa2d4;margin-bottom:12px;line-height:1.45}
+.greenhouse-info span{display:block;margin:2px 0}
+.greenhouse-actions{display:flex;gap:8px;flex-wrap:wrap}
+.gh-action-btn{flex:1;min-width:88px;padding:10px 8px;font-size:13px;font-family:var(--font-main);background:rgba(26,0,31,.92);border:1px solid var(--border-soft);border-radius:12px;color:#f3d7fa;cursor:pointer;transition:border-color .18s,background .18s}
+.gh-action-btn:hover{border-color:rgba(201,0,204,.55);background:rgba(201,0,204,.12)}
+.gh-action-btn.primary{border-color:rgba(201,0,204,.45);background:rgba(201,0,204,.16)}
+.gh-action-btn.danger{border-color:rgba(248,113,113,.45);color:#ffd0d0}
+.gh-form-section{width:100%;background:linear-gradient(145deg,var(--clr-card),#000);border:1px solid var(--border-soft);border-radius:16px;padding:18px;margin-top:4px}
+.gh-form-section h3{margin-bottom:14px}
+.gh-form-group{margin-bottom:12px;text-align:left}
+.gh-form-group label{display:block;margin-bottom:6px;font-size:12px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--txt-dim)}
+.gh-form-group input{width:100%;padding:12px 14px;background:rgba(21,0,26,.72);border:1px solid var(--border-soft);border-radius:14px;color:#fff;font-family:var(--font-main);font-size:15px}
+.gh-form-group input:focus{outline:0;border-color:var(--clr-neon-brighter);box-shadow:0 0 0 3px rgba(201,0,204,.18)}
+.gh-form-row{display:flex;gap:10px}
+.gh-form-row .gh-form-group{flex:1;min-width:0}
+.gh-form-actions{display:flex;gap:10px;margin-top:14px}
+.gh-empty-state{text-align:center;padding:28px 16px;color:#caa2d4;border:1px dashed var(--border-soft);border-radius:16px;background:rgba(12,0,17,.65)}
+.pwa-handoff{text-align:left;margin:12px 0;padding:16px;border:2px solid rgba(201,0,204,.35);border-radius:14px;background:rgba(63,0,92,.25)}
+.pwa-handoff-title{font-size:16px;font-weight:700;color:#fff;text-align:center;margin-bottom:6px}
+.pwa-handoff-lead{font-size:13px;color:#d7b7df;text-align:center;margin-bottom:12px;line-height:1.35}
+.pwa-handoff-warn{font-size:13px;color:#ffb3c4;text-align:center;line-height:1.4;margin-bottom:10px}
+.pwa-handoff-steps{margin:0 0 14px 18px;padding:0;color:#caa2d4;font-size:13px;line-height:1.5}
+.pwa-handoff-steps li{margin-bottom:4px}
+.pwa-url-label{display:block;font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:#b78dc3;margin-bottom:6px}
+.pwa-url-display{width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(201,0,204,.32);background:rgba(0,0,0,.45);color:#e9d4f2;font-size:11px;font-family:ui-monospace,monospace;margin-bottom:10px}
+.pwa-handoff-actions{display:flex;flex-direction:column;gap:8px}
+.pwa-handoff-btn{max-width:none!important;margin:0!important;font-size:14px;padding:12px}
+.pwa-handoff-btn--secondary{border-color:rgba(255,255,255,.22)!important;color:#e9d8f0!important;background:linear-gradient(160deg,rgba(20,0,28,.7),rgba(4,0,8,.9))!important}
+.pwa-copy-status,.pwa-net-status{font-size:12px;text-align:center;margin-top:8px;color:#caa2d4;min-height:16px}
+.pwa-handoff-open{max-width:none!important;margin:10px 0 0!important;text-decoration:none!important}
+.hidden{display:none!important}

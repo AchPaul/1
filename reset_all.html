@@ -34,6 +34,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 .grow{display:inline-block;font-size:30px;color:#fff;font-weight:600;letter-spacing:.2px;line-height:1;-webkit-text-stroke:.45px currentColor;transform:scaleX(1.18)}
 .hub{display:inline-block;font-size:30px;color:#e95eeb;font-weight:600;letter-spacing:.2px;line-height:1;-webkit-text-stroke:.45px currentColor;transform:scaleX(1.18);border:4px solid #e95eeb;border-radius:10px;padding:4px;margin-left:12px}
 </style>
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <header>
@@ -42,9 +43,10 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <div class="header-transition"></div>
 <main class="main">
 <div class="pwa-bar" id="pwa-bar" style="width:100%;max-width:320px;margin:0 auto 10px">
-<div class="greenhouse-select-wrap" id="greenhouse-selector" style="display:none">
-<select class="greenhouse-select" id="greenhouse-select" aria-label="Выбор теплицы" style="flex:1;padding:10px;background:#1a0026;border:1px solid #6d00a6;border-radius:8px;color:#fff;font-size:13px"></select>
-<a href="greenhouses.html" class="greenhouse-manage-btn" title="Теплицы" style="padding:10px 12px;border:1px solid #6d00a6;border-radius:8px;color:#c900cc;text-decoration:none">⚙</a>
+<div class="greenhouse-select-wrap" id="greenhouse-selector">
+<select class="greenhouse-select" id="greenhouse-select" aria-label="Выбор теплицы"></select>
+<a href="greenhouses.html?add=1" class="greenhouse-add-btn" id="greenhouse-add-btn">+ Добавить теплицу</a>
+<a href="greenhouses.html" class="greenhouse-manage-btn" title="Управление теплицами" aria-label="Управление теплицами">⚙</a>
 </div>
 <div class="pwa-status" id="pwa-status-line" style="font-size:11px;text-align:center;color:#9a7aa8;min-height:16px">Подключение...</div>
 </div>

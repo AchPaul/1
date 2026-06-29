@@ -71,6 +71,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 .hub{display:inline-block;font-size:30px;color:#e95eeb;font-weight:600;letter-spacing:.2px;line-height:1;-webkit-text-stroke:.45px currentColor;transform:scaleX(1.18);border:4px solid #e95eeb;border-radius:10px;padding:4px;margin-left:12px}
 input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{display:none!important}
 </style>
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <header>
@@ -79,9 +80,10 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <div class="header-transition"></div>
 <main class="main">
 <div class="pwa-bar" id="pwa-bar" style="width:100%;max-width:320px;margin:0 auto 10px">
-<div class="greenhouse-select-wrap" id="greenhouse-selector" style="display:none">
-<select class="greenhouse-select" id="greenhouse-select" aria-label="Выбор теплицы" style="flex:1;padding:10px;background:#1a0026;border:1px solid #6d00a6;border-radius:8px;color:#fff;font-size:13px"></select>
-<a href="greenhouses.html" class="greenhouse-manage-btn" title="Теплицы" style="padding:10px 12px;border:1px solid #6d00a6;border-radius:8px;color:#c900cc;text-decoration:none">⚙</a>
+<div class="greenhouse-select-wrap" id="greenhouse-selector">
+<select class="greenhouse-select" id="greenhouse-select" aria-label="Выбор теплицы"></select>
+<a href="greenhouses.html?add=1" class="greenhouse-add-btn" id="greenhouse-add-btn">+ Добавить теплицу</a>
+<a href="greenhouses.html" class="greenhouse-manage-btn" title="Управление теплицами" aria-label="Управление теплицами">⚙</a>
 </div>
 <div class="pwa-status" id="pwa-status-line" style="font-size:11px;text-align:center;color:#9a7aa8;min-height:16px">Подключение...</div>
 </div>
@@ -111,9 +113,28 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <p class="serv-note">WiFi: <span id="mqtt-wifi-status" style="font-weight:700">—</span></p>
 <p class="serv-note">MQTT: <span id="mqtt-status" style="font-weight:700">—</span></p>
 <p class="serv-note">Топик: <span id="mqtt-topic">—</span></p>
-<div id="pwa-container" style="display:none;text-align:center;margin:12px 0;padding:14px;border:2px solid var(--clr-neon);border-radius:10px;background:rgba(63,0,92,0.3)">
-<p style="font-size:14px;color:#fedaff;margin-bottom:10px">Ссылка для удалённого доступа (перед открытием переключитесь на свой интернет)</p>
-<a id="pwa-link" href="#" target="_blank" style="color:#fff;font-size:16px;text-decoration:underline">Открыть PWA</a>
+<div id="pwa-container" class="pwa-handoff" style="display:none">
+<p class="pwa-handoff-title">✅ MQTT подключён</p>
+<p class="pwa-handoff-lead">Откройте PWA для удалённого доступа к теплице</p>
+<div id="pwa-handoff-offline" class="pwa-handoff-block">
+<p class="pwa-handoff-warn">Сейчас вы в Wi‑Fi теплицы — интернета нет. Прямое открытие ссылки не сработает.</p>
+<ol class="pwa-handoff-steps">
+<li>Не закрывайте эту вкладку</li>
+<li>Отключитесь от Wi‑Fi теплицы и подключитесь к домашнему интернету</li>
+<li>Когда интернет появится — нажмите «Открыть PWA» (кнопка включится сама)</li>
+</ol>
+<label class="pwa-url-label" for="pwa-url-display">Ссылка PWA</label>
+<input type="text" id="pwa-url-display" class="pwa-url-display" readonly aria-label="Ссылка PWA">
+<div class="pwa-handoff-actions">
+<button type="button" id="pwa-btn-share" class="neon-buttom pwa-handoff-btn">📤 Отправить себе</button>
+<button type="button" id="pwa-btn-copy" class="neon-buttom pwa-handoff-btn pwa-handoff-btn--secondary">📋 Копировать</button>
+</div>
+<p id="pwa-copy-status" class="pwa-copy-status"></p>
+<p id="pwa-net-status" class="pwa-net-status">⏳ Ожидаем интернет…</p>
+</div>
+<div id="pwa-handoff-online" class="pwa-handoff-block" style="display:none">
+<a id="pwa-link" class="neon-buttom pwa-handoff-open" href="#" target="_blank" rel="noopener">🚀 Открыть PWA</a>
+</div>
 </div>
 <div class="container_clue"><p class="trigger_clue" id="clue-mqtt">Как настроить MQTT?</p><div class="content_clue"><p>1) Введите данные брокера.</p><p>2) Используйте 6 цифр MAC для PWA.</p><p>3) При успехе появится ссылка PWA.</p></div></div>
 <div class="group"><h1>Хост</h1><input class="group_input" type="text" name="mqtt_host" placeholder="введите данные"></div>
@@ -153,6 +174,11 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <p id="soil-cal-status" class="serv-note"></p>
 </div>
 <div class="serv-section">
+<div class="serv-section-label">Удалённый доступ</div>
+<a class="neon-buttom icon" href="greenhouses.html">🌿 Мои теплицы<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M12 2L2 7v10c0 5.55 3.84 10.74 10 12 6.16-1.26 10-6.45 10-12V7l-10-5z"/></svg></div></a>
+<p class="serv-note" style="margin-top:8px">Добавьте или выберите теплицу для подключения PWA к MQTT-брокеру.</p>
+</div>
+<div class="serv-section">
 <div class="serv-section-label">Заводские</div>
 <a class="neon-buttom icon" href="diag.html">Логи и диагностика<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M19.937 8.68c-.011-.032-.02-.063-.033-.094a.997.997 0 0 0-.196-.293l-6-6a.997.997 0 0 0-.293-.196c-.03-.014-.062-.022-.094-.033a.991.991 0 0 0-.259-.051C13.04 2.011 13.021 2 13 2H6c-1.103 0-2 .897-2 2v16c0 1.103.897 2 2 2h12c1.103 0 2-.897 2-2V9c0-.021-.011-.04-.013-.062a.99.99 0 0 0-.05-.258M16.586 8H14V5.414zM6 20V4h6v5a1 1 0 0 0 1 1h5l.002 10z"/><path d="M8 12h8v2H8zm0 4h8v2H8zm0-8h2v2H8z"/></svg></div></a>
 <a class="neon-buttom icon" href="/root_ota">Локальная прошивка<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M12 16l4-5h-3V4h-2v7H8l4 5zm-7 3V9H2v12h20V9h-3v10H5z"/></svg></div></a>
@@ -164,6 +190,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <script src="plant_config.js"></script>
 <script src="mqtt-simple.js"></script>
 <script src="pwa-bridge.js"></script>
+
+<script src="pwa-handoff.js"></script>
 
 <script>
 (function(){
@@ -259,9 +287,13 @@ var mqttHostInput=document.querySelector('#mqtt-form input[name="mqtt_host"]');
 var mqttUserInput=document.querySelector('#mqtt-form input[name="mqtt_user"]');
 var mqttPassInput=document.querySelector('#mqtt-form input[name="mqtt_pass"]');
 function getInputValue(inputEl,fallback){if(inputEl){var raw=String(inputEl.value||'').trim();if(raw.length)return raw;}return fallback;}
-function buildPwaUrl(){var host=encodeURIComponent(getInputValue(mqttHostInput,GH_MQTT_HOST));var port=encodeURIComponent(getInputValue(mqttPortInput,GH_MQTT_PORT));var user=getInputValue(mqttUserInput,GH_MQTT_USER);var pass=getInputValue(mqttPassInput,GH_MQTT_PASS);var params='?host='+host+'&port='+port+'&topic='+encodeURIComponent(GH_MQTT_TOPIC);var cred=[];if(user)cred.push('u='+encodeURIComponent(user));if(pass)cred.push('pw='+encodeURIComponent(pass));return GH_PWA_BASE+params+(cred.length?'#'+cred.join('&'):'');}
-function loadMqttConfig(){fetch('/api/mqtt_config',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){GH_PWA_BASE=d.pwa_url||'';GH_MQTT_HOST=d.host||'';GH_MQTT_PORT=String(d.port||8883);GH_MQTT_USER=d.user||'';GH_MQTT_PASS='';GH_MQTT_TOPIC=d.topic||'';if(mqttHostInput)mqttHostInput.placeholder=d.host||'введите данные';if(mqttPortInput)mqttPortInput.placeholder=GH_MQTT_PORT;if(mqttUserInput)mqttUserInput.placeholder=d.user||'введите данные';if(mqttPassInput)mqttPassInput.placeholder=d.pass_configured?'\u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d':'\u0432\u0432\u0435\u0434\u0438\u0442\u0435 \u0434\u0430\u043d\u043d\u044b\u0435';var topicEl=document.getElementById('mqtt-topic');if(topicEl)topicEl.textContent=GH_MQTT_TOPIC||'—';if(pwaLink)pwaLink.href=buildPwaUrl();}).catch(function(){});}
-['input','change'].forEach(function(ev){if(mqttPortInput)mqttPortInput.addEventListener(ev,function(){if(pwaLink)pwaLink.href=buildPwaUrl();});if(mqttHostInput)mqttHostInput.addEventListener(ev,function(){if(pwaLink)pwaLink.href=buildPwaUrl();});if(mqttUserInput)mqttUserInput.addEventListener(ev,function(){if(pwaLink)pwaLink.href=buildPwaUrl();});if(mqttPassInput)mqttPassInput.addEventListener(ev,function(){if(pwaLink)pwaLink.href=buildPwaUrl();});});
+function mqttPortToPwaPort(raw){var p=parseInt(String(raw||'8883'),10);if(!Number.isFinite(p)||p<=0)return '8884';if(p===8883)return '8884';return String(p);}
+function normalizeTopic(t){if(!t)return '';return t.endsWith('/')?t:t+'/';}
+function buildPwaUrl(){var host=encodeURIComponent(getInputValue(mqttHostInput,GH_MQTT_HOST));var port=encodeURIComponent(mqttPortToPwaPort(getInputValue(mqttPortInput,GH_MQTT_PORT)));var user=getInputValue(mqttUserInput,GH_MQTT_USER);var pass=getInputValue(mqttPassInput,GH_MQTT_PASS);var topic=normalizeTopic(GH_MQTT_TOPIC);var params='?host='+host+'&port='+port+'&topic='+encodeURIComponent(topic);var cred=[];if(user)cred.push('u='+encodeURIComponent(user));if(pass)cred.push('pw='+encodeURIComponent(pass));return GH_PWA_BASE+params+(cred.length?'#'+cred.join('&'):'');}
+function refreshPwaHandoff(){if(window.GHPwaHandoffRefresh)GHPwaHandoffRefresh();}
+function initPwaHandoff(){if(window.GHPwaHandoff&&!window.__ghPwaHandoffInit){window.__ghPwaHandoffInit=1;GHPwaHandoff.init({getUrl:buildPwaUrl,probeBase:GH_PWA_BASE||'https://achpaul.github.io/1/'});}}
+function loadMqttConfig(){fetch('/api/mqtt_config',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){GH_PWA_BASE=d.pwa_url||'';GH_MQTT_HOST=d.host||'';GH_MQTT_PORT=String(d.port||8883);GH_MQTT_USER=d.user||'';GH_MQTT_PASS='';GH_MQTT_TOPIC=d.topic||'';if(mqttHostInput)mqttHostInput.placeholder=d.host||'введите данные';if(mqttPortInput)mqttPortInput.placeholder=GH_MQTT_PORT;if(mqttUserInput)mqttUserInput.placeholder=d.user||'введите данные';if(mqttPassInput)mqttPassInput.placeholder=d.pass_configured?'\u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d':'\u0432\u0432\u0435\u0434\u0438\u0442\u0435 \u0434\u0430\u043d\u043d\u044b\u0435';var topicEl=document.getElementById('mqtt-topic');if(topicEl)topicEl.textContent=GH_MQTT_TOPIC||'—';initPwaHandoff();refreshPwaHandoff();}).catch(function(){});}
+['input','change'].forEach(function(ev){if(mqttPortInput)mqttPortInput.addEventListener(ev,function(){refreshPwaHandoff();});if(mqttHostInput)mqttHostInput.addEventListener(ev,function(){refreshPwaHandoff();});if(mqttUserInput)mqttUserInput.addEventListener(ev,function(){refreshPwaHandoff();});if(mqttPassInput)mqttPassInput.addEventListener(ev,function(){refreshPwaHandoff();});});
 var mqttForm=document.getElementById('mqtt-form');
 function isClearSubmission(form){return Array.prototype.every.call(form.querySelectorAll('input:not([type="submit"]):not([type="button"])'),function(input){return String(input.value||'').trim().length===0;});}
 if(mqttForm){mqttForm.addEventListener('submit',function(e){e.preventDefault();var btn=mqttForm.querySelector('input[type="submit"]');if(!btn||btn.disabled)return;var orig=btn.value;var cleared=isClearSubmission(mqttForm);btn.disabled=true;btn.value='...';if(mqttErrorMsg)mqttErrorMsg.style.display='none';fetch('/send_mqtt',{method:'POST',body:new FormData(mqttForm)}).then(function(r){return r.json().then(function(d){return {ok:r.ok,data:d};});}).then(function(res){if(res.ok&&res.data&&res.data.ok){btn.value=res.data.cleared?'Данные очищены!':(res.data.verify_started?'Проверка...':(res.data.saved?'Сохранено ✓':'Без изменений'));}else{btn.value='Неверные данные';if(mqttErrorMsg&&res.data&&!res.data.ok)mqttErrorMsg.style.display='block';}setTimeout(function(){btn.value=orig;btn.disabled=false;updateNetStatus();},2000);}).catch(function(){btn.value='Ошибка';setTimeout(function(){btn.value=orig;btn.disabled=false;},2000);});});}
@@ -280,12 +312,12 @@ paintStatus(mqttWifiStatus,d.wifi_connected,'Сеть подключена','С�
 paintStatus(apWifiStatus,d.wifi_connected,'Сеть подключена','Сеть не подключена');
 if(d.wifi_connected)setAuthFailVisible(false);else setAuthFailVisible(!!d.wifi_auth_failed);
 paintStatus(mqttStatus,d.mqtt_connected,'Подключено','Не подключено');
-if(pwaContainer)pwaContainer.style.display=d.mqtt_connected?'block':'none';
+if(pwaContainer){pwaContainer.style.display=d.mqtt_connected?'block':'none';if(d.mqtt_connected)refreshPwaHandoff();}
 if(mqttErrorMsg)mqttErrorMsg.style.display=(d.mqtt_verify_failed&&!d.mqtt_connected)?'block':'none';
 if(mqttReconnectBtn)mqttReconnectBtn.style.display=(d.mqtt_reconnect_needed&&!d.mqtt_connected)?'block':'none';
 if(apState){apState.textContent=d.ap_started?'Активна':'Выключена';apState.style.color=d.ap_started?'rgb(185,226,154)':'rgb(239,154,160)';}
 }).catch(function(){});}
-loadWifiConfig();setTimeout(loadMqttConfig,150);setTimeout(loadApConfig,300);updateNetStatus();setInterval(updateNetStatus,5000);
+loadWifiConfig();setTimeout(loadMqttConfig,150);setTimeout(loadApConfig,300);setTimeout(initPwaHandoff,200);updateNetStatus();setInterval(updateNetStatus,5000);
 })();
 </script>
 
