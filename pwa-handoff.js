@@ -78,7 +78,7 @@
     var hint = document.getElementById('pwa-captive-hint');
     if(!hint) return;
     if(isLikelyCaptivePortal()){
-      hint.innerHTML = 'На телефоне встроенный браузер (Captive Portal) <strong>закроется</strong> при отключении от Wi‑Fi теплицы. Сохраните ссылку <strong>сейчас</strong>:';
+      hint.innerHTML = 'На телефоне встроенный браузер <strong>закроется</strong> при отключении от Wi‑Fi теплицы. Сохраните ссылку <strong>сейчас</strong>:';
     } else {
       hint.innerHTML = 'Сейчас нет интернета — PWA не откроется напрямую. Сохраните ссылку <strong>до</strong> отключения от Wi‑Fi теплицы:';
     }

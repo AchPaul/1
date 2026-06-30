@@ -153,15 +153,15 @@ function switchGreenhouse(id){
   if(!setActiveGreenhouse(id)) return false;
   const gh = getActiveGreenhouse();
   if(gh){
-    // Отключаемся от текущего MQTT и подключаемся к новому
     clearDeviceCheckTimer();
     if(manager){
       manager.disconnect();
     }
     lastState = null;
     lastStateTs = 0;
-    deviceOnline = null; // Reset device status when switching
-    cachedDataWasStale = false; // Reset stale flag for new connection
+    deviceOnline = null;
+    cachedDataWasStale = false;
+    mqttEverConnected = false;
     connect(gh);
     const displayName = gh.name || 'Новая теплица';
     addLog(`Переключено на: ${displayName}`, 'connection', 'info');
@@ -189,7 +189,11 @@ window.ghGreenhouses = {
   switch: switchGreenhouse,
   getAll: () => greenhouses,
   getActiveId: () => activeGreenhouseId,
-  refreshSelector: () => initGreenhouseSelector()
+  refreshSelector: () => initGreenhouseSelector(),
+  connectActive: () => {
+    const gh = getActiveGreenhouse();
+    if(gh && ensureValidConfig(gh)) connect(gh);
+  }
 };
 // === Конец системы управления теплицами ===
 
@@ -210,6 +214,8 @@ let cachedDataWasStale = false; // Flag to track if initial cached data was stal
 let deviceCheckTimer = null; // Timer to check if device is offline
 
 let configFromUrl = false;
+let connectionPhase = 'idle';
+let mqttEverConnected = false;
 
 // Механизм блокировки UI обновлений на странице настроек
 let lastUserInteractionTime = 0;
@@ -568,6 +574,46 @@ function logStatus(msg, warn=false){
   });
 }
 
+function isTransientConnectionPhase(){
+  return connectionPhase === 'connecting' || connectionPhase === 'error' || connectionPhase === 'reconnecting';
+}
+
+function setConnectionStatus(phase, opts){
+  opts = opts || {};
+  connectionPhase = phase;
+  const messages = {
+    no_config: 'Введите данные',
+    connecting: 'Подключение..',
+    error: 'Ошибка подключения',
+    reconnecting: 'Переподключение..',
+    connected: opts.name ? ('Подключено · ' + opts.name) : 'Подключено',
+    device_offline: 'Теплица не в сети',
+    waiting_data: 'Ожидание данных от теплицы..',
+    waiting_status: 'Ожидание статуса теплицы..',
+    no_network: 'Нет сети'
+  };
+  const msg = messages[phase] || opts.message || '';
+  const warn = phase !== 'connected' && phase !== 'connecting' &&
+    phase !== 'waiting_data' && phase !== 'waiting_status';
+  logStatus(msg, warn);
+}
+
+function updateConnectedDeviceStatus(){
+  if(!connected || isTransientConnectionPhase()) return;
+  const now = Date.now();
+  const telemetryStale = lastStateTs ? (now - lastStateTs) > STALE_DATA_THRESHOLD : false;
+  if(deviceOnline === false || telemetryStale){
+    setConnectionStatus('device_offline');
+  } else if(deviceOnline === null){
+    setConnectionStatus('waiting_status');
+  } else if(manager && manager.awaitingFirstState){
+    setConnectionStatus('waiting_data');
+  } else {
+    const name = lastState && lastState.name;
+    setConnectionStatus('connected', { name: name });
+  }
+}
+
 function getStoredMqttStatus(){
   try {
     const stored = localStorage.getItem(LS_MQTT_CONNECTED);
@@ -675,12 +721,12 @@ function ensureValidConfig(cfg){
 
 function connect(cfg){
   if(!ensureValidConfig(cfg)) { 
-    logStatus('MQTT не настроен', true); 
+    setConnectionStatus('no_config');
     if(cfgBox) cfgBox.classList.add('visible'); 
     return; 
   }
   saveConfig(cfg);
-  currentConfig = cfg; // Сохраняем для автоматического переподключения
+  currentConfig = cfg;
   baseTopic = cfg.base;
   stateTopic = baseTopic + 'state/json';
   setBase = baseTopic + 'set/';
@@ -688,10 +734,10 @@ function connect(cfg){
     manager = new MQTTManager();
     attachManagerEvents();
   }
-  logStatus('Подключение...');
+  setConnectionStatus('connecting');
   manager.connect(cfg).catch(err=>{
     console.error('[GrowHub:PWA] connect error', err);
-    logStatus('Ошибка подключения: ' + (err && err.message ? err.message : 'неизвестно'), true);
+    setConnectionStatus('error');
     setStoredMqttStatus('disconnected');
   });
 }
@@ -702,40 +748,15 @@ function attachManagerEvents(){
   manager.on('status', (st)=>{
     connected = (st === 'connected');
     if(st === 'connected'){
-      // Приоритет источников статуса:
-      // 1) LWT (<base>/status retained): online/offline
-      // 2) Свежесть телеметрии (state/json): если >2 минут без обновления -> считаем "не в сети"
-      // 3) Fallback-таймер, только если LWT вообще не приходит
+      mqttEverConnected = true;
       clearDeviceCheckTimer();
-
-      const now = Date.now();
-      const telemetryAgeMs = lastStateTs ? (now - lastStateTs) : Infinity;
-      const telemetryStale = telemetryAgeMs > STALE_DATA_THRESHOLD;
-
-      if(deviceOnline === false){
-        logStatus('Теплица не в сети', true);
-      } else if(telemetryStale){
-        // Требование: если данные не обновлялись >2 минут — сразу считаем устройство оффлайн.
-        logStatus('Теплица не в сети', true);
-      } else if(deviceOnline === true){
-        // LWT говорит что теплица online, но можно ещё ждать свежий state/json.
-        if(manager && manager.awaitingFirstState){
-          logStatus('Ожидание данных от теплицы...');
-        } else {
-          logStatus('Подключено');
-        }
-      } else {
-        // deviceOnline === null: LWT ещё не пришёл.
-        // Таймер нужен только как fallback (если LWT отсутствует/не retained).
-        logStatus('Ожидание статуса теплицы...');
+      updateConnectedDeviceStatus();
+      if(deviceOnline === null){
         deviceCheckTimer = setTimeout(()=>{
           if(!manager || !connected) return;
-          // Если за время ожидания получили либо LWT, либо свежий state — таймер не должен ничего менять.
           if(deviceOnline !== null) return;
           if(!manager.awaitingFirstState) return;
-
-          // Fallback: ни LWT, ни state — считаем что теплица не в сети.
-          logStatus('Теплица не в сети', true);
+          setConnectionStatus('device_offline');
           addLog('Нет LWT/state (fallback)', 'connection', 'warning');
         }, DEVICE_OFFLINE_CHECK_DELAY);
       }
@@ -744,18 +765,22 @@ function attachManagerEvents(){
       setTimeout(requestSyncHint, 300);
     } else if(st === 'reconnecting'){
       clearDeviceCheckTimer();
-      logStatus('Переподключение...');
+      connected = false;
+      setConnectionStatus('reconnecting');
       addLog('MQTT переподключение...', 'connection', 'warning');
     } else if(st === 'offline'){
       clearDeviceCheckTimer();
-      logStatus('Нет сети', true);
+      connected = false;
+      setConnectionStatus('no_network');
       addLog('Нет интернет-соединения', 'connection', 'error');
     } else if(st === 'disconnected'){
       clearDeviceCheckTimer();
-      // Не показываем 'Отключено' если недавно получали данные
+      connected = false;
       const timeSinceLastState = lastStateTs ? (Date.now() - lastStateTs) : Infinity;
       if(timeSinceLastState > STALE_DATA_THRESHOLD){
-        logStatus('Отключено', true);
+        if(mqttEverConnected && currentConfig){
+          setConnectionStatus('reconnecting');
+        }
         setStoredMqttStatus('disconnected');
         addLog('MQTT отключен', 'connection', 'warning');
       }
@@ -767,10 +792,10 @@ function attachManagerEvents(){
     clearDeviceCheckTimer();
     if(connected){
       if(isOnline){
-        logStatus('Подключено');
+        updateConnectedDeviceStatus();
         addLog('Устройство в сети', 'connection', 'success');
       } else {
-        logStatus('Теплица не в сети', true);
+        setConnectionStatus('device_offline');
         addLog('Теплица не в сети (LWT)', 'connection', 'warning');
       }
     }
@@ -788,9 +813,8 @@ function attachManagerEvents(){
       lastStateTs = ts;
 
       const stale = (manager && manager.cachedStateWasStale) || !ts || (Date.now() - ts > STALE_DATA_THRESHOLD);
-      if(stale){
-        // Требование: если данные старые — сразу показываем что теплица не в сети.
-        logStatus('Теплица не в сети', true);
+      if(stale && connected && !isTransientConnectionPhase()){
+        setConnectionStatus('device_offline');
       }
       // Не ставим deviceOnline=true по кешу.
     } else {
@@ -801,7 +825,7 @@ function attachManagerEvents(){
       if(deviceOnline !== true){
         deviceOnline = true;
         if(connected){
-          logStatus('Подключено');
+          updateConnectedDeviceStatus();
           addLog('Получены данные от теплицы', 'connection', 'success');
         }
       }
@@ -835,13 +859,18 @@ function attachManagerEvents(){
     cachedDataWasStale = info && info.stale;
     if(cachedDataWasStale){
       console.log('[GrowHub:PWA] Cached data is stale (>2min old), waiting for fresh data');
-      // Требование: при первом заходе/обновлении, если кеш старый — сразу показываем "не в сети"
-      logStatus('Теплица не в сети', true);
+      if(connected && !isTransientConnectionPhase()){
+        setConnectionStatus('device_offline');
+      }
     }
   });
   manager.on('error', (err)=>{
     console.error('[GrowHub:PWA] MQTT error', err);
-    logStatus('Ошибка: ' + (err && err.message ? err.message : 'MQTT'));
+    if(mqttEverConnected){
+      setConnectionStatus('reconnecting');
+    } else {
+      setConnectionStatus('error');
+    }
     addLog('MQTT ошибка: ' + (err && err.message ? err.message : 'неизвестно'), 'connection', 'error');
   });
 }
@@ -909,41 +938,29 @@ window.addEventListener('online', ()=>{
   console.log('[GrowHub:PWA] Browser online');
   addLog('Интернет восстановлен', 'connection', 'success');
   if(!connected && currentConfig){
-    logStatus('Восстановление связи...');
+    setConnectionStatus(mqttEverConnected ? 'reconnecting' : 'connecting');
     setTimeout(()=> connect(currentConfig), 1000);
   }
 });
 window.addEventListener('offline', ()=>{
   console.log('[GrowHub:PWA] Browser offline');
-  logStatus('Нет интернета');
+  setConnectionStatus('no_network');
   addLog('Интернет отключён', 'connection', 'error');
 });
-// Обработка возврата на вкладку (visibility change)
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible' && currentConfig){
     if(!connected){
-      logStatus('Восстановление связи...');
+      setConnectionStatus(mqttEverConnected ? 'reconnecting' : 'connecting');
       connect(currentConfig);
     } else {
-      // Запросить свежие данные при возврате на вкладку
       requestSyncHint();
     }
   }
 });
 function renderState(js){
   if(typeof window.ghOnMqttState === 'function') window.ghOnMqttState(js);
-  const pwaStatus = document.getElementById('pwa-status-line');
-  if(pwaStatus){
-    if(!connected){
-      pwaStatus.textContent = 'Нет связи с MQTT';
-      pwaStatus.classList.add('warn');
-    } else if(deviceOnline === false){
-      pwaStatus.textContent = 'Теплица не в сети';
-      pwaStatus.classList.add('warn');
-    } else {
-      pwaStatus.textContent = js && js.name ? ('Подключено · ' + js.name) : 'Подключено';
-      pwaStatus.classList.remove('warn');
-    }
+  if(document.getElementById('pwa-status-line') && connected && !isTransientConnectionPhase()){
+    updateConnectedDeviceStatus();
   }
   if(window.__ghDashboardMode || document.getElementById('pwa-bar')) return;
   // Пропускаем обновление UI если пользователь активно настраивает
@@ -1638,15 +1655,13 @@ if(formCfg.clear){
 
 function periodic(){
   const now = Date.now();
-  if(statusLine && lastStateTs){
+  if(lastStateTs && connected && !isTransientConnectionPhase()){
     const age = now - lastStateTs;
     if(age > STALE_DATA_THRESHOLD){
-      // Если телеметрия не обновлялась >2 минут — сразу считаем теплицу оффлайн.
-      logStatus('Теплица не в сети', true);
-    } else if(age > FORCE_STATE_INTERVAL){
-      // Мягкое предупреждение (до 2 минут): телеметрия подустарела.
-      statusLine.textContent = connected ? 'Подключено (старая телеметрия, запрос обновления...)' : statusLine.textContent;
-      if(connected) requestSyncHint();
+      setConnectionStatus('device_offline');
+    } else if(age > FORCE_STATE_INTERVAL && statusLine){
+      statusLine.textContent = 'Подключено (старая телеметрия, запрос обновления...)';
+      requestSyncHint();
     }
   }
   requestAnimationFrame(()=> setTimeout(periodic, 3000));
@@ -1655,10 +1670,6 @@ function periodic(){
 function init(){
   // Загружаем логи из localStorage
   loadLogs();
-  
-  // Определяем текущую страницу для управления блокировкой UI
-  const pathname = window.location.pathname;
-  (void)pathname;
 
   addLog('PWA запущено', 'system', 'info');
 
@@ -1693,20 +1704,10 @@ function init(){
                      window.location.pathname === '';
   const isDashboard = !!window.__ghDashboardMode;
   if(!ensureValidConfig(cfg)) {
-    if(isMainPage && !isDashboard) {
-      // На старой главной показать форму настроек
-      if(cfgBox) cfgBox.classList.add('visible');
-      logStatus('MQTT не настроен', true);
-    } else if(isDashboard) {
-      logStatus('MQTT не настроен — добавьте теплицу', true);
-    } else {
-      // На остальных страницах просто показать статус
-      logStatus('MQTT не настроен', true);
-      return; // не подключаемся
-    }
+    setConnectionStatus('no_config');
+    if(isMainPage && !isDashboard && cfgBox) cfgBox.classList.add('visible');
   } else {
-    // Сразу показываем "Подключение..." - не полагаемся на сохранённый статус
-    logStatus('Подключение...');
+    setConnectionStatus('connecting');
     connect(cfg);
   }
   bindControls();
@@ -1735,6 +1736,9 @@ function initGreenhouseSelector(){
   if(ghs.length === 0){
     if(selectEl) selectEl.style.display = 'none';
     if(addBtn) addBtn.style.display = '';
+    if(!ensureValidConfig(getActiveGreenhouse() || {})){
+      setConnectionStatus('no_config');
+    }
   } else {
     if(addBtn) addBtn.style.display = 'none';
     if(selectEl){
