@@ -1279,9 +1279,16 @@ function histParseRows(payload){
     }
     return out;
   }
-  // Старый пер-точечный формат (на всякий случай).
+  // Старый пер-точечный формат и MQTT-массивы [t,ta,tsl,ha,hg,al].
   var rows=(payload&&payload.points)?payload.points:(Array.isArray(payload)?payload:[]);
   return rows.map(function(r){
+    if(Array.isArray(r)){
+      return {
+        t:Number(r[0])||0,
+        ta:r[1],tsl:r[2],ha:r[3],hg:r[4],
+        al:r[5]!==undefined?r[5]:0
+      };
+    }
     return {
       t:Number(r.t!==undefined?r.t:r.ts)||0,
       ta:r.ta,tsl:r.tsl,ha:r.ha,hg:r.hg,
@@ -1402,10 +1409,13 @@ function drawHistoryChart(payload){
   if(metaTemp)metaTemp.textContent=hasTemp?meta:'датчик недоступен';
   if(metaHum)metaHum.textContent=hasHum?meta:'датчик недоступен';
 }
-function fetchHistoryChart(){
+function fetchHistoryChart(force){
   if(!historyOpen)return Promise.resolve();
   if(document.hidden)return Promise.resolve();
-  if(__historyFetchInFlight)return Promise.resolve();
+  if(__historyFetchInFlight){
+    if(force)scheduleHistoryFetch(120);
+    return Promise.resolve();
+  }
   var reqHours=historyHours;
   var seq=++__historyFetchSeq;
   __historyFetchInFlight=true;
@@ -1447,6 +1457,9 @@ window.addEventListener('resize',function(){
 window.addEventListener('pagehide',function(){
   cancelHistoryFetch();
 });
+window.fetchHistoryChart=fetchHistoryChart;
+window.drawHistoryChart=drawHistoryChart;
+window.scheduleHistoryFetch=scheduleHistoryFetch;
 function attachSheetDrag(sheetId,headerId,closeFn){
   var sheet=document.getElementById(sheetId);
   var header=document.getElementById(headerId);

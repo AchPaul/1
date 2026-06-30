@@ -2,6 +2,7 @@
  * Assumptions:
  *  - MQTT state topic: <base>state/json (retained)
  *  - MQTT history topic: <base>history/json (retained, 24h climate)
+ *  - MQTT diag topic: <base>diag/json (retained, system logs)
  *  - Commands: <base>set/<key> (payload = token\\nvalue)
  *  - JSON fields per firmware publish_state_core() in mqtt.cpp
  *    Keys: name, profile_id, profile_name, day_time, lig_hours,
@@ -26,7 +27,7 @@ function generateGreenhouseId(){
 }
 
 function pwaPortFromMqtt(raw){
-  const p = parseInt(String(raw || '8883'), 10);
+  const p = parseInt(String(raw || '8884'), 10);
   if(!Number.isFinite(p) || p <= 0) return '8884';
   if(p === 8883) return '8884';
   return String(p);
@@ -52,6 +53,7 @@ function loadGreenhouses(){
       const fixed = pwaPortFromMqtt(gh.port);
       if(gh.port !== fixed){ gh.port = fixed; portMigrated = true; }
       if(gh.base && !gh.base.endsWith('/')){ gh.base += '/'; portMigrated = true; }
+      if(gh.deviceUrl){ delete gh.deviceUrl; portMigrated = true; }
     });
     if(portMigrated) saveGreenhouses();
     // Миграция старой конфигурации если теплицы пусты
@@ -108,8 +110,7 @@ function addGreenhouse(config){
     pass: config.pass || '',
     base: config.base,
     path: config.path || '/mqtt',
-    proto: config.proto || 'wss',
-    deviceUrl: config.deviceUrl || ''
+    proto: config.proto || 'wss'
   };
   greenhouses.push(gh);
   if(!activeGreenhouseId){
@@ -470,6 +471,40 @@ function readCredentialParams(){
   return { user, pass };
 }
 
+function parseGreenhouseUrlParams(){
+  const url = new URL(window.location.href);
+  const p = (k)=> url.searchParams.get(k) || '';
+  const creds = readCredentialParams();
+  const longParams = {
+    host: p('host'),
+    port: p('port'),
+    user: creds.user,
+    pass: creds.pass,
+    base: p('topic'),
+    path: p('path'),
+    proto: p('proto')
+  };
+  const shortParams = {
+    host: p('h'),
+    port: p('p'),
+    user: creds.user,
+    pass: creds.pass,
+    base: p('b'),
+    path: p('pt'),
+    proto: p('pr')
+  };
+  const chosen = {};
+  ['host','port','user','pass','base','path','proto'].forEach(k=>{
+    if(longParams[k]) chosen[k] = longParams[k];
+    else if(shortParams[k]) chosen[k] = shortParams[k];
+  });
+  if(chosen.base && !chosen.base.endsWith('/')) chosen.base += '/';
+  if(chosen.path && !chosen.path.startsWith('/')) chosen.path = '/' + chosen.path;
+  if(chosen.port) chosen.port = pwaPortFromMqtt(chosen.port);
+  const fromUrl = Object.values(chosen).some(Boolean);
+  return { chosen, fromUrl, creds };
+}
+
 function stripSensitiveUrlParams(){
   const url = new URL(window.location.href);
   let changed = false;
@@ -557,80 +592,32 @@ function setStoredMqttStatus(status){
 }
 
 function loadConfig(){
-  const url = new URL(window.location.href);
-  const p = (k)=> url.searchParams.get(k) || '';
-  const creds = readCredentialParams();
-  
-  // Загружаем список теплиц
   loadGreenhouses();
-  
-  // host/port/topic в query; user/pass — в hash (#u=&pw=) или legacy query
-  const longParams = {
-    host: p('host'),
-    port: p('port'),
-    user: creds.user,
-    pass: creds.pass,
-    base: p('topic'),
-    path: p('path'),
-    proto: p('proto')
-  };
-  const shortParams = {
-    host: p('h'),
-    port: p('p'),
-    user: creds.user,
-    pass: creds.pass,
-    base: p('b'),
-    path: p('pt'),
-    proto: p('pr')
-  };
-  // Prefer long params when provided, else fall back to short
-  const chosen = {};
-  ['host','port','user','pass','base','path','proto'].forEach(k=>{
-    if(longParams[k]) chosen[k] = longParams[k]; else if(shortParams[k]) chosen[k] = shortParams[k];
-  });
-  configFromUrl = Object.values(chosen).some(Boolean);
-  // Normalize base topic trailing slash
-  if(chosen.base && !chosen.base.endsWith('/')) chosen.base += '/';
-  if(chosen.path && !chosen.path.startsWith('/')) chosen.path = '/' + chosen.path;
-  if(chosen.port) chosen.port = pwaPortFromMqtt(chosen.port);
-  
-  // Если есть URL параметры - используем их и добавляем как новую теплицу
-  if(configFromUrl && chosen.host && chosen.base){
-    // Проверяем есть ли уже такая теплица
+  const { chosen, fromUrl } = parseGreenhouseUrlParams();
+  configFromUrl = fromUrl;
+
+  if(fromUrl && chosen.host && chosen.base){
     const existing = greenhouses.find(g => g.host === chosen.host && g.base === chosen.base);
     if(existing){
+      updateGreenhouse(existing.id, chosen);
       setActiveGreenhouse(existing.id);
-      if(creds.user || creds.pass) stripSensitiveUrlParams();
-      return existing;
-    } else {
-      // Добавляем новую теплицу из URL
-      const newGh = addGreenhouse({
-        name: 'Теплица (URL)',
-        ...chosen
-      });
-      setActiveGreenhouse(newGh.id);
-      if(creds.user || creds.pass) stripSensitiveUrlParams();
-      return newGh;
+      return getActiveGreenhouse();
     }
+    const newGh = addGreenhouse({
+      name: 'Теплица (URL)',
+      ...chosen
+    });
+    setActiveGreenhouse(newGh.id);
+    return newGh;
   }
-  
-  // Если нет URL параметров - берем активную теплицу
+
   const activeGh = getActiveGreenhouse();
-  if(activeGh){
-    return activeGh;
-  }
-  
-  // Fallback: старая логика для совместимости
+  if(activeGh) return activeGh;
+
   let cfg = null;
   const stored = localStorage.getItem(LS_KEY);
   if(stored){ try { cfg = JSON.parse(stored); } catch(_){} }
-  
-  // Merge with stored config (URL params override stored when non-empty)
-  const merged = Object.assign({}, cfg||{}, Object.fromEntries(Object.entries(chosen).filter(([,v])=>v)));
-  if(configFromUrl && (creds.user || creds.pass)){
-    stripSensitiveUrlParams();
-  }
-  return merged;
+  return Object.assign({}, cfg||{}, Object.fromEntries(Object.entries(chosen).filter(([,v])=>v)));
 }
 
 function saveConfig(cfg){
@@ -643,13 +630,37 @@ function saveConfig(cfg){
   }
 }
 
+function getConfigFormFields(){
+  if(formCfg.host) return formCfg;
+  const alt = {
+    host: document.getElementById('inp-host'),
+    port: document.getElementById('inp-port'),
+    user: document.getElementById('inp-user'),
+    pass: document.getElementById('inp-pass'),
+    base: document.getElementById('inp-base')
+  };
+  return alt.host ? alt : null;
+}
+
 function fillConfigForm(cfg){
-  if(!formCfg.host) return;
-  formCfg.host.value = cfg.host||'';
-  formCfg.port.value = cfg.port||'';
-  formCfg.user.value = cfg.user||'';
-  formCfg.pass.value = cfg.pass||'';
-  formCfg.base.value = cfg.base||'';
+  const fields = getConfigFormFields();
+  if(!fields || !fields.host) return;
+  fields.host.value = cfg.host || '';
+  if(fields.port) fields.port.value = cfg.port || '';
+  if(fields.user) fields.user.value = cfg.user || '';
+  if(fields.pass) fields.pass.value = cfg.pass || '';
+  if(fields.base) fields.base.value = cfg.base || '';
+}
+
+function cfgFromForm(cfg){
+  const fields = getConfigFormFields();
+  if(!fields) return cfg;
+  if(fields.host) cfg.host = (fields.host.value || '').trim();
+  if(fields.port) cfg.port = (fields.port.value || '').trim();
+  if(fields.user) cfg.user = (fields.user.value || '').trim();
+  if(fields.pass) cfg.pass = (fields.pass.value || '').trim();
+  if(fields.base) cfg.base = (fields.base.value || '').trim();
+  return cfg;
 }
 
 function ensureValidConfig(cfg){
@@ -814,6 +825,10 @@ function attachManagerEvents(){
   manager.on('history', (hist)=>{
     window.dispatchEvent(new CustomEvent('gh-history-update', { detail: hist }));
     if(typeof window.ghOnMqttHistory === 'function') window.ghOnMqttHistory(hist);
+  });
+  manager.on('diag', (diag)=>{
+    window.dispatchEvent(new CustomEvent('gh-diag-update', { detail: diag }));
+    if(typeof window.ghOnMqttDiag === 'function') window.ghOnMqttDiag(diag);
   });
   manager.on('cached', (info)=>{
     // Track if cached data was stale for connection status logic
@@ -1647,31 +1662,15 @@ function init(){
 
   addLog('PWA запущено', 'system', 'info');
 
-  const rawParams = extractUrlRaw();
-  const cfg = loadConfig();
+  extractUrlRaw();
   const creds = readCredentialParams();
-  const urlSp = new URLSearchParams(window.location.search);
-  const qp = (k)=> urlSp.get(k) || '';
-  // Force fill from URL (prefer long names) before merging display
-  if(formCfg.host && (rawParams.host || qp('h'))) formCfg.host.value = rawParams.host || qp('h') || '';
-  if(formCfg.port && (rawParams.port || qp('p'))) formCfg.port.value = rawParams.port || qp('p') || '';
-  if(formCfg.user && creds.user) formCfg.user.value = creds.user;
-  if(formCfg.pass && creds.pass) formCfg.pass.value = creds.pass;
-  if(formCfg.base && (rawParams.topic || qp('b'))) formCfg.base.value = rawParams.topic || qp('b') || '';
-  // Now overwrite with merged cfg only for fields still empty (avoid clobbering URL intention)
-  if(formCfg.host && !formCfg.host.value) formCfg.host.value = cfg.host || '';
-  if(formCfg.port && !formCfg.port.value) formCfg.port.value = cfg.port || '';
-  if(formCfg.user && !formCfg.user.value) formCfg.user.value = cfg.user || '';
-  if(formCfg.pass && !formCfg.pass.value) formCfg.pass.value = cfg.pass || '';
-  if(formCfg.base && !formCfg.base.value) formCfg.base.value = cfg.base || '';
-  // Reflect final cfg object for connection logic (safely handle null elements)
-  if(formCfg.host) cfg.host = formCfg.host.value.trim();
-  if(formCfg.port) cfg.port = formCfg.port.value.trim();
-  if(formCfg.user) cfg.user = formCfg.user.value.trim();
-  if(formCfg.pass) cfg.pass = formCfg.pass.value.trim();
-  if(formCfg.base) cfg.base = formCfg.base.value.trim();
+  let cfg = loadConfig() || {};
+  fillConfigForm(cfg);
+  cfg = cfgFromForm(cfg);
   if(configFromUrl){
     saveConfig(cfg);
+    if(creds.user || creds.pass) stripSensitiveUrlParams();
+    window.__ghConfigFromUrl = true;
     if(cfgBox) cfgBox.classList.remove('visible');
   }
   

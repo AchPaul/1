@@ -9,6 +9,7 @@
   var lastMqttState = null;
   var lastApiState = null;
   var lastMqttHistory = null;
+  var lastMqttDiag = null;
 
   function flag(v){ return v === 1 || v === true || v === '1' || v === 'true'; }
   function num(v, fb){ var n = Number(v); return Number.isFinite(n) ? n : (fb || 0); }
@@ -129,7 +130,7 @@
     var pwaMqttOk = false;
     try { pwaMqttOk = typeof window.ghIsMqttConnected === 'function' && window.ghIsMqttConnected(); } catch(_e){}
     return {
-      wifi_connected: flag(js.wifi_connected) || !!getDeviceHttpBase(),
+      wifi_connected: flag(js.wifi_connected),
       wifi_auth_failed: false,
       mqtt_connected: pwaMqttOk || flag(js.mqtt_connected),
       ap_started: flag(js.ap_started) || flag(js.ap_mode),
@@ -155,8 +156,35 @@
     };
   }
 
+  function mqttHistoryHasData(raw){
+    if(!raw) return false;
+    if(raw.points && raw.points.length) return true;
+    if(raw.ta && typeof raw.ta.length === 'number' && raw.ta.length > 0) return true;
+    return false;
+  }
+
   function mqttHistoryToApi(raw){
-    if(!raw) return { hours: 24, interval_sec: 60, points: [] };
+    if(!raw) return { hours: 24, interval_sec: 600, points: [] };
+    if(raw.ta && typeof raw.ta.length === 'number'){
+      var step = num(raw.step, num(raw.interval_sec, 600));
+      var t0 = num(raw.t0, 0);
+      var pts = [];
+      for(var i = 0; i < raw.ta.length; i++){
+        pts.push({
+          t: t0 + i * step,
+          ta: raw.ta[i],
+          tsl: raw.tsl ? raw.tsl[i] : 255,
+          ha: raw.ha ? raw.ha[i] : 255,
+          hg: raw.hg ? raw.hg[i] : 255,
+          al: 0
+        });
+      }
+      return {
+        hours: num(raw.hours, 24),
+        interval_sec: step,
+        points: pts
+      };
+    }
     var pts = [];
     var src = raw.points || [];
     for(var i = 0; i < src.length; i++){
@@ -183,7 +211,7 @@
     }
     return {
       hours: num(raw.hours, 24),
-      interval_sec: num(raw.interval_sec, 60),
+      interval_sec: num(raw.interval_sec, 600),
       points: pts
     };
   }
@@ -274,31 +302,23 @@
     });
   }
 
+  function okJsonResponse(extra){
+    var obj = { ok: true };
+    if(extra && typeof extra === 'object'){
+      Object.keys(extra).forEach(function(k){ obj[k] = extra[k]; });
+    }
+    return jsonResponse(obj);
+  }
+
+  function failJsonResponse(status, error){
+    return jsonResponse({ ok: false, error: error || 'failed' }, status || 400);
+  }
+
   function textResponse(text, status){
     return new Response(text, { status: status || 200, headers: { 'Content-Type': 'text/plain' } });
   }
 
-  function getDeviceHttpBase(){
-    try {
-      if(window.ghGreenhouses && window.ghGreenhouses.getActive){
-        var gh = window.ghGreenhouses.getActive();
-        if(gh && gh.deviceUrl) return String(gh.deviceUrl).replace(/\/$/, '');
-      }
-    } catch(_e){}
-    return null;
-  }
-
-  function proxyToDevice(path, init){
-    var base = getDeviceHttpBase();
-    if(!base) return null;
-    var url = base + (path.startsWith('/') ? path : '/' + path);
-    return nativeFetch(url, init || {});
-  }
-
-  /** deviceUrl из теплицы или тот же хост, если PWA открыта с контроллера (AP). */
-  function proxyToDeviceOrLocal(path, init){
-    var proxied = proxyToDevice(path, init);
-    if(proxied) return proxied;
+  function proxyToLocal(path, init){
     try {
       if(typeof window !== 'undefined' && window.location && window.location.protocol &&
           window.location.protocol.indexOf('http') === 0){
@@ -308,8 +328,8 @@
     return null;
   }
 
-  function deviceRequiredResponse(){
-    return jsonResponse({ ok: false, error: 'deviceUrl_required' }, 503);
+  function localOnlyResponse(){
+    return jsonResponse({ ok: false, error: 'local_only' }, 503);
   }
 
   function handleSendPost(path, init){
@@ -327,13 +347,14 @@
         var a = num(fd.air_up, 0);
         var w = num(fd.water_up, 0);
         cmds = [{ key: 'soil_cal_save', val: String(a) + ',' + String(w) }];
+        return publishCommands(cmds).then(function(){ return okJsonResponse(); });
       } else {
-        var proxied = proxyToDevice(path, init);
+        var proxied = proxyToLocal(path, init);
         if(proxied) return proxied.then(function(r){ return r.text().then(function(t){ return new Response(t, { status: r.status, headers: { 'Content-Type': r.headers.get('Content-Type') || 'text/plain' } }); }); });
-        return deviceRequiredResponse();
+        return localOnlyResponse();
       }
 
-      return publishCommands(cmds).then(function(){ return textResponse('OK'); });
+      return publishCommands(cmds).then(function(){ return okJsonResponse(); });
     });
   }
 
@@ -365,10 +386,19 @@
     if(waterUp && js.soil_cal_staging_water !== undefined && document.activeElement !== waterUp){
       waterUp.value = js.soil_cal_staging_water;
     }
+    if(js.soil_raw_up !== undefined){
+      var rawEl = document.getElementById('raw-up');
+      if(rawEl) rawEl.textContent = js.soil_raw_up;
+    }
     if(js.soil_calibrated !== undefined){
-      var calStatus = document.getElementById('cal-status');
-      if(calStatus){
-        calStatus.classList.toggle('not-done', !flag(js.soil_calibrated));
+      var calChip = document.getElementById('cal-status-chip');
+      if(calChip){
+        var done = flag(js.soil_calibrated);
+        calChip.classList.toggle('not-done', !done);
+        var ic = document.getElementById('cal-icon');
+        var tx = document.getElementById('cal-text');
+        if(ic) ic.textContent = done ? '✅' : '⚠️';
+        if(tx) tx.textContent = done ? 'Калибровка выполнена' : 'Калибровка не выполнена';
       }
     }
     var apSel = document.querySelector('select[name="ap_mode"]');
@@ -434,15 +464,33 @@
 
     if(method === 'GET' && path.indexOf('/api/history') >= 0){
       var histHours = parseHistoryHours(path);
-      if(lastMqttHistory && lastMqttHistory.points && lastMqttHistory.points.length){
+      if(mqttHistoryHasData(lastMqttHistory)){
         return Promise.resolve(jsonResponse(filterHistoryByHours(mqttHistoryToApi(lastMqttHistory), histHours)));
       }
-      var base = getDeviceHttpBase();
-      if(!base) return Promise.resolve(jsonResponse({ hours: histHours, interval_sec: 60, points: [] }));
-      var histUrl = base + (path.startsWith('/') ? path : '/' + path);
-      return nativeFetch(histUrl, { cache: 'no-store' }).then(function(r){ return r.json(); }).catch(function(){
-        return { hours: histHours, interval_sec: 60, points: [] };
-      }).then(function(data){ return jsonResponse(data); });
+      var localHist = proxyToLocal(path, init);
+      if(localHist){
+        return localHist.then(function(r){ return r.json(); }).then(function(d){
+          return jsonResponse(d);
+        }).catch(function(){
+          return jsonResponse({ hours: histHours, interval_sec: 600, points: [] });
+        });
+      }
+      return Promise.resolve(jsonResponse({ hours: histHours, interval_sec: 600, points: [] }));
+    }
+
+    if(method === 'GET' && path.indexOf('/api/diag') >= 0){
+      if(lastMqttDiag && (lastMqttDiag.logs || lastMqttDiag.events)){
+        return Promise.resolve(jsonResponse(lastMqttDiag));
+      }
+      var localDiag = proxyToLocal(path, init);
+      if(localDiag){
+        return localDiag.then(function(r){ return r.json(); }).then(function(d){
+          return jsonResponse(d);
+        }).catch(function(){
+          return jsonResponse({ uptime: 0, heap_free: 0, reset_reason: '', reset_code: 0, logs: [] });
+        });
+      }
+      return Promise.resolve(jsonResponse({ uptime: 0, heap_free: 0, reset_reason: '', reset_code: 0, logs: [] }));
     }
 
     if(method === 'GET' && path.indexOf('/api/soil_raw') >= 0){
@@ -453,8 +501,8 @@
       return Promise.resolve(init.body).then(function(body){
         var fd = parseFormBody(body);
         var cmds = settingsToMqttCommands(fd.field, fd.period || 'common', fd.value);
-        if(cmds === null) return textResponse('SmartHum active', 409);
-        return publishCommands(cmds).then(function(){ return textResponse('OK'); });
+        if(cmds === null) return failJsonResponse(409, 'smart_hum');
+        return publishCommands(cmds).then(function(){ return okJsonResponse(); });
       });
     }
 
@@ -462,9 +510,9 @@
       return Promise.resolve(init.body).then(function(body){
         var fd = parseFormBody(body);
         var name = String(fd.gh_name || '').trim();
-        if(name.length > 22) return textResponse('Invalid name', 400);
+        if(name.length > 22) return failJsonResponse(400, 'invalid_name');
         var val = name.length ? name : 'Теплица';
-        return publishCommands([{ key: 'name', val: val }]).then(function(){ return textResponse('OK'); });
+        return publishCommands([{ key: 'name', val: val }]).then(function(){ return okJsonResponse(); });
       });
     }
 
@@ -474,7 +522,7 @@
         var onH = num(fd.light_on_hour, 0);
         var curH = num(fd.current_hour, 0);
         var val = String(onH) + ':' + String(curH);
-        return publishCommands([{ key: 'set_time', val: val }]).then(function(){ return textResponse('OK'); });
+        return publishCommands([{ key: 'set_time', val: val }]).then(function(){ return okJsonResponse(); });
       });
     }
 
@@ -488,21 +536,21 @@
         } else if(fd.growth_stage !== undefined && fd.growth_stage !== ''){
           cmds.push({ key: 'vpd_stage', val: 'g:' + String(num(fd.growth_stage, 0)) });
         }
-        if(!cmds.length) return textResponse('Nothing to save', 400);
-        return publishCommands(cmds).then(function(){ return textResponse('OK'); });
+        if(!cmds.length) return failJsonResponse(400, 'nothing_to_save');
+        return publishCommands(cmds).then(function(){ return okJsonResponse(); });
       });
     }
 
     if(method === 'POST' && (path.indexOf('/send_mqtt') >= 0 ||
         path.indexOf('/send_wifi') >= 0 || path.indexOf('/send_reset') >= 0 ||
         path.indexOf('/setup_complete') >= 0)){
-      var devPost = proxyToDeviceOrLocal(path, init);
+      var devPost = proxyToLocal(path, init);
       if(devPost) return devPost.then(function(r){
         var ct = r.headers.get('Content-Type') || '';
         if(ct.indexOf('json') >= 0) return r.json().then(function(d){ return jsonResponse(d, r.status); });
         return r.text().then(function(t){ return new Response(t, { status: r.status }); });
       });
-      return Promise.resolve(deviceRequiredResponse());
+      return Promise.resolve(localOnlyResponse());
     }
 
     if(method === 'POST' && path.indexOf('/send_') >= 0){
@@ -513,17 +561,43 @@
       }
     }
 
-    var devGet = proxyToDevice(path, init);
-    if(devGet && method === 'GET' && path.indexOf('/api/') >= 0){
-      return devGet.then(function(r){ return r.json(); }).then(function(d){ return jsonResponse(d); }).catch(function(){ return null; });
+    var localGet = proxyToLocal(path, init);
+    if(localGet && method === 'GET' && path.indexOf('/api/') >= 0){
+      return localGet.then(function(r){ return r.json(); }).then(function(d){ return jsonResponse(d); }).catch(function(){ return null; });
     }
 
     return null;
   }
 
+  function readHistoryHoursPref(){
+    try {
+      var s = localStorage.getItem('gh_history_hours');
+      if(s){
+        var h = parseInt(s, 10);
+        if(h === 6 || h === 12 || h === 24) return h;
+      }
+    } catch(_e){}
+    return 12;
+  }
+
+  function onMqttDiag(raw){
+    lastMqttDiag = raw;
+    if(typeof window.applyDiagData === 'function'){
+      window.applyDiagData(raw);
+    }
+    window.dispatchEvent(new CustomEvent('gh-diag-update', { detail: raw }));
+  }
+
   function onMqttHistory(raw){
     lastMqttHistory = raw;
-    if(typeof window.fetchHistoryChart === 'function'){
+    if(typeof window.drawHistoryChart === 'function' && mqttHistoryHasData(raw)){
+      var api = filterHistoryByHours(mqttHistoryToApi(raw), readHistoryHoursPref());
+      if(api.points && api.points.length) window.drawHistoryChart(api);
+      return;
+    }
+    if(typeof window.scheduleHistoryFetch === 'function'){
+      window.scheduleHistoryFetch(0);
+    } else if(typeof window.fetchHistoryChart === 'function'){
       window.fetchHistoryChart();
     }
   }
@@ -554,18 +628,15 @@
   window.ghUpdateServiceAcks = updateServiceAcks;
   window.ghOnMqttState = onMqttState;
   window.ghOnMqttHistory = onMqttHistory;
+  window.ghOnMqttDiag = onMqttDiag;
   window.ghMqttHistoryToApi = mqttHistoryToApi;
   window.ghFilterHistoryByHours = filterHistoryByHours;
+  window.ghMqttHistoryHasData = mqttHistoryHasData;
   window.ghGetLastMqttState = function(){ return lastMqttState; };
   window.ghGetLastMqttHistory = function(){ return lastMqttHistory; };
+  window.ghGetLastMqttDiag = function(){ return lastMqttDiag; };
   window.ghGetLastApiState = function(){ return lastApiState; };
-  window.getDeviceHttpBase = getDeviceHttpBase;
   window.GH_MQTT_CMD_TOKEN = MQTT_CMD_TOKEN;
-  window.ghFetchDeviceHtml = function(path){
-    var p = proxyToDevice(path, { cache: 'no-store' });
-    if(!p) return Promise.reject(new Error('deviceUrl_required'));
-    return p.then(function(r){ return r.text(); });
-  };
 
   window.addEventListener('gh-state-update', function(e){
     if(e && e.detail) onMqttState(e.detail);
@@ -581,9 +652,11 @@
       mqttToApiStatus: mqttToApiStatus,
       settingsToMqttCommands: settingsToMqttCommands,
       mqttHistoryToApi: mqttHistoryToApi,
+      mqttHistoryHasData: mqttHistoryHasData,
       filterHistoryByHours: filterHistoryByHours,
       setLastMqttState: function(s){ lastMqttState = s; },
-      setLastMqttHistory: function(h){ lastMqttHistory = h; }
+      setLastMqttHistory: function(h){ lastMqttHistory = h; },
+      setLastMqttDiag: function(d){ lastMqttDiag = d; }
     };
   }
 })();

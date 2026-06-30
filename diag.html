@@ -136,19 +136,27 @@ function renderLogs(entries,truncated){
   if(truncated)html+='<div class="empty-state">Список обрезан — слишком много записей</div>';
   box.innerHTML=html;
 }
+function applyDiagData(d){
+  if(!d)return;
+  var u=document.getElementById('stat-uptime');if(u)u.textContent=formatUptime(d.uptime);
+  var hf=document.getElementById('stat-heap-free');if(hf)hf.textContent=(d.heap_free!=null?d.heap_free+' B':'—');
+  paintResetReason(document.getElementById('stat-reset'),d.reset_reason,d.reset_code);
+  var logs=d.logs||d.events||[];
+  renderLogs(logs,d.truncated);
+}
 function loadDiag(){
   fetch('/api/diag',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
-    var u=document.getElementById('stat-uptime');if(u)u.textContent=formatUptime(d.uptime);
-    var hf=document.getElementById('stat-heap-free');if(hf)hf.textContent=(d.heap_free!=null?d.heap_free+' B':'—');
-    paintResetReason(document.getElementById('stat-reset'),d.reset_reason,d.reset_code);
-    var logs=d.logs||d.events||[];
-    renderLogs(logs,d.truncated);
+    applyDiagData(d);
   }).catch(function(){
     var box=document.getElementById('logs-box');
     if(box)box.innerHTML='<div class="empty-state">Не удалось загрузить диагностику</div>';
   });
 }
 function refreshDiag(){loadDiag();}
+window.applyDiagData=applyDiagData;
+window.addEventListener('gh-diag-update',function(e){
+  if(e&&e.detail)applyDiagData(e.detail);
+});
 
 var hash=(location.hash||'').replace('#','');
 if(hash==='events')hash='logs';

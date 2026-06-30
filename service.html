@@ -50,18 +50,6 @@ p{text-align:center;padding:0 5px;margin-bottom:12px}
 .attention{max-width:300px;margin:10px auto;padding:10px 14px;border:2px solid #ff2e63;border-radius:10px;background:rgba(255,0,80,.08);color:#ffb3c4;font-size:14px;text-align:center;line-height:1.25}
 .select-dropdown__button{padding:11px 14px;background:rgba(40,0,52,.9);color:#fff;border:1px solid rgba(201,0,204,.32);border-radius:12px;width:100%;font-size:15px}
 .serv-note{text-align:center;font-size:14px;color:#c4a1c7;margin:8px 0}
-.cal-status-chip{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(34,197,94,.45);background:rgba(34,197,94,.12);font-size:13px;color:#b8f5c0;margin-bottom:10px}
-.cal-status-chip.not-done{border-color:rgba(239,68,68,.45);background:rgba(239,68,68,.12);color:#fecaca}
-.cal-raw{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid rgba(201,0,204,.28);border-radius:12px;background:rgba(21,0,26,.78);margin-bottom:12px}
-.cal-raw-label{font-size:12px;color:#b78dc3;text-transform:uppercase;letter-spacing:.5px}
-.cal-raw-value{font-size:22px;font-weight:700;color:#f3d7fa}
-.cal-field-row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
-.cal-field-row input{flex:1;min-width:0;padding:10px 12px;border-radius:12px;border:1px solid rgba(201,0,204,.32);background:rgba(21,0,26,.72);color:#fff;font-size:16px}
-.cal-field-row input:focus{outline:0;border-color:#c900cc}
-.cal-capture{appearance:none;flex:none;width:52px;padding:10px 6px;border-radius:12px;border:1px solid rgba(34,197,94,.45);background:rgba(20,60,30,.35);color:#dffae3;font-size:13px;cursor:pointer}
-.cal-hint{font-size:11px;color:#9a7aa8;margin:-4px 0 10px 2px;line-height:1.35}
-.cal-msg{font-size:13px;color:#ef9aa0;text-align:center;margin:8px 0}
-.cal-instruction{font-size:12px;color:#caa2d4;line-height:1.45;margin-bottom:12px}
 header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.5);position:relative;z-index:100}
 .header-transition{height:56px;position:relative;overflow:hidden;background:linear-gradient(180deg,rgba(40,0,60,.98) 0%,rgba(31,0,45,.9) 26%,rgba(20,0,31,.72) 55%,rgba(9,0,16,.34) 82%,transparent 100%);margin-top:-8px;margin-bottom:8px}
 .header-transition::before{content:'';position:absolute;inset:-20px 0 0;background:radial-gradient(ellipse at top,rgba(201,0,204,.2) 0%,rgba(120,0,180,.12) 34%,rgba(0,0,0,0) 72%);filter:blur(10px);pointer-events:none}
@@ -137,7 +125,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 </div>
 <div class="container_clue"><p class="trigger_clue" id="clue-mqtt">Как настроить MQTT?</p><div class="content_clue"><p>1) Введите данные брокера.</p><p>2) Используйте 6 цифр MAC для PWA.</p><p>3) При успехе появится ссылка PWA.</p></div></div>
 <div class="group"><h1>Хост</h1><input class="group_input" type="text" name="mqtt_host" placeholder="введите данные"></div>
-<div class="group"><h1>Порт MQTT (TLS)</h1><input class="group_input" type="number" name="mqtt_port" placeholder="8883" min="1" max="65535"></div>
+<div class="group"><h1>Порт MQTT (TLS)</h1><input class="group_input" type="number" name="mqtt_port" placeholder="введите данные" min="1" max="65535"></div>
+<div class="group"><h1>Порт PWA (WSS)</h1><input class="group_input" type="number" name="mqtt_pwa_port" placeholder="введите данные" min="1" max="65535"></div>
 <div class="group"><h1>Логин</h1><input class="group_input" type="text" name="mqtt_user" placeholder="введите данные"></div>
 <div class="group"><h1>Пароль</h1><input class="group_input" type="text" name="mqtt_pass" placeholder="введите данные"></div>
 <div id="mqtt-error-msg" style="display:none;text-align:center;margin:12px auto;max-width:300px;padding:12px;border:1px solid rgba(239,154,160,.45);border-radius:14px;background:rgba(60,0,10,.55);color:#ef9aa0;font-size:14px">Ошибка подключения</div>
@@ -159,18 +148,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 </form>
 </div>
 </div>
-<div class="serv-section" id="cal-section">
-<div class="serv-section-label">Калибровка почвы</div>
-<div id="cal-status-chip" class="cal-status-chip not-done"><span id="cal-icon">⚠️</span><span id="cal-text">Калибровка не выполнена</span></div>
-<div class="cal-raw"><span class="cal-raw-label">RAW сейчас</span><span class="cal-raw-value" id="raw-up">—</span></div>
-<p class="cal-instruction">Сухой: датчик в воздухе. Мокрый: пролитый субстрат 5–10&nbsp;мин после стока (ПФК).</p>
-<label class="cal-hint" style="text-align:left;display:block">Сухой (воздух)</label>
-<div class="cal-field-row"><input type="number" id="air_up" min="500" max="4095" placeholder="500–4095"><button type="button" class="cal-capture" onclick="captureSoilRaw('air')">⬆️</button></div>
-<label class="cal-hint" style="text-align:left;display:block">Мокрый (ПФК)</label>
-<div class="cal-field-row"><input type="number" id="water_up" min="100" max="4000" placeholder="100–4000"><button type="button" class="cal-capture" onclick="captureSoilRaw('water')">⬇️</button></div>
-<div id="cal-msg" class="cal-msg" style="display:none"></div>
-<button type="button" class="neon-buttom" id="soil-cal-save-btn" onclick="applySoilCal()">Сохранить калибровку</button>
-<p id="soil-cal-status" class="serv-note"></p>
+<div class="serv-section">
+<div class="serv-section-label">Датчики</div>
+<a class="neon-buttom icon" href="soil_cal.html">Калибровка датчиков<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h2v-2h-2v2zm0-4h2V7h-2v6z"/></svg></div></a>
 </div>
 <div class="serv-section">
 <div class="serv-section-label">Удалённый доступ</div>
@@ -205,61 +185,8 @@ function showServTab(tab){
 document.querySelectorAll('.serv-tab').forEach(function(b){b.addEventListener('click',function(){showServTab(b.dataset.tab);});});
 document.querySelectorAll('.trigger_clue').forEach(function(trigger){trigger.addEventListener('click',function(){var c=trigger.nextElementSibling;if(c)c.style.display=c.style.display==='block'?'none':'block';});});
 var hash=(location.hash||'').replace('#','');
+if(hash==='cal'){location.replace('soil_cal.html');return;}
 if(hash==='wifi'||hash==='mqtt'||hash==='ap')showServTab(hash);
-if(hash==='cal'){var sec=document.getElementById('cal-section');if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});}
-function applyCalStatusChip(done){
-  var st=document.getElementById('cal-status-chip');var ic=document.getElementById('cal-icon');var tx=document.getElementById('cal-text');
-  if(!st)return;
-  if(done){st.className='cal-status-chip';if(ic)ic.textContent='✅';if(tx)tx.textContent='Калибровка выполнена';}
-  else{st.className='cal-status-chip not-done';if(ic)ic.textContent='⚠️';if(tx)tx.textContent='Калибровка не выполнена';}
-}
-function loadSoilCalConfig(){
-  fetch('/api/soil_raw',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
-    applyCalStatusChip(!!d.calibrated);
-    var a=document.getElementById('air_up');var w=document.getElementById('water_up');
-    if(a&&d.air_up)a.value=d.air_up;
-    if(w&&d.water_up)w.value=d.water_up;
-  }).catch(function(){});
-}
-function updateSoilRawDisplay(){
-  fetch('/api/soil_raw',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
-    var el=document.getElementById('raw-up');
-    if(el&&d.raw_up!==undefined)el.textContent=d.raw_up;
-  }).catch(function(){});
-}
-function captureSoilRaw(type){
-  fetch('/api/soil_raw',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
-    if(d.raw_up==null)return;
-    var el=document.getElementById(type==='air'?'air_up':'water_up');
-    if(el)el.value=d.raw_up;
-  }).catch(function(){});
-}
-function showCalMsg(text){var el=document.getElementById('cal-msg');if(!el)return;el.textContent=text;el.style.display='';}
-function clearCalMsg(){var el=document.getElementById('cal-msg');if(!el)return;el.style.display='none';el.textContent='';}
-function applySoilCal(){
-  clearCalMsg();
-  var a=parseInt(document.getElementById('air_up').value,10);
-  var w=parseInt(document.getElementById('water_up').value,10);
-  var status=document.getElementById('soil-cal-status');
-  var btn=document.getElementById('soil-cal-save-btn');
-  if(!Number.isFinite(a)||a<500||a>4095||!Number.isFinite(w)||w<100||w>4000||a<=w){
-    showCalMsg('Проверьте значения: сухой должен быть больше мокрого');
-    return;
-  }
-  var fd=new FormData();fd.append('air_up',a);fd.append('water_up',w);
-  btn.disabled=true;btn.textContent='Сохраняем...';
-  if(status){status.textContent='';status.style.color='';}
-  fetch('/send_soil_cal',{method:'POST',body:fd}).then(function(r){return r.json().then(function(d){return {ok:r.ok,data:d};});}).then(function(res){
-    if(!res.ok||!res.data||!res.data.ok)throw new Error('fail');
-    applyCalStatusChip(true);
-    if(status){status.textContent='Сохранено';status.style.color='#a8f0b9';}
-    btn.disabled=false;btn.textContent='Сохранить калибровку';
-  }).catch(function(){
-    if(status){status.textContent='Ошибка сохранения';status.style.color='#ffb3b3';}
-    btn.disabled=false;btn.textContent='Сохранить калибровку';
-  });
-}
-loadSoilCalConfig();updateSoilRawDisplay();setInterval(updateSoilRawDisplay,1000);
 var wifiStatus=document.getElementById('wifi-status');
 var wifiAuthErr=document.getElementById('wifi-auth-error');
 var wifiFormMsg=document.getElementById('wifi-form-msg');
@@ -280,22 +207,25 @@ var pwaContainer=document.getElementById('pwa-container');
 var pwaLink=document.getElementById('pwa-link');
 var mqttErrorMsg=document.getElementById('mqtt-error-msg');
 var mqttReconnectBtn=document.getElementById('mqtt-reconnect-btn');
-var GH_PWA_BASE='',GH_MQTT_HOST='',GH_MQTT_PORT='8883',GH_MQTT_USER='',GH_MQTT_PASS='',GH_MQTT_TOPIC='';
+var GH_PWA_BASE='',GH_MQTT_HOST='',GH_MQTT_PORT='',GH_PWA_PORT='',GH_MQTT_USER='',GH_MQTT_PASS='',GH_MQTT_TOPIC='';
 var mqttPortInput=document.querySelector('#mqtt-form input[name="mqtt_port"]');
+var mqttPwaPortInput=document.querySelector('#mqtt-form input[name="mqtt_pwa_port"]');
 var mqttHostInput=document.querySelector('#mqtt-form input[name="mqtt_host"]');
 var mqttUserInput=document.querySelector('#mqtt-form input[name="mqtt_user"]');
 var mqttPassInput=document.querySelector('#mqtt-form input[name="mqtt_pass"]');
-function getInputValue(inputEl,fallback){if(inputEl){var raw=String(inputEl.value||'').trim();if(raw.length)return raw;}return fallback;}
-function mqttPortToPwaPort(raw){var p=parseInt(String(raw||'8883'),10);if(!Number.isFinite(p)||p<=0)return '8884';if(p===8883)return '8884';return String(p);}
+function getInputValue(inputEl,fallback){if(inputEl){var raw=String(inputEl.value||'').trim();if(raw.length)return raw;}return fallback||'';}
 function normalizeTopic(t){if(!t)return '';return t.endsWith('/')?t:t+'/';}
-function buildPwaUrl(){var host=encodeURIComponent(getInputValue(mqttHostInput,GH_MQTT_HOST));var port=encodeURIComponent(mqttPortToPwaPort(getInputValue(mqttPortInput,GH_MQTT_PORT)));var user=getInputValue(mqttUserInput,GH_MQTT_USER);var pass=getInputValue(mqttPassInput,GH_MQTT_PASS);var topic=normalizeTopic(GH_MQTT_TOPIC);var params='?host='+host+'&port='+port+'&topic='+encodeURIComponent(topic);var cred=[];if(user)cred.push('u='+encodeURIComponent(user));if(pass)cred.push('pw='+encodeURIComponent(pass));return GH_PWA_BASE+params+(cred.length?'#'+cred.join('&'):'');}
+function buildPwaUrl(){var host=encodeURIComponent(getInputValue(mqttHostInput,GH_MQTT_HOST));var port=encodeURIComponent(getInputValue(mqttPwaPortInput,GH_PWA_PORT));var user=getInputValue(mqttUserInput,GH_MQTT_USER);var pass=getInputValue(mqttPassInput,GH_MQTT_PASS);var topic=normalizeTopic(GH_MQTT_TOPIC);var params='?host='+host+'&port='+port+'&topic='+encodeURIComponent(topic);var cred=[];if(user)cred.push('u='+encodeURIComponent(user));if(pass)cred.push('pw='+encodeURIComponent(pass));return GH_PWA_BASE+params+(cred.length?'#'+cred.join('&'):'');}
 function refreshPwaHandoff(){if(window.GHPwaHandoffRefresh)GHPwaHandoffRefresh();}
 function initPwaHandoff(){if(window.GHPwaHandoff&&!window.__ghPwaHandoffInit){window.__ghPwaHandoffInit=1;GHPwaHandoff.init({getUrl:buildPwaUrl,probeBase:GH_PWA_BASE||'https://achpaul.github.io/1/'});}}
-function loadMqttConfig(){fetch('/api/mqtt_config',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){GH_PWA_BASE=d.pwa_url||'';GH_MQTT_HOST=d.host||'';GH_MQTT_PORT=String(d.port||8883);GH_MQTT_USER=d.user||'';GH_MQTT_PASS='';GH_MQTT_TOPIC=d.topic||'';if(mqttHostInput)mqttHostInput.placeholder=d.host||'введите данные';if(mqttPortInput)mqttPortInput.placeholder=GH_MQTT_PORT;if(mqttUserInput)mqttUserInput.placeholder=d.user||'введите данные';if(mqttPassInput)mqttPassInput.placeholder=d.pass_configured?'\u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d':'\u0432\u0432\u0435\u0434\u0438\u0442\u0435 \u0434\u0430\u043d\u043d\u044b\u0435';var topicEl=document.getElementById('mqtt-topic');if(topicEl)topicEl.textContent=GH_MQTT_TOPIC||'—';initPwaHandoff();refreshPwaHandoff();}).catch(function(){});}
-['input','change'].forEach(function(ev){if(mqttPortInput)mqttPortInput.addEventListener(ev,function(){refreshPwaHandoff();});if(mqttHostInput)mqttHostInput.addEventListener(ev,function(){refreshPwaHandoff();});if(mqttUserInput)mqttUserInput.addEventListener(ev,function(){refreshPwaHandoff();});if(mqttPassInput)mqttPassInput.addEventListener(ev,function(){refreshPwaHandoff();});});
+function mqttCfgValue(v){return (v&&v!=='введите данные')?v:'';}
+function portCfgValue(v){if(v===undefined||v===null||v===''||v===0||v==='0')return '';return String(v);}
+function fillMqttFormFields(){if(mqttHostInput)mqttHostInput.value=GH_MQTT_HOST;if(mqttPortInput)mqttPortInput.value=GH_MQTT_PORT;if(mqttPwaPortInput)mqttPwaPortInput.value=GH_PWA_PORT;if(mqttUserInput)mqttUserInput.value=GH_MQTT_USER;if(mqttPassInput){mqttPassInput.value=GH_MQTT_PASS||'';mqttPassInput.placeholder=window.__ghMqttPassConfigured?'\u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d':'\u0432\u0432\u0435\u0434\u0438\u0442\u0435 \u0434\u0430\u043d\u043d\u044b\u0435';}}
+function loadMqttConfig(){fetch('/api/mqtt_config',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){GH_PWA_BASE=d.pwa_url||'';GH_MQTT_HOST=mqttCfgValue(d.host);GH_MQTT_PORT=portCfgValue(d.port);GH_PWA_PORT=portCfgValue(d.pwa_port);GH_MQTT_USER=mqttCfgValue(d.user);GH_MQTT_PASS=d.pass||'';GH_MQTT_TOPIC=d.topic||'';window.__ghMqttPassConfigured=!!d.pass_configured;fillMqttFormFields();var topicEl=document.getElementById('mqtt-topic');if(topicEl)topicEl.textContent=GH_MQTT_TOPIC||'—';initPwaHandoff();refreshPwaHandoff();}).catch(function(){});}
+['input','change'].forEach(function(ev){if(mqttPortInput)mqttPortInput.addEventListener(ev,function(){refreshPwaHandoff();});if(mqttPwaPortInput)mqttPwaPortInput.addEventListener(ev,function(){refreshPwaHandoff();});if(mqttHostInput)mqttHostInput.addEventListener(ev,function(){refreshPwaHandoff();});if(mqttUserInput)mqttUserInput.addEventListener(ev,function(){refreshPwaHandoff();});if(mqttPassInput)mqttPassInput.addEventListener(ev,function(){refreshPwaHandoff();});});
 var mqttForm=document.getElementById('mqtt-form');
 function isClearSubmission(form){return Array.prototype.every.call(form.querySelectorAll('input:not([type="submit"]):not([type="button"])'),function(input){return String(input.value||'').trim().length===0;});}
-if(mqttForm){mqttForm.addEventListener('submit',function(e){e.preventDefault();var btn=mqttForm.querySelector('input[type="submit"]');if(!btn||btn.disabled)return;var orig=btn.value;var cleared=isClearSubmission(mqttForm);btn.disabled=true;btn.value='...';if(mqttErrorMsg)mqttErrorMsg.style.display='none';fetch('/send_mqtt',{method:'POST',body:new FormData(mqttForm)}).then(function(r){return r.json().then(function(d){return {ok:r.ok,data:d};});}).then(function(res){if(res.ok&&res.data&&res.data.ok){btn.value=res.data.cleared?'Данные очищены!':(res.data.verify_started?'Проверка...':(res.data.saved?'Сохранено ✓':'Без изменений'));}else{btn.value='Неверные данные';if(mqttErrorMsg&&res.data&&!res.data.ok)mqttErrorMsg.style.display='block';}setTimeout(function(){btn.value=orig;btn.disabled=false;updateNetStatus();},2000);}).catch(function(){btn.value='Ошибка';setTimeout(function(){btn.value=orig;btn.disabled=false;},2000);});});}
+if(mqttForm){mqttForm.addEventListener('submit',function(e){e.preventDefault();var btn=mqttForm.querySelector('input[type="submit"]');if(!btn||btn.disabled)return;var orig=btn.value;var cleared=isClearSubmission(mqttForm);btn.disabled=true;btn.value='...';if(mqttErrorMsg)mqttErrorMsg.style.display='none';fetch('/send_mqtt',{method:'POST',body:new FormData(mqttForm)}).then(function(r){return r.json().then(function(d){return {ok:r.ok,data:d};});}).then(function(res){if(res.ok&&res.data&&res.data.ok){btn.value=res.data.cleared?'Данные очищены!':(res.data.verify_started?'Проверка...':(res.data.saved?'Сохранено ✓':'Без изменений'));loadMqttConfig();}else{btn.value='Неверные данные';if(mqttErrorMsg&&res.data&&!res.data.ok)mqttErrorMsg.style.display='block';}setTimeout(function(){btn.value=orig;btn.disabled=false;updateNetStatus();},2000);}).catch(function(){btn.value='Ошибка';setTimeout(function(){btn.value=orig;btn.disabled=false;},2000);});});}
 if(mqttReconnectBtn){var __mqttReconnectRetry=null;function doMqttReconnect(){if(mqttReconnectBtn.disabled)return;mqttReconnectBtn.disabled=true;var orig=mqttReconnectBtn.textContent;mqttReconnectBtn.textContent='...';if(mqttErrorMsg)mqttErrorMsg.style.display='none';fetch('/send_mqtt_reconnect',{method:'POST'}).then(function(r){return r.json().then(function(d){return {ok:r.ok,data:d};});}).then(function(res){if(res.ok&&res.data&&res.data.ok){mqttReconnectBtn.textContent='Подключение...';setTimeout(function(){mqttReconnectBtn.textContent=orig;mqttReconnectBtn.disabled=false;updateNetStatus();},2000);return;}if(res.data&&res.data.pending){mqttReconnectBtn.textContent='Ждём память...';if(__mqttReconnectRetry)clearTimeout(__mqttReconnectRetry);__mqttReconnectRetry=setTimeout(function(){mqttReconnectBtn.disabled=false;doMqttReconnect();},5000);return;}mqttReconnectBtn.textContent='Ошибка';setTimeout(function(){mqttReconnectBtn.textContent=orig;mqttReconnectBtn.disabled=false;updateNetStatus();},2000);}).catch(function(){mqttReconnectBtn.textContent='Ошибка';setTimeout(function(){mqttReconnectBtn.textContent=orig;mqttReconnectBtn.disabled=false;},2000);});}mqttReconnectBtn.addEventListener('click',doMqttReconnect);}
 var apState=document.getElementById('ap-state');
 var apWifiStatus=document.getElementById('ap-wifi-status');

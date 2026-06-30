@@ -6,6 +6,8 @@
   const LS_LAST_STATE_TS_PREFIX = 'gh_last_state_ts_';
   const LS_LAST_HISTORY_PREFIX = 'gh_last_history_';
   const LS_LAST_HISTORY_TS_PREFIX = 'gh_last_history_ts_';
+  const LS_LAST_DIAG_PREFIX = 'gh_last_diag_';
+  const LS_LAST_DIAG_TS_PREFIX = 'gh_last_diag_ts_';
 
   function cacheSlug(base){
     return String(base || 'default').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 48);
@@ -15,8 +17,10 @@
   function lsStateTsKey(base){ return LS_LAST_STATE_TS_PREFIX + cacheSlug(base); }
   function lsHistoryKey(base){ return LS_LAST_HISTORY_PREFIX + cacheSlug(base); }
   function lsHistoryTsKey(base){ return LS_LAST_HISTORY_TS_PREFIX + cacheSlug(base); }
+  function lsDiagKey(base){ return LS_LAST_DIAG_PREFIX + cacheSlug(base); }
+  function lsDiagTsKey(base){ return LS_LAST_DIAG_TS_PREFIX + cacheSlug(base); }
   const STALE_DATA_THRESHOLD = 120000; // 2 minutes — единый порог устаревания (кеш + «не в сети»)
-  const LEGACY_LS_KEYS = ['gh_last_state', 'gh_last_state_ts', 'gh_last_history', 'gh_last_history_ts'];
+  const LEGACY_LS_KEYS = ['gh_last_state', 'gh_last_state_ts', 'gh_last_history', 'gh_last_history_ts', 'gh_last_diag', 'gh_last_diag_ts'];
 
   function purgeLegacyLsCache(){
     LEGACY_LS_KEYS.forEach(function(k){
@@ -62,7 +66,7 @@
     constructor(){
       this.client = null;
       this.cfg = null;
-      this.events = {status: [], state: [], history: [], error: [], cached: [], deviceStatus: []};
+      this.events = {status: [], state: [], history: [], diag: [], error: [], cached: [], deviceStatus: []};
       this.baseTopic = '';
       this.stateTopic = '';
       this.queue = [];
@@ -73,6 +77,8 @@
       this.lastStateTime = 0;
       this.lastHistory = null;
       this.lastHistoryTime = 0;
+      this.lastDiag = null;
+      this.lastDiagTime = 0;
       this.connected = false;
       this.deviceOnline = null; // null = unknown, true = online, false = offline
       this.awaitingFirstState = true; // Flag to track if we're waiting for first fresh state
@@ -105,6 +111,7 @@
       this.baseTopic = base;
       this.stateTopic = base + 'state/json';
       this.historyTopic = base + 'history/json';
+      this.diagTopic = base + 'diag/json';
       this.deviceStatusTopic = base + 'status'; // LWT topic for online/offline
 
       const url = `${proto}://${cfg.host}:${cfg.port}${path}`;
@@ -123,6 +130,7 @@
       // emit cached state immediately if present
       this._emitCachedState();
       this._emitCachedHistory();
+      this._emitCachedDiag();
     }
 
     _bind(){
@@ -132,6 +140,7 @@
         this.reconnectMs = 1000;
         this.client.subscribe(this.stateTopic, {qos:0});
         this.client.subscribe(this.historyTopic, {qos:0});
+        this.client.subscribe(this.diagTopic, {qos:0});
         this.client.subscribe(this.deviceStatusTopic, {qos:0}); // Subscribe to LWT
         this.emit('status','connected');
         this._flushQueue();
@@ -184,6 +193,17 @@
             }catch(_e){}
             this.emit('history', hist);
           }catch(e){ console.warn('[MQTTManager] history parse error', e); }
+        } else if(topic === this.diagTopic){
+          try{
+            const diag = JSON.parse(payload.toString());
+            this.lastDiag = diag;
+            this.lastDiagTime = Date.now();
+            try{
+              localStorage.setItem(lsDiagKey(this.baseTopic), JSON.stringify(diag));
+              localStorage.setItem(lsDiagTsKey(this.baseTopic), String(this.lastDiagTime));
+            }catch(_e){}
+            this.emit('diag', diag);
+          }catch(e){ console.warn('[MQTTManager] diag parse error', e); }
         } else if(topic === this.deviceStatusTopic){
           // LWT status: "online" or "offline"
           const status = payload.toString().trim().toLowerCase();
@@ -203,6 +223,20 @@
           this.lastHistory = hist;
           this.lastHistoryTime = timestamp;
           this.emit('history', hist);
+        }
+      }catch(_e){}
+    }
+
+    _emitCachedDiag(){
+      try{
+        const cached = localStorage.getItem(lsDiagKey(this.baseTopic));
+        const cachedTs = localStorage.getItem(lsDiagTsKey(this.baseTopic));
+        const timestamp = cachedTs ? parseInt(cachedTs, 10) : 0;
+        if(cached){
+          const diag = JSON.parse(cached);
+          this.lastDiag = diag;
+          this.lastDiagTime = timestamp;
+          this.emit('diag', diag);
         }
       }catch(_e){}
     }
@@ -262,6 +296,7 @@
           this.client.unsubscribe(this.stateTopic, ()=>{
             this.client.subscribe(this.stateTopic);
             this.client.subscribe(this.historyTopic);
+            this.client.subscribe(this.diagTopic);
           });
         } catch(_e) {}
       }

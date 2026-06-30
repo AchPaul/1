@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GrowHub — Калибровка датчиков</title>
+<link rel="icon" type="image/svg+xml" href="favicon-plant.svg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#28003c">
+<meta name="referrer" content="no-referrer">
+
+<style>
+:root{--clr-neon:hsl(288,52%,35%);--clr-bg:hsl(295,14%,67%)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+h2{text-align:center;padding:0 6px;font-size:21px;font-weight:700;letter-spacing:.4px;color:#fff;text-shadow:0 0 18px rgba(201,0,204,.35)}
+.neon-buttom{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;max-width:300px;margin-left:auto;margin-right:auto;padding:14px 20px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:15px;font-weight:600;letter-spacing:.3px;text-decoration:none;color:#f3d7fa;cursor:pointer;background:linear-gradient(160deg,rgba(34,0,46,.92) 0%,rgba(8,0,14,.92) 100%);border:1px solid rgba(201,0,204,.32);border-radius:14px;box-shadow:0 4px 12px rgba(0,0,0,.5),inset 0 0 12px rgba(201,0,204,.08);transition:transform .14s,border-color .2s,box-shadow .2s,color .2s}
+.neon-buttom:disabled{background:#3d3b3d;color:#fff;cursor:wait}
+.neon-buttom::before{content:none}
+.neon-buttom::after{content:none}
+.neon-buttom:hover,.neon-buttom:focus{border-color:rgba(201,0,204,.65);box-shadow:0 6px 18px rgba(0,0,0,.6),0 0 16px rgba(201,0,204,.28),inset 0 0 14px rgba(201,0,204,.12);color:#fff;outline:none}
+.neon-buttom:active{transform:scale(.97)}
+.icon{position:relative}
+.icon_btn{position:absolute;top:50%;left:16px;transform:translateY(-50%);display:flex;align-items:center;line-height:0}
+.main{display:flex;margin:20px 0;justify-content:center;align-items:center;flex-direction:column;gap:25px}
+.serv-section{width:100%;max-width:320px}
+.serv-section-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:hsl(288,52%,55%);padding:4px 0;border-bottom:1px solid hsl(288,25%,28%);margin-bottom:12px}
+.serv-note{text-align:center;font-size:14px;color:#c4a1c7;margin:8px 0}
+.cal-status-chip{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(34,197,94,.45);background:rgba(34,197,94,.12);font-size:13px;color:#b8f5c0;margin-bottom:10px}
+.cal-status-chip.not-done{border-color:rgba(239,68,68,.45);background:rgba(239,68,68,.12);color:#fecaca}
+.cal-raw{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid rgba(201,0,204,.28);border-radius:12px;background:rgba(21,0,26,.78);margin-bottom:12px}
+.cal-raw-label{font-size:12px;color:#b78dc3;text-transform:uppercase;letter-spacing:.5px}
+.cal-raw-value{font-size:22px;font-weight:700;color:#f3d7fa}
+.cal-field-row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.cal-field-row input{flex:1;min-width:0;padding:10px 12px;border-radius:12px;border:1px solid rgba(201,0,204,.32);background:rgba(21,0,26,.72);color:#fff;font-size:16px}
+.cal-field-row input:focus{outline:0;border-color:#c900cc}
+.cal-capture{appearance:none;flex:none;width:52px;padding:10px 6px;border-radius:12px;border:1px solid rgba(34,197,94,.45);background:rgba(20,60,30,.35);color:#dffae3;font-size:13px;cursor:pointer}
+.cal-hint{font-size:11px;color:#9a7aa8;margin:-4px 0 10px 2px;line-height:1.35}
+.cal-msg{font-size:13px;color:#ef9aa0;text-align:center;margin:8px 0}
+.cal-instruction{font-size:12px;color:#caa2d4;line-height:1.45;margin-bottom:12px}
+header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.5);position:relative;z-index:100}
+.header-transition{height:56px;position:relative;overflow:hidden;background:linear-gradient(180deg,rgba(40,0,60,.98) 0%,rgba(31,0,45,.9) 26%,rgba(20,0,31,.72) 55%,rgba(9,0,16,.34) 82%,transparent 100%);margin-top:-8px;margin-bottom:8px}
+.header-transition::before{content:'';position:absolute;inset:-20px 0 0;background:radial-gradient(ellipse at top,rgba(201,0,204,.2) 0%,rgba(120,0,180,.12) 34%,rgba(0,0,0,0) 72%);filter:blur(10px);pointer-events:none}
+.header-transition::after{content:'';position:absolute;left:0;right:0;bottom:-8px;height:26px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,#000 100%);pointer-events:none}
+.logo{margin-top:2px;display:inline-flex;align-items:center;gap:5px}
+.grow{display:inline-block;font-size:30px;color:#fff;font-weight:600;letter-spacing:.2px;line-height:1;-webkit-text-stroke:.45px currentColor;transform:scaleX(1.18)}
+.hub{display:inline-block;font-size:30px;color:#e95eeb;font-weight:600;letter-spacing:.2px;line-height:1;-webkit-text-stroke:.45px currentColor;transform:scaleX(1.18);border:4px solid #e95eeb;border-radius:10px;padding:4px;margin-left:12px}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{display:none!important}
+</style>
+<link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<header>
+<div class="logo"><span class="grow">Grow</span><span class="hub">Hub</span></div>
+</header>
+<div class="header-transition"></div>
+<main class="main">
+<div class="pwa-bar" id="pwa-bar" style="width:100%;max-width:320px;margin:0 auto 10px">
+<div class="greenhouse-select-wrap" id="greenhouse-selector">
+<select class="greenhouse-select" id="greenhouse-select" aria-label="Выбор теплицы"></select>
+<a href="greenhouses.html?add=1" class="greenhouse-add-btn" id="greenhouse-add-btn">+ Добавить теплицу</a>
+<a href="greenhouses.html" class="greenhouse-manage-btn" title="Управление теплицами" aria-label="Управление теплицами">⚙</a>
+</div>
+<div class="pwa-status" id="pwa-status-line" style="font-size:11px;text-align:center;color:#9a7aa8;min-height:16px">Подключение...</div>
+</div>
+
+<h2>Калибровка датчиков</h2>
+<div class="serv-section" id="cal-section">
+<div class="serv-section-label">Калибровка почвы</div>
+<div id="cal-status-chip" class="cal-status-chip not-done"><span id="cal-icon">⚠️</span><span id="cal-text">Калибровка не выполнена</span></div>
+<div class="cal-raw"><span class="cal-raw-label">RAW сейчас</span><span class="cal-raw-value" id="raw-up">—</span></div>
+<p class="cal-instruction">Сухой: датчик в воздухе. Мокрый: пролитый субстрат 5–10&nbsp;мин после стока (ПФК).</p>
+<label class="cal-hint" style="text-align:left;display:block">Сухой (воздух)</label>
+<div class="cal-field-row"><input type="number" id="air_up" min="500" max="4095" placeholder="500–4095"><button type="button" class="cal-capture" id="capture-air" aria-label="Захватить RAW для сухого">⬆️</button></div>
+<label class="cal-hint" style="text-align:left;display:block">Мокрый (ПФК)</label>
+<div class="cal-field-row"><input type="number" id="water_up" min="100" max="4000" placeholder="100–4000"><button type="button" class="cal-capture" id="capture-water" aria-label="Захватить RAW для мокрого">⬇️</button></div>
+<div id="cal-msg" class="cal-msg" style="display:none"></div>
+<button type="button" class="neon-buttom" id="soil-cal-save-btn">Сохранить калибровку</button>
+<p id="soil-cal-status" class="serv-note"></p>
+</div>
+<a class="neon-buttom icon" href="service.html">Назад в сервис<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M21 11H6.414l5.293-5.293-1.414-1.414L2.586 12l7.707 7.707 1.414-1.414L6.414 13H21z"/></svg></div></a>
+</main>
+
+<script src="plant_config.js"></script>
+<script src="mqtt-simple.js"></script>
+<script src="pwa-bridge.js"></script>
+
+<script>
+(function(){
+function applyCalStatusChip(done){
+  var st=document.getElementById('cal-status-chip');var ic=document.getElementById('cal-icon');var tx=document.getElementById('cal-text');
+  if(!st)return;
+  if(done){st.className='cal-status-chip';if(ic)ic.textContent='✅';if(tx)tx.textContent='Калибровка выполнена';}
+  else{st.className='cal-status-chip not-done';if(ic)ic.textContent='⚠️';if(tx)tx.textContent='Калибровка не выполнена';}
+}
+function loadSoilCalConfig(){
+  fetch('/api/soil_raw',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    applyCalStatusChip(!!d.calibrated);
+    var a=document.getElementById('air_up');var w=document.getElementById('water_up');
+    if(a&&d.air_up)a.value=d.air_up;
+    if(w&&d.water_up)w.value=d.water_up;
+  }).catch(function(){});
+}
+function updateSoilRawDisplay(){
+  fetch('/api/soil_raw',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    var el=document.getElementById('raw-up');
+    if(el&&d.raw_up!==undefined)el.textContent=d.raw_up;
+    if(d.calibrated!==undefined)applyCalStatusChip(!!d.calibrated);
+  }).catch(function(){});
+}
+function captureSoilRaw(type){
+  fetch('/api/soil_raw',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    if(d.raw_up==null)return;
+    var el=document.getElementById(type==='air'?'air_up':'water_up');
+    if(el)el.value=d.raw_up;
+  }).catch(function(){});
+}
+function showCalMsg(text){var el=document.getElementById('cal-msg');if(!el)return;el.textContent=text;el.style.display='';}
+function clearCalMsg(){var el=document.getElementById('cal-msg');if(!el)return;el.style.display='none';el.textContent='';}
+function applySoilCal(){
+  clearCalMsg();
+  var a=parseInt(document.getElementById('air_up').value,10);
+  var w=parseInt(document.getElementById('water_up').value,10);
+  var status=document.getElementById('soil-cal-status');
+  var btn=document.getElementById('soil-cal-save-btn');
+  if(!Number.isFinite(a)||a<500||a>4095||!Number.isFinite(w)||w<100||w>4000||a<=w){
+    showCalMsg('Проверьте значения: сухой должен быть больше мокрого');
+    return;
+  }
+  var fd=new FormData();fd.append('air_up',a);fd.append('water_up',w);
+  btn.disabled=true;btn.textContent='Сохраняем...';
+  if(status){status.textContent='';status.style.color='';}
+  fetch('/send_soil_cal',{method:'POST',body:fd}).then(function(r){
+    return r.json().then(function(d){return {ok:r.ok,data:d};}).catch(function(){
+      return r.text().then(function(t){return {ok:r.ok,data:{ok:r.ok&&t==='OK'}};});
+    });
+  }).then(function(res){
+    if(!res.ok||!res.data||!res.data.ok)throw new Error('fail');
+    applyCalStatusChip(true);
+    if(status){status.textContent='Сохранено';status.style.color='#a8f0b9';}
+    btn.disabled=false;btn.textContent='Сохранить калибровку';
+  }).catch(function(){
+    if(status){status.textContent='Ошибка сохранения';status.style.color='#ffb3b3';}
+    btn.disabled=false;btn.textContent='Сохранить калибровку';
+  });
+}
+document.getElementById('capture-air').addEventListener('click',function(){captureSoilRaw('air');});
+document.getElementById('capture-water').addEventListener('click',function(){captureSoilRaw('water');});
+document.getElementById('soil-cal-save-btn').addEventListener('click',applySoilCal);
+loadSoilCalConfig();updateSoilRawDisplay();setInterval(updateSoilRawDisplay,1000);
+})();
+</script>
+
+<script src="app.js"></script>
+
+</body>
+</html>

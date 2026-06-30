@@ -42,7 +42,7 @@
 <input type="hidden" id="edit-id">
 <div class="gh-form-row">
 <div class="gh-form-group">
-<label>Адрес MQTT брокера</label>
+<label>Адрес MQTT</label>
 <input type="text" id="inp-host" placeholder="broker.example.com" autocomplete="off">
 </div>
 <div class="gh-form-group">
@@ -63,10 +63,6 @@
 <div class="gh-form-group">
 <label>Топик</label>
 <input type="text" id="inp-base" placeholder="abc123/" autocomplete="off">
-</div>
-<div class="gh-form-group">
-<label>HTTP устройства (опционально)</label>
-<input type="text" id="inp-device-url" placeholder="http://192.168.1.50 — WiFi, логи, OTA">
 </div>
 <div class="gh-form-actions">
 <button type="button" id="btn-cancel" class="gh-action-btn">Отмена</button>
@@ -96,7 +92,6 @@
   const inpUser = document.getElementById('inp-user');
   const inpPass = document.getElementById('inp-pass');
   const inpBase = document.getElementById('inp-base');
-  const inpDeviceUrl = document.getElementById('inp-device-url');
 
   function renderList(){
     const greenhouses = window.ghGreenhouses.getAll();
@@ -121,7 +116,6 @@
         <div class="greenhouse-info">
           <span>🌐 ${escapeHtml(gh.host)}:${escapeHtml(String(gh.port || ''))}</span>
           <span>📡 ${escapeHtml(gh.base || '')}</span>
-          ${gh.deviceUrl ? `<span>🔗 ${escapeHtml(gh.deviceUrl)}</span>` : ''}
         </div>
         <div class="greenhouse-actions">
           ${gh.id !== activeId ? `<button type="button" class="gh-action-btn primary" onclick="selectGreenhouse('${gh.id}')">Выбрать</button>` : ''}
@@ -151,7 +145,6 @@
         inpUser.value = gh.user || '';
         inpPass.value = gh.pass || '';
         inpBase.value = gh.base || '';
-        inpDeviceUrl.value = gh.deviceUrl || '';
       }
     } else {
       formTitle.textContent = 'Новая теплица';
@@ -161,7 +154,6 @@
       inpUser.value = '';
       inpPass.value = '';
       inpBase.value = '';
-      inpDeviceUrl.value = '';
     }
     inpHost.focus();
   }
@@ -200,7 +192,6 @@
     const user = inpUser.value.trim();
     const pass = inpPass.value.trim();
     let base = inpBase.value.trim();
-    const deviceUrl = inpDeviceUrl ? inpDeviceUrl.value.trim() : '';
 
     if(!host){
       alert('Введите адрес брокера');
@@ -214,7 +205,7 @@
     }
     if(!base.endsWith('/')) base += '/';
 
-    const config = { host, port, user, pass, base, proto: 'wss', deviceUrl };
+    const config = { host, port, user, pass, base, proto: 'wss' };
     const editId = inpId.value;
 
     if(editId){
@@ -230,7 +221,13 @@
   });
 
   renderList();
-  if(new URLSearchParams(location.search).has('add')){
+  if(window.__ghConfigFromUrl){
+    const gh = window.ghGreenhouses.getActive();
+    if(gh){
+      showForm(gh.id);
+      formEl.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }
+  } else if(new URLSearchParams(location.search).has('add')){
     showForm(null);
   }
 })();

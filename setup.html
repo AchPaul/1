@@ -177,15 +177,8 @@ function doSave(){
   btn.style.pointerEvents='none';btn.style.opacity='0.5';
   btn.textContent='Сохранение...';
   var fd=new FormData(document.getElementById('wf'));
-  var url='/setup_complete';
-  try{
-    if(typeof window.getDeviceHttpBase==='function'){
-      var base=window.getDeviceHttpBase();
-      if(base) url=base+url;
-    }
-  }catch(e){}
   var dest=location.pathname.indexOf('.html')>=0?'index.html':'/';
-  fetch(url,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){
+  fetch('/setup_complete',{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){
     if(!r.ok) throw new Error('HTTP '+r.status);
     btn.textContent='Сохранено ✓';
     btn.style.borderColor='#22c55e';
