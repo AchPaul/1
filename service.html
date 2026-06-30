@@ -24,8 +24,11 @@ p{text-align:center;padding:0 5px;margin-bottom:12px}
 .icon{position:relative}
 .icon_btn{position:absolute;top:50%;left:16px;transform:translateY(-50%);display:flex;align-items:center;line-height:0}
 .main{display:flex;margin:20px 0;justify-content:center;align-items:center;flex-direction:column;gap:25px}
-.group{text-align:left;width:260px;margin:0 auto}
+.group{text-align:left;width:260px;margin:0 auto 16px}
 .group h1{font-size:13px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:#b78dc3;margin:0 0 7px 2px}
+.serv-section > .neon-buttom + .neon-buttom{margin-top:14px}
+.serv-panel .group{margin-bottom:16px}
+.serv-form-btns{display:flex;flex-direction:column;align-items:center;gap:16px;margin-top:20px;text-align:center;width:100%}
 .group_input{color:#fff;width:100%;max-width:300px;padding:12px 14px;border:1px solid rgba(201,0,204,.32);border-radius:14px;background:rgba(21,0,26,.72);font-size:16px;transition:border-color .2s,box-shadow .2s,background .2s}
 .group_input::placeholder{color:#d7b7df;opacity:.5}
 .group_input:focus{outline:0;border-color:#c900cc;box-shadow:0 0 0 3px rgba(201,0,204,.18),0 0 14px rgba(201,0,204,.22);background:rgba(40,0,52,.8)}
@@ -92,7 +95,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <div id="wifi-form-msg" class="wifi-msg" style="display:none"></div>
 <div class="group"><h1>Имя Wi-Fi</h1><input class="group_input" type="text" name="ssid" id="wifi-ssid" placeholder="пусто — не менять" maxlength="32"></div>
 <div class="group"><h1>Пароль</h1><div class="pass-wrap"><input class="group_input" type="password" id="wifi-pass" name="pass" placeholder="пусто — не менять" maxlength="32" autocomplete="new-password"><button type="button" class="pass-toggle" id="wifi-pass-toggle" aria-label="Показать пароль"><svg id="wifi-pass-eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg><svg id="wifi-pass-eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.8 21.8 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 5c7 0 11 7 11 7a21.8 21.8 0 0 1-3.17 4.49"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div></div>
-<div style="text-align:center;margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:12px"><input class="neon-buttom icon" type="submit" id="wifi-save-btn" value="Сохранить"><button type="button" class="neon-buttom icon neon-buttom--danger" id="wifi-reset-btn">Сброс WiFi</button></div>
+<div class="serv-form-btns"><input class="neon-buttom icon" type="submit" id="wifi-save-btn" value="Сохранить"><button type="button" class="neon-buttom icon neon-buttom--danger" id="wifi-reset-btn">Сброс WiFi</button></div>
 </form>
 </div>
 <div id="panel-mqtt" class="serv-panel" role="tabpanel">
@@ -130,7 +133,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <div class="group"><h1>Логин</h1><input class="group_input" type="text" name="mqtt_user" placeholder="введите данные"></div>
 <div class="group"><h1>Пароль</h1><input class="group_input" type="text" name="mqtt_pass" placeholder="введите данные"></div>
 <div id="mqtt-error-msg" style="display:none;text-align:center;margin:12px auto;max-width:300px;padding:12px;border:1px solid rgba(239,154,160,.45);border-radius:14px;background:rgba(60,0,10,.55);color:#ef9aa0;font-size:14px">Ошибка подключения</div>
-<div style="text-align:center;margin-top:16px"><input class="neon-buttom icon" type="submit" value="Сохранить MQTT"></div>
+<div class="serv-form-btns"><input class="neon-buttom icon" type="submit" value="Сохранить MQTT"></div>
 </form>
 <button type="button" id="mqtt-reconnect-btn" class="neon-buttom icon" style="display:none;margin-top:12px">Переподключиться</button>
 </div>
@@ -144,13 +147,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <option value="1">AP включена</option>
 <option value="0">AP переключение</option>
 </select>
-<div style="text-align:center;margin-top:16px"><input class="neon-buttom icon" type="submit" value="Сохранить"></div>
+<div class="serv-form-btns"><input class="neon-buttom icon" type="submit" value="Сохранить"></div>
 </form>
 </div>
 </div>
 <div class="serv-section">
 <div class="serv-section-label">Датчики</div>
-<a class="neon-buttom icon" href="soil_cal.html">Калибровка датчиков<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h2v-2h-2v2zm0-4h2V7h-2v6z"/></svg></div></a>
+<a class="neon-buttom icon" href="soil_cal.html">Калибровка датчиков<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg></div></a>
 </div>
 <div class="serv-section">
 <div class="serv-section-label">Удалённый доступ</div>

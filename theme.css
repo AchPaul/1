@@ -61,7 +61,7 @@ h3{font-family:var(--font-main);text-align:center;font-size:16px;font-weight:700
 .icon_btn{position:absolute;top:50%;left:16px;transform:translateY(-50%);display:flex;align-items:center;line-height:0}
 
 /* ---- Inputs ---- */
-.group{text-align:left}
+.group{text-align:left;margin-bottom:16px}
 .group h1{font-family:var(--font-main);font-size:13px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--txt-dim);margin:0 0 7px 2px}
 .group_input{font-family:var(--font-main);color:#fff;width:300px;max-width:calc(100vw - 34px);padding:12px 14px;border:1px solid var(--border-soft);border-radius:14px;background:rgba(21,0,26,.72);font-size:16px;transition:border-color .2s,box-shadow .2s,background .2s}
 .group_input::placeholder{color:#d7b7df;opacity:.5}
@@ -131,3 +131,10 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
 .pwa-net-status--hint{font-size:11px;color:#9a7aa8;margin-top:12px}
 .pwa-handoff-open{max-width:none!important;margin:10px 0 0!important;text-decoration:none!important}
 .hidden{display:none!important}
+
+/* ---- Service page spacing ---- */
+.serv-section{width:100%;max-width:320px}
+.serv-section-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:hsl(288,52%,55%);padding:4px 0;border-bottom:1px solid hsl(288,25%,28%);margin-bottom:12px}
+.serv-section > .neon-buttom + .neon-buttom{margin-top:14px}
+.serv-panel .group{margin-bottom:16px}
+.serv-form-btns{display:flex;flex-direction:column;align-items:center;gap:16px;margin-top:20px;text-align:center;width:100%}
