@@ -115,8 +115,8 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </main>
 
 <script src="plant_config.js"></script>
-<script src="mqtt-simple.js"></script>
-<script src="pwa-bridge.js"></script>
+<script src="mqtt-simple.js?v=64"></script>
+<script src="pwa-bridge.js?v=64"></script>
 
 <script>
 var plantSearchTimer=null;
@@ -188,7 +188,7 @@ loadProfileConfig();
 document.querySelectorAll('form').forEach(function(f){f.addEventListener('submit',function(e){e.preventDefault();var btn=f.querySelector('input[type="submit"]');if(!btn||btn.disabled)return;var orig=btn.value;btn.disabled=true;btn.value='...';fetch(f.action,{method:'POST',body:new FormData(f)}).then(function(r){return r.json().then(function(d){return {ok:r.ok,data:d};});}).then(function(res){btn.value=(res.ok&&res.data&&res.data.ok)?'Сохранено ✓':'Ошибка';if(res.ok&&res.data&&res.data.ok)loadProfileConfig();setTimeout(function(){btn.value=orig;btn.disabled=false},2000)}).catch(function(){btn.value='Ошибка';setTimeout(function(){btn.value=orig;btn.disabled=false},2000)})})});
 </script>
 
-<script src="app.js"></script>
+<script src="app.js?v=64"></script>
 
 </body>
 </html>

@@ -1,9 +1,10 @@
 /**
  * GrowHub Service Worker
- * Кэширование статических ресурсов PWA (страницы = site.cpp прошивки).
+ * HTML/JS — network-first (актуальная логика с сервера).
+ * CSS/иконки — cache-first (офлайн).
  */
 
-const CACHE = 'gh-remote-v63';
+const CACHE = 'gh-remote-v64';
 
 const ASSETS = [
   './',
@@ -47,18 +48,71 @@ function isCacheableRequest(request) {
   }
 }
 
+function wantsNetworkFirst(request) {
+  if (request.mode === 'navigate') return true;
+  try {
+    const path = new URL(request.url).pathname;
+    return path.endsWith('.js') || path.endsWith('.html');
+  } catch (_e) {
+    return false;
+  }
+}
+
+function putInCache(request, response) {
+  if (!response || response.status !== 200 || response.type === 'opaque') return;
+  const clone = response.clone();
+  caches.open(CACHE).then(cache => cache.put(request, clone));
+}
+
+function offlineFallback(request) {
+  if (request.mode === 'navigate') {
+    return caches.match('./index.html');
+  }
+  return new Response('Offline', { status: 503, statusText: 'Offline' });
+}
+
+function networkFirst(request) {
+  return fetch(request, { cache: 'no-store' })
+    .then(response => {
+      putInCache(request, response);
+      return response;
+    })
+    .catch(() => caches.match(request).then(cached => cached || offlineFallback(request)));
+}
+
+function cacheFirst(request) {
+  return caches.match(request).then(cached => {
+    if (cached) return cached;
+    return fetch(request).then(response => {
+      putInCache(request, response);
+      return response;
+    }).catch(() => offlineFallback(request));
+  });
+}
+
+async function precacheAssets(cache) {
+  await Promise.all(ASSETS.map(async (url) => {
+    try {
+      const response = await fetch(url, { cache: 'no-store' });
+      if (response.ok) await cache.put(url, response);
+    } catch (e) {
+      console.warn('[SW] precache failed:', url, e);
+    }
+  }));
+}
+
 self.addEventListener('install', e => {
-  console.log('[SW] Installing...');
+  console.log('[SW] Installing', CACHE);
   self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE)
-      .then(c => c.addAll(ASSETS))
-      .then(() => console.log('[SW] Assets cached'))
+      .then(cache => precacheAssets(cache))
+      .then(() => console.log('[SW] Assets precached'))
   );
 });
 
 self.addEventListener('activate', e => {
-  console.log('[SW] Activating...');
+  console.log('[SW] Activating', CACHE);
   e.waitUntil(
     caches.keys()
       .then(keys => Promise.all(
@@ -71,27 +125,18 @@ self.addEventListener('activate', e => {
   );
 });
 
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('fetch', e => {
   const request = e.request;
   if (request.method !== 'GET') return;
   if (!isCacheableRequest(request)) return;
 
   e.respondWith(
-    caches.match(request).then(cached => {
-      if (cached) return cached;
-      return fetch(request).then(response => {
-        if (!response || response.status !== 200 || response.type === 'opaque') {
-          return response;
-        }
-        const clone = response.clone();
-        caches.open(CACHE).then(cache => cache.put(request, clone));
-        return response;
-      }).catch(() => {
-        if (request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-        return new Response('Offline', { status: 503, statusText: 'Offline' });
-      });
-    })
+    wantsNetworkFirst(request) ? networkFirst(request) : cacheFirst(request)
   );
 });

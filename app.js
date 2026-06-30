@@ -1713,9 +1713,41 @@ function init(){
   bindControls();
   periodic();
   initGreenhouseSelector();
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
-  }
+  registerServiceWorker();
+  window.__ghAppReady = true;
+  window.dispatchEvent(new CustomEvent('gh-app-ready'));
+}
+
+let swRefreshing = false;
+
+function registerServiceWorker(){
+  if(!('serviceWorker' in navigator)) return;
+  let hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+    if(!hadController){
+      hadController = true;
+      return;
+    }
+    if(swRefreshing) return;
+    swRefreshing = true;
+    window.location.reload();
+  });
+  navigator.serviceWorker.register('service-worker.js').then(reg=>{
+    hadController = !!navigator.serviceWorker.controller;
+    if(reg.waiting && navigator.serviceWorker.controller){
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+    reg.addEventListener('updatefound', ()=>{
+      const worker = reg.installing;
+      if(!worker) return;
+      worker.addEventListener('statechange', ()=>{
+        if(worker.state === 'installed' && navigator.serviceWorker.controller){
+          worker.postMessage({ type: 'SKIP_WAITING' });
+        }
+      });
+    });
+    return reg.update();
+  }).catch(()=>{});
 }
 
 let greenhouseSelectBound = false;
