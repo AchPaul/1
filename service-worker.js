@@ -3,7 +3,7 @@
  * Кэширование статических ресурсов PWA (страницы = site.cpp прошивки).
  */
 
-const CACHE = 'gh-remote-v62';
+const CACHE = 'gh-remote-v63';
 
 const ASSETS = [
   './',

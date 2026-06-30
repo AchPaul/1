@@ -599,7 +599,7 @@ function setConnectionStatus(phase, opts){
 }
 
 function updateConnectedDeviceStatus(){
-  if(!connected || isTransientConnectionPhase()) return;
+  if(!connected) return;
   const now = Date.now();
   const telemetryStale = lastStateTs ? (now - lastStateTs) > STALE_DATA_THRESHOLD : false;
   if(deviceOnline === false || telemetryStale){
@@ -959,7 +959,7 @@ document.addEventListener('visibilitychange', ()=>{
 });
 function renderState(js){
   if(typeof window.ghOnMqttState === 'function') window.ghOnMqttState(js);
-  if(document.getElementById('pwa-status-line') && connected && !isTransientConnectionPhase()){
+  if(document.getElementById('pwa-status-line') && connected){
     updateConnectedDeviceStatus();
   }
   if(window.__ghDashboardMode || document.getElementById('pwa-bar')) return;
