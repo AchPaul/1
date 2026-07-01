@@ -50,7 +50,6 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 .icon{position:relative}
 .icon_btn{position:absolute;top:50%;left:16px;transform:translateY(-50%);display:flex;align-items:center;line-height:0}
 </style>
-<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <header><div class="logo"><span class="grow">Grow</span><span class="hub">Hub</span></div></header>
@@ -62,7 +61,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <a href="greenhouses.html?add=1" class="greenhouse-add-btn" id="greenhouse-add-btn">+ Добавить теплицу</a>
 <a href="greenhouses.html" class="greenhouse-manage-btn" title="Управление теплицами" aria-label="Управление теплицами">⚙</a>
 </div>
-<div class="pwa-status" id="pwa-status-line" style="font-size:11px;text-align:center;color:#9a7aa8;min-height:16px"></div>
+<div class="pwa-status" id="pwa-status-line" style="font-size:11px;text-align:center;color:#9a7aa8;min-height:16px">Подключение...</div>
 </div>
 
 <h1 class="page-title">Логи и диагностика</h1>
@@ -90,8 +89,8 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </main>
 
 <script src="plant_config.js"></script>
-<script src="mqtt-simple.js?v=64"></script>
-<script src="pwa-bridge.js?v=64"></script>
+<script src="mqtt-simple.js"></script>
+<script src="pwa-bridge.js"></script>
 
 <script>
 function showDiagTab(tab){
@@ -136,27 +135,19 @@ function renderLogs(entries,truncated){
   if(truncated)html+='<div class="empty-state">Список обрезан — слишком много записей</div>';
   box.innerHTML=html;
 }
-function applyDiagData(d){
-  if(!d)return;
-  var u=document.getElementById('stat-uptime');if(u)u.textContent=formatUptime(d.uptime);
-  var hf=document.getElementById('stat-heap-free');if(hf)hf.textContent=(d.heap_free!=null?d.heap_free+' B':'—');
-  paintResetReason(document.getElementById('stat-reset'),d.reset_reason,d.reset_code);
-  var logs=d.logs||d.events||[];
-  renderLogs(logs,d.truncated);
-}
 function loadDiag(){
   fetch('/api/diag',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
-    applyDiagData(d);
+    var u=document.getElementById('stat-uptime');if(u)u.textContent=formatUptime(d.uptime);
+    var hf=document.getElementById('stat-heap-free');if(hf)hf.textContent=(d.heap_free!=null?d.heap_free+' B':'—');
+    paintResetReason(document.getElementById('stat-reset'),d.reset_reason,d.reset_code);
+    var logs=d.logs||d.events||[];
+    renderLogs(logs,d.truncated);
   }).catch(function(){
     var box=document.getElementById('logs-box');
     if(box)box.innerHTML='<div class="empty-state">Не удалось загрузить диагностику</div>';
   });
 }
 function refreshDiag(){loadDiag();}
-window.applyDiagData=applyDiagData;
-window.addEventListener('gh-diag-update',function(e){
-  if(e&&e.detail)applyDiagData(e.detail);
-});
 
 var hash=(location.hash||'').replace('#','');
 if(hash==='events')hash='logs';
@@ -165,7 +156,7 @@ refreshDiag();
 setInterval(loadDiag,10000);
 </script>
 
-<script src="app.js?v=64"></script>
+<script src="app.js"></script>
 
 </body>
 </html>

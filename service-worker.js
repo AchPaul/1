@@ -4,7 +4,7 @@
  * CSS/иконки — cache-first (офлайн).
  */
 
-const CACHE = 'gh-remote-v68';
+const CACHE = 'gh-remote-v45';
 
 const ASSETS = [
   './',

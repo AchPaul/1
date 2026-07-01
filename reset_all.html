@@ -34,7 +34,6 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 .grow{display:inline-block;font-size:30px;color:#fff;font-weight:600;letter-spacing:.2px;line-height:1;-webkit-text-stroke:.45px currentColor;transform:scaleX(1.18)}
 .hub{display:inline-block;font-size:30px;color:#e95eeb;font-weight:600;letter-spacing:.2px;line-height:1;-webkit-text-stroke:.45px currentColor;transform:scaleX(1.18);border:4px solid #e95eeb;border-radius:10px;padding:4px;margin-left:12px}
 </style>
-<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <header>
@@ -48,7 +47,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <a href="greenhouses.html?add=1" class="greenhouse-add-btn" id="greenhouse-add-btn">+ Добавить теплицу</a>
 <a href="greenhouses.html" class="greenhouse-manage-btn" title="Управление теплицами" aria-label="Управление теплицами">⚙</a>
 </div>
-<div class="pwa-status" id="pwa-status-line" style="font-size:11px;text-align:center;color:#9a7aa8;min-height:16px"></div>
+<div class="pwa-status" id="pwa-status-line" style="font-size:11px;text-align:center;color:#9a7aa8;min-height:16px">Подключение...</div>
 </div>
 
 <h3 style="margin-top:20px;padding:0 10px;text-align:center">Сброс настроек</h3>
@@ -59,8 +58,8 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </main>
 
 <script src="plant_config.js"></script>
-<script src="mqtt-simple.js?v=64"></script>
-<script src="pwa-bridge.js?v=64"></script>
+<script src="mqtt-simple.js"></script>
+<script src="pwa-bridge.js"></script>
 
 <script>
 document.getElementById('resetBtn').addEventListener('click',function(){
@@ -74,7 +73,7 @@ else{msg.style.color='rgb(239,154,160)';msg.textContent='Ошибка сброс
 });
 </script>
 
-<script src="app.js?v=64"></script>
+<script src="app.js"></script>
 
 </body>
 </html>

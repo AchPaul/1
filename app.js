@@ -217,10 +217,9 @@ let configFromUrl = false;
 let connectionPhase = 'idle';
 let mqttEverConnected = false;
 
-// Механизм блокировки UI обновлений на странице настроек
+// Механизм блокировки автообновления UI после редактирования (2 мин на любой странице)
 let lastUserInteractionTime = 0;
 const UI_LOCK_DURATION = 120000; // 120 секунд после последнего взаимодействия
-let isOnSettingsPage = false;
 
 function isStagePresetProfileName(name){
   if(!name) return false;
@@ -393,12 +392,18 @@ function markUserInteraction(){
   lastUserInteractionTime = Date.now();
 }
 
-function isUIUpdateLocked(){
-  // Блокируем обновления только на странице настроек и только если недавно было взаимодействие
-  if(!isOnSettingsPage) return false;
-  const elapsed = Date.now() - lastUserInteractionTime;
-  return elapsed < UI_LOCK_DURATION;
+function clearUserInteractionLock(){
+  lastUserInteractionTime = 0;
 }
+
+function isUIUpdateLocked(){
+  if(!lastUserInteractionTime) return false;
+  return (Date.now() - lastUserInteractionTime) < UI_LOCK_DURATION;
+}
+
+window.ghMarkUserInteraction = markUserInteraction;
+window.ghClearUiUpdateLock = clearUserInteractionLock;
+window.ghIsUiUpdateLocked = isUIUpdateLocked;
 
 const ALERT_KEYS = [
   'rebooted',
@@ -1398,6 +1403,27 @@ function flashPub(msg){
   setTimeout(()=> pubStatusEl.classList.remove('fade'), 600);
 }
 
+function bindGlobalPageInteractionLock(){
+  function shouldLockTarget(target){
+    if(!target || !target.closest) return false;
+    if(target.closest('form')) return true;
+    if(target.closest('#plant-search-results')) return true;
+    if(target.matches('input,select,textarea,button.plant-result')) return true;
+    return false;
+  }
+  function onEdit(e){
+    if(shouldLockTarget(e.target)) markUserInteraction();
+  }
+  document.addEventListener('input', onEdit, true);
+  document.addEventListener('change', onEdit, true);
+  document.addEventListener('focusin', onEdit, true);
+  document.addEventListener('click', function(e){
+    if(e.target && e.target.classList && e.target.classList.contains('plant-result')){
+      markUserInteraction();
+    }
+  }, true);
+}
+
 function bindControls(){
   const ranged = [
     ['lig_hours','inp_lig_hours'],
@@ -1711,6 +1737,7 @@ function init(){
     connect(cfg);
   }
   bindControls();
+  bindGlobalPageInteractionLock();
   periodic();
   initGreenhouseSelector();
   registerServiceWorker();

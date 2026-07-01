@@ -106,6 +106,10 @@
       alt_watering_state: flag(js.alternate_watering) ? 'вкл' : 'выкл',
       smart_humair: flag(js.smart_humair) ? 1 : 0,
       cooling_enabled: flag(js.cooling_enabled) ? 1 : 0,
+      cooling_available: flag(js.cooling_available) ? 1 : 0,
+      cooling_ui_enabled: flag(js.cooling_ui_enabled) ? 1 : 0,
+      ca: flag(js.cooling_available) ? 1 : 0,
+      cu: flag(js.cooling_ui_enabled) ? 1 : 0,
       dehumidify_enabled: flag(js.dehumidify) ? 1 : 0,
       alternate_watering: flag(js.alternate_watering) ? 1 : 0,
       vent_always_day: flag(js.vent_day_always) ? 1 : 0,
@@ -333,6 +337,60 @@
     return jsonResponse({ ok: false, error: 'local_only' }, 503);
   }
 
+  function setSelectIfValid(sel, val){
+    if(!sel || val === undefined || val === null) return;
+    var s = String(val);
+    for(var i = 0; i < sel.options.length; i++){
+      if(sel.options[i].value === s){
+        sel.value = s;
+        return;
+      }
+    }
+  }
+
+  function buildProfileConfigFromMqtt(js){
+    if(!js || js.profile_id === undefined) return null;
+    var total = Number(window.GH_PLANT_NUMS);
+    if(!Number.isFinite(total)) total = 379;
+    var seed = total - 3;
+    var veg = total - 2;
+    var flow = total - 1;
+    var cur = num(js.profile_id, 0);
+    var cfg = {
+      cur_preset: cur,
+      stage_seedling: seed,
+      stage_vegetative: veg,
+      stage_flowering: flow
+    };
+    if(cur >= 5 && cur < seed && js.profile_name){
+      cfg.cur_plant_name = js.profile_name;
+    }
+    return cfg;
+  }
+
+  function parsePlantsSearchParams(path){
+    var q = '';
+    var limit = 12;
+    try {
+      var u = new URL(path, window.location.href);
+      q = (u.searchParams.get('q') || '').trim();
+      var l = parseInt(u.searchParams.get('limit') || '12', 10);
+      if(l > 0 && l <= 15) limit = l;
+    } catch(_e){}
+    return { q: q, limit: limit };
+  }
+
+  function searchPlantsClient(query, limit){
+    if(typeof window.ghSearchPlants === 'function'){
+      return window.ghSearchPlants(query, limit);
+    }
+    return [];
+  }
+
+  function isUiSyncLocked(){
+    return typeof window.ghIsUiUpdateLocked === 'function' && window.ghIsUiUpdateLocked();
+  }
+
   function handleSendPost(path, init){
     return Promise.resolve(init.body).then(function(body){
       var fd = parseFormBody(body);
@@ -361,11 +419,25 @@
 
   function syncPageFromMqtt(js){
     if(!js) return;
+    if(isUiSyncLocked()) return;
     var pid = js.profile_id;
     if(pid !== undefined){
-      document.querySelectorAll('select[name="plant"],select[name="profile"]').forEach(function(sel){
-        sel.value = String(pid);
+      setSelectIfValid(document.getElementById('profile-select'), pid);
+      setSelectIfValid(document.getElementById('stage-select'), pid);
+      document.querySelectorAll('select[data-plant-select]').forEach(function(sel){
+        setSelectIfValid(sel, pid);
       });
+    }
+    var total = Number(window.GH_PLANT_NUMS);
+    if(!Number.isFinite(total)) total = 379;
+    var seed = total - 3;
+    var cur = num(js.profile_id, 0);
+    if(cur >= 5 && cur < seed && js.profile_name){
+      var inp = document.getElementById('plant-search-input');
+      if(inp && document.activeElement !== inp) inp.value = js.profile_name;
+      if(typeof window.selectPlant === 'function') window.selectPlant(cur, js.profile_name, null);
+      var curEl = document.getElementById('plant-selected');
+      if(curEl) curEl.textContent = 'Текущий: ' + js.profile_name;
     }
     if(js.name){
       var nameInp = document.querySelector('input[name="gh_name"]');
@@ -496,6 +568,39 @@
 
     if(method === 'GET' && path.indexOf('/api/soil_raw') >= 0){
       return Promise.resolve(jsonResponse(mqttToSoilRaw(lastMqttState)));
+    }
+
+    if(method === 'GET' && path.indexOf('/api/profile_config') >= 0){
+      var cfg = buildProfileConfigFromMqtt(lastMqttState);
+      if(cfg) return Promise.resolve(jsonResponse(cfg));
+      var localProfileCfg = proxyToLocal(path, init);
+      if(localProfileCfg){
+        return localProfileCfg.then(function(r){ return r.json(); }).then(function(d){
+          return jsonResponse(d);
+        }).catch(function(){
+          return jsonResponse({ cur_preset: 0, stage_seedling: 376, stage_vegetative: 377, stage_flowering: 378 });
+        });
+      }
+      return Promise.resolve(jsonResponse({ cur_preset: 0, stage_seedling: 376, stage_vegetative: 377, stage_flowering: 378 }));
+    }
+
+    if(method === 'GET' && path.indexOf('/api/plants_search') >= 0){
+      var searchParams = parsePlantsSearchParams(path);
+      if(typeof window.ghSearchPlants === 'function'){
+        return Promise.resolve(jsonResponse({
+          q: searchParams.q,
+          plants: searchPlantsClient(searchParams.q, searchParams.limit)
+        }));
+      }
+      var localPlantsSearch = proxyToLocal(path, init);
+      if(localPlantsSearch){
+        return localPlantsSearch.then(function(r){ return r.json(); }).then(function(d){
+          return jsonResponse(d);
+        }).catch(function(){
+          return jsonResponse({ q: searchParams.q, plants: [] });
+        });
+      }
+      return Promise.resolve(jsonResponse({ q: searchParams.q, plants: [] }));
     }
 
     if(method === 'POST' && path.indexOf('/settings') >= 0){
