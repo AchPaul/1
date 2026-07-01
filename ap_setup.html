@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GrowHub — Настройка AP</title>
+<link rel="icon" type="image/svg+xml" href="favicon-plant.svg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#28003c">
+<meta name="referrer" content="no-referrer">
+
+<style>
+:root{--clr-neon:hsl(288,52%,35%);--clr-bg:hsl(295,14%,67%)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+h2{text-align:center;padding:0 6px;font-size:21px;font-weight:700;letter-spacing:.4px;color:#fff;text-shadow:0 0 18px rgba(201,0,204,.35)}
+p{text-align:center;padding:0 5px;margin-bottom:12px}
+.neon-buttom{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;max-width:300px;margin-left:auto;margin-right:auto;padding:14px 20px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:15px;font-weight:600;letter-spacing:.3px;text-decoration:none;color:#f3d7fa;cursor:pointer;background:linear-gradient(160deg,rgba(34,0,46,.92) 0%,rgba(8,0,14,.92) 100%);border:1px solid rgba(201,0,204,.32);border-radius:14px;box-shadow:0 4px 12px rgba(0,0,0,.5),inset 0 0 12px rgba(201,0,204,.08);transition:transform .14s,border-color .2s,box-shadow .2s,color .2s}
+.neon-buttom:disabled{background:#3d3b3d;color:#fff;cursor:wait}
+.neon-buttom::before{content:none}
+.neon-buttom::after{content:none}
+.neon-buttom:hover,.neon-buttom:focus{border-color:rgba(201,0,204,.65);box-shadow:0 6px 18px rgba(0,0,0,.6),0 0 16px rgba(201,0,204,.28),inset 0 0 14px rgba(201,0,204,.12);color:#fff;outline:none}
+.neon-buttom:active{transform:scale(.97)}
+.icon{position:relative}
+.icon_btn{position:absolute;top:50%;left:16px;transform:translateY(-50%);display:flex;align-items:center;line-height:0}
+.main{display:flex;margin:20px 0;justify-content:center;align-items:center;flex-direction:column;gap:25px}
+.serv-section{width:100%;max-width:320px}
+.serv-section-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:hsl(288,52%,55%);padding:4px 0;border-bottom:1px solid hsl(288,25%,28%);margin-bottom:12px}
+.serv-form-btns{display:flex;flex-direction:column;align-items:center;gap:16px;margin-top:20px;text-align:center;width:100%}
+.attention{max-width:300px;margin:10px auto;padding:10px 14px;border:2px solid #ff2e63;border-radius:10px;background:rgba(255,0,80,.08);color:#ffb3c4;font-size:14px;text-align:center;line-height:1.25}
+.select-dropdown__button{padding:11px 14px;background:rgba(40,0,52,.9);color:#fff;border:1px solid rgba(201,0,204,.32);border-radius:12px;width:100%;font-size:15px}
+.serv-note{text-align:center;font-size:14px;color:#c4a1c7;margin:8px 0}
+header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.5);position:relative;z-index:100}
+.header-transition{height:56px;position:relative;overflow:hidden;background:linear-gradient(180deg,rgba(40,0,60,.98) 0%,rgba(31,0,45,.9) 26%,rgba(20,0,31,.72) 55%,rgba(9,0,16,.34) 82%,transparent 100%);margin-top:-8px;margin-bottom:8px}
+.header-transition::before{content:'';position:absolute;inset:-20px 0 0;background:radial-gradient(ellipse at top,rgba(201,0,204,.2) 0%,rgba(120,0,180,.12) 34%,rgba(0,0,0,0) 72%);filter:blur(10px);pointer-events:none}
+.header-transition::after{content:'';position:absolute;left:0;right:0;bottom:-8px;height:26px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,#000 100%);pointer-events:none}
+.logo{margin-top:2px;display:inline-flex;align-items:center;gap:5px}
+.grow{display:inline-block;font-size:30px;color:#fff;font-weight:600;letter-spacing:.2px;line-height:1;-webkit-text-stroke:.45px currentColor;transform:scaleX(1.18)}
+.hub{display:inline-block;font-size:30px;color:#e95eeb;font-weight:600;letter-spacing:.2px;line-height:1;-webkit-text-stroke:.45px currentColor;transform:scaleX(1.18);border:4px solid #e95eeb;border-radius:10px;padding:4px;margin-left:12px}
+</style>
+<link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<header>
+<div class="logo"><span class="grow">Grow</span><span class="hub">Hub</span></div>
+</header>
+<div class="header-transition"></div>
+<main class="main">
+<div class="pwa-bar" id="pwa-bar" style="width:100%;max-width:320px;margin:0 auto 10px">
+<div class="greenhouse-select-wrap" id="greenhouse-selector">
+<select class="greenhouse-select" id="greenhouse-select" aria-label="Выбор теплицы"></select>
+<a href="greenhouses.html?add=1" class="greenhouse-add-btn" id="greenhouse-add-btn">+ Добавить теплицу</a>
+<a href="greenhouses.html" class="greenhouse-manage-btn" title="Управление теплицами" aria-label="Управление теплицами">⚙</a>
+</div>
+<div class="pwa-status" id="pwa-status-line" style="font-size:11px;text-align:center;color:#9a7aa8;min-height:16px"></div>
+</div>
+
+<h2>Настройка AP</h2>
+<div class="serv-section" id="ap-section">
+<div class="serv-section-label">Режим WiFi (AP)</div>
+<form action="/send_ap" method="POST" id="ap-form">
+<p style="font-size:14px;color:#d7b7df;margin-bottom:10px">«AP включена» — теплица всегда раздаёт Wi‑Fi. «AP переключение» — AP отключается при Wi‑Fi + MQTT.</p>
+<p class="attention">Настройте MQTT, прежде чем отключать AP.</p>
+<p class="serv-note">Режим: <b id="ap-mode" data-field="ap_mode_label">—</b><br>AP: <b id="ap-state">—</b></p>
+<select name="ap_mode" id="ap-mode-select" class="select-dropdown__button" style="margin-top:8px">
+<option value="1">AP включена</option>
+<option value="0">AP переключение</option>
+</select>
+<div class="serv-form-btns"><input class="neon-buttom icon" type="submit" value="Сохранить"></div>
+</form>
+</div>
+<a class="neon-buttom icon" href="service.html">Назад в сервис<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M21 11H6.414l5.293-5.293-1.414-1.414L2.586 12l7.707 7.707 1.414-1.414L6.414 13H21z"/></svg></div></a>
+</main>
+
+<script src="plant_config.js"></script>
+<script src="mqtt-simple.js?v=67"></script>
+<script src="pwa-bridge.js?v=67"></script>
+
+<script>
+(function(){
+var apState=document.getElementById('ap-state');
+var apMode=document.getElementById('ap-mode');
+var apSelect=document.getElementById('ap-mode-select');
+function loadApConfig(){fetch('/api/ap_config',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){if(apMode&&d.ap_mode)apMode.textContent=d.ap_mode;if(apSelect&&d.ap_persistent!==undefined)apSelect.value=d.ap_persistent?'1':'0';}).catch(function(){});}
+function updateApStatus(){fetch('/api/status',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+if(apState){apState.textContent=d.ap_started?'Активна':'Выключена';apState.style.color=d.ap_started?'rgb(185,226,154)':'rgb(239,154,160)';}
+}).catch(function(){});}
+var apForm=document.getElementById('ap-form');
+if(apForm){apForm.addEventListener('submit',function(e){e.preventDefault();var btn=apForm.querySelector('input[type="submit"]');if(!btn||btn.disabled)return;var orig=btn.value;btn.disabled=true;btn.value='...';fetch('/send_ap',{method:'POST',body:new FormData(apForm)}).then(function(r){return r.json().then(function(d){return {ok:r.ok,data:d};});}).then(function(res){btn.value=(res.ok&&res.data&&res.data.ok)?'Сохранено ✓':'Ошибка';setTimeout(function(){btn.value=orig;btn.disabled=false;loadApConfig();updateApStatus();},2000);}).catch(function(){btn.value='Ошибка';setTimeout(function(){btn.value=orig;btn.disabled=false;},2000);});});}
+loadApConfig();updateApStatus();setInterval(updateApStatus,5000);
+})();
+</script>
+
+<script src="app.js?v=67"></script>
+
+</body>
+</html>

@@ -17,8 +17,15 @@
 .pwa-bar .greenhouse-manage-btn{padding:10px 12px;border:1px solid rgba(201,0,204,.35);border-radius:12px;color:#e95eeb;text-decoration:none;background:rgba(26,0,31,.92);flex:none;line-height:1.2}
 .pwa-status{font-size:11px;text-align:center;color:#9a7aa8;min-height:16px}
 .pwa-status.warn{color:#ffb3b3}
-#service-acks{display:flex;flex-direction:column;gap:10px;width:100%;max-width:400px}
-#service-acks .neon-buttom{font-size:14px;width:100%}
+#service-acks{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border:2px solid rgba(201,0,204,.28);border-radius:15px;background:linear-gradient(145deg,rgba(22,0,28,.92),#000);box-shadow:0 0 16px rgba(201,0,204,.12),inset 0 0 14px rgba(201,0,204,.05)}
+.ack-btn{appearance:none;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px 14px;border-radius:12px;border:1px solid rgba(201,0,204,.35);background:rgba(26,0,31,.92);color:#f3d7fa;font-family:var(--font-main);font-size:13px;font-weight:600;letter-spacing:.35px;text-decoration:none;cursor:pointer;transition:background .18s,border-color .18s,color .18s,transform .12s,box-shadow .18s;box-shadow:0 2px 8px rgba(0,0,0,.3),inset 0 0 8px rgba(201,0,204,.06);-webkit-tap-highlight-color:transparent}
+.ack-btn:hover,.ack-btn:focus{border-color:rgba(201,0,204,.6);background:rgba(201,0,204,.14);color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.35),0 0 12px rgba(201,0,204,.18);outline:none}
+.ack-btn:active{transform:scale(.98)}
+.ack-btn:disabled{opacity:.55;cursor:wait;transform:none}
+.ack-btn--water{border-color:rgba(51,204,255,.4);color:#b8ecff;background:rgba(0,24,38,.75)}
+.ack-btn--water:hover,.ack-btn--water:focus{border-color:rgba(51,204,255,.7);background:rgba(51,204,255,.12);box-shadow:0 4px 12px rgba(0,0,0,.35),0 0 12px rgba(51,204,255,.2)}
+.ack-btn--humid{border-color:rgba(211,92,255,.4);color:#e8c8ff;background:rgba(28,0,38,.75)}
+.ack-btn--humid:hover,.ack-btn--humid:focus{border-color:rgba(211,92,255,.7);background:rgba(211,92,255,.12);box-shadow:0 4px 12px rgba(0,0,0,.35),0 0 12px rgba(211,92,255,.2)}
 </style>
 
 <style>
@@ -109,8 +116,6 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 .neon-buttom::after{content:'';position:absolute;background:var(--clr-neon);top:0;left:0;bottom:0;right:0;box-shadow:0 0 2em .5em var(--clr-neon);opacity:0;z-index:-1;transition:opacity 100ms}
 .neon-buttom:hover,.neon-buttom:focus{color:#ead7f0;text-shadow:none}
 .neon-buttom:hover::before,.neon-buttom:focus::before,.neon-buttom:hover::after,.neon-buttom:focus::after{opacity:1}
-#service-acks{display:flex;flex-direction:column;gap:10px}
-#service-acks .neon-buttom{font-size:14px}
 .bottom-sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);z-index:999;opacity:0;pointer-events:none;transition:opacity .3s}
 .bottom-sheet-overlay.active{opacity:1;pointer-events:auto}
 .bottom-sheet{position:fixed;left:0;right:0;bottom:-100%;max-width:460px;margin:0 auto;border-top:2px solid var(--clr-neon-brighter);border-radius:25px 25px 0 0;padding:25px 20px 24px;z-index:1000;display:flex;flex-direction:column;align-items:center;box-shadow:0 -5px 25px rgba(201,0,204,.4);transition:bottom .4s cubic-bezier(.175,.885,.32,1.275)}
@@ -231,7 +236,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <div class="alert" id="alert-water" style="display:none;border-color:rgba(59,130,246,.4);background:linear-gradient(135deg,rgba(59,130,246,.15) 0%,rgba(37,99,235,.1) 100%)"><span style="color:#93c5fd">💧 Ваша очередь полить растение!</span></div>
 </div>
 </div>
-<div id="service-acks" style="display:none;flex-direction:column;gap:10px;margin-top:0;width:100%;max-width:320px"></div>
+<div id="service-acks" style="display:none"></div>
 
 <div class="dashboard-grid">
 <div class="tile tile--compact-main">
@@ -498,9 +503,9 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 
 
 <script src="plant_config.js"></script>
-<script src="mqtt-simple.js?v=64"></script>
-<script src="pwa-bridge.js?v=64"></script>
-<script src="app.js?v=64"></script>
+<script src="mqtt-simple.js?v=68"></script>
+<script src="pwa-bridge.js?v=68"></script>
+<script src="app.js?v=68"></script>
 
 <script>
 var PARAMS={
@@ -761,7 +766,7 @@ function toggleFeature(event,field,chip,period){
     updateFeatureState(field,period,!!nextValue);
     setFeatureChipState(chip,!!nextValue);
     showToast('Сохранено','ok');
-    return fetchDashboardState();
+    markDashboardStateDirty();
   }).catch(function(){
     chip.classList.remove('pending');
     showToast('Ошибка сохранения','err');
@@ -771,28 +776,46 @@ function syncServiceAcks(d){
   var el=document.getElementById('service-acks');
   if(!el)return;
   var html='';
-  if(d.out_hg)html+='<a class="neon-buttom" href="/ok_hg" style="width:100%;font-size:14px">💧 Бак залит</a>';
-  if(d.out_ha)html+='<a class="neon-buttom" href="/ok_ha" style="width:100%;font-size:14px">💨 Увлажнитель залит</a>';
+  if(d.out_hg)html+='<a class="ack-btn ack-btn--water" href="/ok_hg">💧 Бак залит</a>';
+  if(d.out_ha)html+='<a class="ack-btn ack-btn--humid" href="/ok_ha">💨 Увлажнитель залит</a>';
   el.innerHTML=html;
   el.style.display=(d.out_hg||d.out_ha)?'flex':'none';
+}
+function alertFlag(v){return v===true||v===1||v==='1'||v==='true';}
+function applyAlertsFromStatus(d){
+  if(!d)return;
+  setAlert('alert-reboot',alertFlag(d.reboot_alert));
+  setAlert('alert-out-hg',alertFlag(d.out_hg));
+  setAlert('alert-out-ha',alertFlag(d.out_ha));
+  setTempAlert('alert-hig-t',alertFlag(d.hig_temp),d.temp_air,'Жарко');
+  setTempAlert('alert-low-t',alertFlag(d.low_temp),d.temp_air,'Холодно');
+  setAlert('alert-err-air',alertFlag(d.err_sensor_dht));
+  setAlert('alert-err-hg',alertFlag(d.err_sensor_hg));
+  setAlert('alert-err-soil-t',alertFlag(d.err_sensor_soil_t));
+  setAlert('alert-water',alertFlag(d.water_pending));
+  syncServiceAcks(d);
+  var hasAlerts=alertFlag(d.reboot_alert)||alertFlag(d.out_hg)||alertFlag(d.out_ha)||alertFlag(d.hig_temp)||alertFlag(d.low_temp)||alertFlag(d.err_sensor_dht)||alertFlag(d.err_sensor_hg)||alertFlag(d.err_sensor_soil_t)||alertFlag(d.water_pending);
+  var sec=document.getElementById('alerts-section');if(sec)sec.style.display=hasAlerts?'':'none';
+}
+function refreshDashboardAlerts(){
+  if(document.hidden)return;
+  try{
+    if(typeof window.ghIsMqttConnected==='function'&&window.ghIsMqttConnected()
+      &&typeof window.ghGetLastMqttState==='function'&&typeof window.ghMqttToApiStatus==='function'){
+      var js=window.ghGetLastMqttState();
+      if(js){applyAlertsFromStatus(window.ghMqttToApiStatus(js));return;}
+    }
+  }catch(_e){}
+  updateAlerts();
 }
 function updateAlerts(){
   if(document.hidden)return;
   fetch('/api/status',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
-    setAlert('alert-reboot',d.reboot_alert);
-    setAlert('alert-out-hg',d.out_hg);
-    setAlert('alert-out-ha',d.out_ha);
-    setTempAlert('alert-hig-t',d.hig_temp,d.temp_air,'Жарко');
-    setTempAlert('alert-low-t',d.low_temp,d.temp_air,'Холодно');
-    setAlert('alert-err-air',d.err_sensor_dht);
-    setAlert('alert-err-hg',d.err_sensor_hg);
-    setAlert('alert-err-soil-t',d.err_sensor_soil_t);
-    setAlert('alert-water',d.water_pending);
-    syncServiceAcks(d);
-    var hasAlerts=d.reboot_alert||d.out_hg||d.out_ha||d.hig_temp||d.low_temp||d.err_sensor_dht||d.err_sensor_hg||d.err_sensor_soil_t||d.water_pending;
-    var sec=document.getElementById('alerts-section');if(sec)sec.style.display=hasAlerts?'':'none';
+    applyAlertsFromStatus(d);
   }).catch(function(){})
 }
+window.applyAlertsFromStatus=applyAlertsFromStatus;
+window.refreshDashboardAlerts=refreshDashboardAlerts;
 function setText(id,value){
   var el=document.getElementById(id);
   if(el)el.textContent=value;
@@ -812,6 +835,8 @@ function updatePeriodState(paramKey,periodKey,rawValue,displayValue){
 function syncDashboardState(data){
   if(!data)return;
   lastDashboardData=data;
+  __lastStateFetchOk=Date.now();
+  __stateDirty=false;
 
   if(statePick(data,'dn','device_name',''))setText('device-name-text',statePick(data,'dn','device_name',''));
   currentDayNight=fmtDayNightLabel(data)||currentDayNight;
@@ -894,12 +919,54 @@ function syncDashboardState(data){
   drawSpark('spark-air',sparkHistory.air,'#d35cff');
   drawSpark('spark-soil',sparkHistory.soil,'#33ccff');
 }
-function fetchDashboardState(){
-  if(document.hidden)return Promise.resolve();
+function fetchDashboardState(force){
+  if(document.hidden&&!force)return Promise.resolve();
+  __lastStateFetchAttempt=Date.now();
+  if(__stateDeferTimer){clearTimeout(__stateDeferTimer);__stateDeferTimer=null;}
   return fetch('/api/state',{cache:'no-store'}).then(function(r){return r.json();}).then(function(data){
     syncDashboardState(data);
+    refreshDashboardAlerts();
     return data;
   }).catch(function(){})
+}
+var STATE_POLL_MS=10000;
+var STATE_DIRTY_MIN_MS=3000;
+var __stateDirty=false;
+var __lastStateFetchOk=0;
+var __lastStateFetchAttempt=0;
+var __statePollTimer=null;
+var __stateDeferTimer=null;
+function markDashboardStateDirty(){
+  __stateDirty=true;
+  tryFetchDashboardState(false);
+}
+function tryFetchDashboardState(force){
+  if(document.hidden&&!force)return;
+  var now=Date.now();
+  if(!force){
+    if(!__stateDirty&&(!__lastStateFetchOk||now-__lastStateFetchOk<STATE_POLL_MS))return;
+    if(__stateDirty&&__lastStateFetchAttempt&&now-__lastStateFetchAttempt<STATE_DIRTY_MIN_MS){
+      if(!__stateDeferTimer){
+        __stateDeferTimer=setTimeout(function(){
+          __stateDeferTimer=null;
+          tryFetchDashboardState(false);
+        },STATE_DIRTY_MIN_MS-(now-__lastStateFetchAttempt));
+      }
+      return;
+    }
+  }
+  fetchDashboardState(force);
+}
+function startDashboardStatePoll(){
+  stopDashboardStatePoll();
+  __statePollTimer=setInterval(function(){
+    if(document.hidden)return;
+    tryFetchDashboardState(false);
+  },1000);
+}
+function stopDashboardStatePoll(){
+  if(__statePollTimer){clearInterval(__statePollTimer);__statePollTimer=null;}
+  if(__stateDeferTimer){clearTimeout(__stateDeferTimer);__stateDeferTimer=null;}
 }
 function syncVentCurrent(){
   var valueEl=document.getElementById('vent-current-value');
@@ -1024,7 +1091,7 @@ function applySetting(){
   }).then(function(res){
     if(!res.ok||!res.data||!res.data.ok)throw new Error('save failed');
     applyLocalPeriodValue(activeDial.paramKey,activeDial.periodKey,activeDial.value);
-    return fetchDashboardState();
+    markDashboardStateDirty();
   }).then(function(){
     status.textContent='Сохранено';
     showToast('Сохранено','ok');
@@ -1139,7 +1206,7 @@ function pickStage(stage){
   var d=new URLSearchParams();
   d.append('growth_stage',stage);
   d.append('vpd_target_x10','');
-  fetch('/send_vpd_stage',{method:'POST',body:d}).then(function(r){return r.json().then(function(j){return {ok:r.ok,data:j};});}).then(function(res){if(!res.ok||!res.data||!res.data.ok)throw new Error();fetchDashboardState();showToast('Сохранено','ok');}).catch(function(){showToast('Ошибка сохранения','err');});
+  fetch('/send_vpd_stage',{method:'POST',body:d}).then(function(r){return r.json().then(function(j){return {ok:r.ok,data:j};});}).then(function(res){if(!res.ok||!res.data||!res.data.ok)throw new Error();markDashboardStateDirty();showToast('Сохранено','ok');}).catch(function(){showToast('Ошибка сохранения','err');});
 }
 function applyGsSettings(){
   if(gsPreset)return;
@@ -1159,7 +1226,7 @@ function applyGsSettings(){
   } else {
     d.append('vpd_target_x10',parsed.x10);
   }
-  fetch('/send_vpd_stage',{method:'POST',body:d}).then(function(r){return r.json().then(function(j){return {ok:r.ok,data:j};});}).then(function(res){if(!res.ok||!res.data||!res.data.ok)throw new Error();fetchDashboardState();showToast('Сохранено','ok');}).catch(function(){showToast('Ошибка сохранения','err');});
+  fetch('/send_vpd_stage',{method:'POST',body:d}).then(function(r){return r.json().then(function(j){return {ok:r.ok,data:j};});}).then(function(res){if(!res.ok||!res.data||!res.data.ok)throw new Error();markDashboardStateDirty();showToast('Сохранено','ok');}).catch(function(){showToast('Ошибка сохранения','err');});
 }
 function applyLightOn(btn){
   var onHour=parseInt(document.getElementById('light-on-hour').value);
@@ -1178,7 +1245,7 @@ function applyLightOn(btn){
     if(s)s.textContent=String(onHour)+':00';
     if(btn){btn.textContent='✓';setTimeout(function(){btn.textContent='Применить';btn.disabled=false;},1500);}
     showToast('Сохранено','ok');
-    return fetchDashboardState();
+    markDashboardStateDirty();
   }).catch(function(){
     if(btn){btn.textContent='Ошибка';setTimeout(function(){btn.textContent='Применить';btn.disabled=false;},1500);}
     showToast('Ошибка сохранения','err');
@@ -1195,6 +1262,19 @@ var __historyFetchCtrl=null;
 var __historyFetchInFlight=false;
 var __historyFetchTimer=null;
 var __historyFetchSeq=0;
+var __historyPollTimer=null;
+var HISTORY_POLL_MS=600000;
+function startHistoryPoll(){
+  stopHistoryPoll();
+  if(!historyOpen)return;
+  __historyPollTimer=setInterval(function(){
+    if(!historyOpen||document.hidden)return;
+    scheduleHistoryFetch(0);
+  },HISTORY_POLL_MS);
+}
+function stopHistoryPoll(){
+  if(__historyPollTimer){clearInterval(__historyPollTimer);__historyPollTimer=null;}
+}
 // Биты алармов из прошивки (rec.alarms). На каждом графике показываем только профильные ошибки.
 var HIST_ALARM_DS18B20=0x40; // ошибка датчиков температуры DS18B20
 var HIST_ALARM_DHT22=0x10;   // ошибка датчика воздуха DHT22
@@ -1239,8 +1319,10 @@ function toggleHistory(){
   if(historyOpen){
     cancelHistoryFetch();
     scheduleHistoryFetch(0);
+    startHistoryPoll();
   }else{
     cancelHistoryFetch();
+    stopHistoryPoll();
   }
 }
 function setHistoryRange(h){
@@ -1457,6 +1539,7 @@ window.addEventListener('resize',function(){
 });
 window.addEventListener('pagehide',function(){
   cancelHistoryFetch();
+  stopHistoryPoll();
 });
 window.fetchHistoryChart=fetchHistoryChart;
 window.drawHistoryChart=drawHistoryChart;
@@ -1517,6 +1600,7 @@ function applyNameChange(){
     document.getElementById('device-name-text').textContent=displayed;
     status.textContent='Сохранено';status.style.color='#a8f0b9';
     showToast('Сохранено','ok');
+    markDashboardStateDirty();
     setTimeout(closeNameModal,400);
   }).catch(function(){
     status.textContent='Ошибка сохранения';status.style.color='#ffb3b3';
@@ -1531,15 +1615,22 @@ bindEditLock('light-cur-hour','light-schedule');
 bindEditLock('gs-vpd','growth-vpd');
 initFeatureChips();
 syncVentCurrent();
-updateAlerts();
+refreshDashboardAlerts();
 (function(){
   var tg=document.getElementById('tile-growth');
   if(tg&&tg.classList.contains('tile--growth-locked'))gsPreset=true;
 })();
 loadHistoryRangePref();
-fetchDashboardState();
-setInterval(updateAlerts,10000);
-setInterval(fetchDashboardState,15000);
+fetchDashboardState(true);
+startDashboardStatePoll();
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden){stopDashboardStatePoll();return;}
+  startDashboardStatePoll();
+  tryFetchDashboardState(true);
+  refreshDashboardAlerts();
+});
+window.markDashboardStateDirty=markDashboardStateDirty;
+window.fetchDashboardState=fetchDashboardState;
 </script>
 
 </body>

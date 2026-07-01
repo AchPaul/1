@@ -136,11 +136,12 @@
       ap_started: flag(js.ap_started) || flag(js.ap_mode),
       hig_temp: flag(js.alert_high_temp),
       low_temp: flag(js.alert_low_temp),
+      temp_air: num(js.temp_now, 0),
       out_hg: flag(js.alert_water),
       out_ha: flag(js.alert_humid),
       err_sensor_hg: flag(js.err_sensor_hg),
       err_sensor_dht: flag(js.err_sensor_dht),
-      err_sensor_soil: flag(js.err_sensor_soil),
+      err_sensor_soil_t: flag(js.err_sensor_soil),
       water_pending: flag(js.watering_notification_pending),
       reboot_alert: !flag(js.rebooted) && ligHours !== 0 && ligHours !== 24
     };
@@ -228,14 +229,14 @@
   function filterHistoryByHours(data, hours){
     var points = (data && data.points) ? data.points : [];
     if(!points.length){
-      return { hours: hours, interval_sec: 60, points: [] };
+      return { hours: hours, interval_sec: 600, points: [] };
     }
     var lastT = num(points[points.length - 1].t, 0);
     var cutoff = lastT - hours * 3600;
     var filtered = points.filter(function(p){ return num(p.t, 0) >= cutoff; });
     return {
       hours: hours,
-      interval_sec: data.interval_sec || 60,
+      interval_sec: data.interval_sec || 600,
       points: filtered
     };
   }
@@ -422,7 +423,7 @@
       has = true;
       var bw = document.createElement('button');
       bw.type = 'button';
-      bw.className = 'neon-buttom';
+      bw.className = 'ack-btn ack-btn--water';
       bw.textContent = '💧 Бак залит';
       bw.onclick = function(){
         if(window.ghPublish) window.ghPublish('refill', 'water');
@@ -433,7 +434,7 @@
       has = true;
       var bh = document.createElement('button');
       bh.type = 'button';
-      bh.className = 'neon-buttom';
+      bh.className = 'ack-btn ack-btn--humid';
       bh.textContent = '💨 Увлажнитель залит';
       bh.onclick = function(){
         if(window.ghPublish) window.ghPublish('refill', 'humid');
@@ -612,6 +613,9 @@
     syncPageFromMqtt(js);
     if(typeof window.syncDashboardState === 'function' && lastApiState){
       window.syncDashboardState(lastApiState);
+    }
+    if(typeof window.applyAlertsFromStatus === 'function'){
+      window.applyAlertsFromStatus(mqttToApiStatus(js));
     }
   }
 

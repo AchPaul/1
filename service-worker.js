@@ -4,13 +4,14 @@
  * CSS/иконки — cache-first (офлайн).
  */
 
-const CACHE = 'gh-remote-v64';
+const CACHE = 'gh-remote-v68';
 
 const ASSETS = [
   './',
   './index.html',
   './profile.html',
   './service.html',
+  './ap_setup.html',
   './soil_cal.html',
   './reset_all.html',
   './contacts.html',
