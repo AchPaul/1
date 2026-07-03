@@ -1779,7 +1779,7 @@ function registerServiceWorker(){
 
 let greenhouseSelectBound = false;
 
-// Инициализация селектора теплиц на главной странице
+// Инициализация селектора теплиц (только на дашборде — index.html)
 function initGreenhouseSelector(){
   const selectorWrap = document.getElementById('greenhouse-selector');
   const selectEl = document.getElementById('greenhouse-select');

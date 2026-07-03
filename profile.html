@@ -53,11 +53,6 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <div class="header-transition"></div>
 <main class="main">
 <div class="pwa-bar" id="pwa-bar" style="width:100%;max-width:320px;margin:0 auto 10px">
-<div class="greenhouse-select-wrap" id="greenhouse-selector">
-<select class="greenhouse-select" id="greenhouse-select" aria-label="Выбор теплицы"></select>
-<a href="greenhouses.html?add=1" class="greenhouse-add-btn" id="greenhouse-add-btn">+ Добавить теплицу</a>
-<a href="greenhouses.html" class="greenhouse-manage-btn" title="Управление теплицами" aria-label="Управление теплицами">⚙</a>
-</div>
 <div class="pwa-status" id="pwa-status-line" style="font-size:11px;text-align:center;color:#9a7aa8;min-height:16px">Подключение...</div>
 </div>
 
@@ -124,15 +119,15 @@ function renderPlantResults(plants){
   if(!box)return;
   box.innerHTML='';
   if(!plants||!plants.length){box.innerHTML='<div class="plant-search-hint">Ничего не найдено</div>';return;}
-  plants.forEach(function(p){{
+  plants.forEach(function(p){
     var btn=document.createElement('button');
     btn.type='button';
     btn.className='plant-result';
     btn.textContent=p.n||'';
     btn.dataset.id=String(p.id);
-    btn.addEventListener('click',function(){{selectPlant(p.id,p.n,btn);}});
+    btn.addEventListener('click',function(){selectPlant(p.id,p.n,btn);});
     box.appendChild(btn);
-  }});
+  });
 }
 function selectPlant(id,name,btnEl){
   var hid=document.getElementById('plant-id');
@@ -141,7 +136,7 @@ function selectPlant(id,name,btnEl){
   if(sel)sel.textContent='Выбрано: '+(name||'');
   var apply=document.getElementById('plant-apply-btn');
   if(apply)apply.disabled=false;
-  document.querySelectorAll('.plant-result').forEach(function(b){{b.classList.remove('selected');}});
+  document.querySelectorAll('.plant-result').forEach(function(b){b.classList.remove('selected');});
   if(btnEl)btnEl.classList.add('selected');
 }
 function runPlantSearch(q){
@@ -149,18 +144,18 @@ function runPlantSearch(q){
   var box=document.getElementById('plant-search-results');
   if(!box)return;
   if(q.length<2){box.innerHTML='<div class="plant-search-hint">Введите минимум 2 символа</div>';return;}
-  fetch('/api/plants_search?q='+encodeURIComponent(q)+'&limit=12',{{cache:'no-store'}})
-    .then(function(r){{return r.json();}})
-    .then(function(d){{renderPlantResults(d.plants);}})
-    .catch(function(){{renderPlantResults([]);}});
+  fetch('/api/plants_search?q='+encodeURIComponent(q)+'&limit=12',{cache:'no-store'})
+    .then(function(r){return r.json();})
+    .then(function(d){renderPlantResults(d.plants);})
+    .catch(function(){renderPlantResults([]);});
 }
 function bindPlantSearch(){
   var inp=document.getElementById('plant-search-input');
   if(!inp)return;
-  inp.addEventListener('input',function(){{
+  inp.addEventListener('input',function(){
     clearTimeout(plantSearchTimer);
-    plantSearchTimer=setTimeout(function(){{runPlantSearch(inp.value);}},400);
-  }});
+    plantSearchTimer=setTimeout(function(){runPlantSearch(inp.value);},400);
+  });
 }
 bindPlantSearch();function loadProfileConfig(){
   fetch('/api/profile_config',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
