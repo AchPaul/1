@@ -1,10 +1,12 @@
 /**
  * GrowHub Service Worker
  * HTML/JS — network-first (актуальная логика с сервера).
- * CSS/иконки — cache-first (офлайн).
+ * CSS — stale-while-revalidate (офлайн + свежие стили онлайн).
+ * Иконки/manifest — cache-first (офлайн).
  */
+// BUILD_ID: local-dev
 
-const CACHE = 'gh-remote-v46';
+const CACHE = 'gh-remote-local-dev';
 
 const ASSETS = [
   './',
@@ -59,6 +61,15 @@ function wantsNetworkFirst(request) {
   }
 }
 
+function wantsStaleWhileRevalidate(request) {
+  try {
+    const path = new URL(request.url).pathname;
+    return path.endsWith('.css');
+  } catch (_e) {
+    return false;
+  }
+}
+
 function putInCache(request, response) {
   if (!response || response.status !== 200 || response.type === 'opaque') return;
   const clone = response.clone();
@@ -81,6 +92,30 @@ function networkFirst(request) {
     .catch(() => caches.match(request).then(cached => cached || offlineFallback(request)));
 }
 
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(CACHE);
+  const cached = await cache.match(request);
+  const fetchAndUpdate = fetch(request, { cache: 'no-store' })
+    .then(response => {
+      if (response && response.status === 200 && response.type !== 'opaque') {
+        cache.put(request, response.clone());
+      }
+      return response;
+    });
+
+  if (cached) {
+    fetchAndUpdate.catch(() => {});
+    return cached;
+  }
+
+  try {
+    const response = await fetchAndUpdate;
+    if (response) return response;
+  } catch (_e) {}
+
+  return offlineFallback(request);
+}
+
 function cacheFirst(request) {
   return caches.match(request).then(cached => {
     if (cached) return cached;
@@ -89,6 +124,12 @@ function cacheFirst(request) {
       return response;
     }).catch(() => offlineFallback(request));
   });
+}
+
+function pickFetchStrategy(request) {
+  if (wantsNetworkFirst(request)) return networkFirst(request);
+  if (wantsStaleWhileRevalidate(request)) return staleWhileRevalidate(request);
+  return cacheFirst(request);
 }
 
 async function precacheAssets(cache) {
@@ -137,7 +178,5 @@ self.addEventListener('fetch', e => {
   if (request.method !== 'GET') return;
   if (!isCacheableRequest(request)) return;
 
-  e.respondWith(
-    wantsNetworkFirst(request) ? networkFirst(request) : cacheFirst(request)
-  );
+  e.respondWith(pickFetchStrategy(request));
 });

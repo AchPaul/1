@@ -1746,6 +1746,7 @@ function init(){
 }
 
 let swRefreshing = false;
+let swRegistration = null;
 
 function registerServiceWorker(){
   if(!('serviceWorker' in navigator)) return;
@@ -1760,6 +1761,7 @@ function registerServiceWorker(){
     window.location.reload();
   });
   navigator.serviceWorker.register('service-worker.js').then(reg=>{
+    swRegistration = reg;
     hadController = !!navigator.serviceWorker.controller;
     if(reg.waiting && navigator.serviceWorker.controller){
       reg.waiting.postMessage({ type: 'SKIP_WAITING' });
@@ -1773,6 +1775,14 @@ function registerServiceWorker(){
         }
       });
     });
+    if(!window.__ghSwVisibilityBound){
+      window.__ghSwVisibilityBound = true;
+      document.addEventListener('visibilitychange', ()=>{
+        if(document.visibilityState === 'visible' && swRegistration){
+          swRegistration.update().catch(()=>{});
+        }
+      });
+    }
     return reg.update();
   }).catch(()=>{});
 }
