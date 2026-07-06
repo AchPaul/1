@@ -139,8 +139,6 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 </form>
 <button type="button" id="mqtt-reconnect-btn" class="neon-buttom icon" style="display:none;margin-top:12px">Переподключиться</button>
 </div>
-<a class="neon-buttom icon" href="/ap_setup">Настройка AP<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M1 9l2 2c2.88-2.88 6.79-4.08 10.53-3.62l1.19-2.68C9.89 2.38 4.74 3.94 1 7.73V9zm22 6l-2-2a11.96 11.96 0 0 0-2.79-2.06l-1.19 2.68A10.08 10.08 0 0 1 22 15v-2.27zM7.53 9.8l1.19-2.68C5.92 6.85 3.53 7.57 1.59 9.03L3 11c1.72-1.24 3.86-1.69 5.97-1.2l-1.44 2.99zm12.94 4.4l-1.19 2.68c2.85.48 5.24-.24 7.18-1.7L21 13c-1.72 1.24-3.86 1.69-5.97 1.2l1.44-2.99zM12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/></svg></div></a>
-</div>
 <div class="serv-section">
 <div class="serv-section-label">Заводские</div>
 <a class="neon-buttom icon" href="diag.html">Логи и диагностика<div class="icon_btn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M19.937 8.68c-.011-.032-.02-.063-.033-.094a.997.997 0 0 0-.196-.293l-6-6a.997.997 0 0 0-.293-.196c-.03-.014-.062-.022-.094-.033a.991.991 0 0 0-.259-.051C13.04 2.011 13.021 2 13 2H6c-1.103 0-2 .897-2 2v16c0 1.103.897 2 2 2h12c1.103 0 2-.897 2-2V9c0-.021-.011-.04-.013-.062a.99.99 0 0 0-.05-.258M16.586 8H14V5.414zM6 20V4h6v5a1 1 0 0 0 1 1h5l.002 10z"/><path d="M8 12h8v2H8zm0 4h8v2H8zm0-8h2v2H8z"/></svg></div></a>
@@ -152,6 +150,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 </main>
 
 <script src="plant_config.js"></script>
+<script src="mqtt-cache.js"></script>
 <script src="mqtt-simple.js"></script>
 <script src="pwa-bridge.js"></script>
 
@@ -363,7 +362,6 @@ document.querySelectorAll('.serv-tab').forEach(function(b){b.addEventListener('c
 document.querySelectorAll('.trigger_clue').forEach(function(trigger){trigger.addEventListener('click',function(){var c=trigger.nextElementSibling;if(c)c.style.display=c.style.display==='block'?'none':'block';});});
 var hash=(location.hash||'').replace('#','');
 if(hash==='cal'){location.replace('/soil_cal');return;}
-if(hash==='ap'){location.replace('/ap_setup');return;}
 if(hash==='wifi'||hash==='mqtt')showServTab(hash);
 var wifiStatus=document.getElementById('wifi-status');
 var wifiAuthErr=document.getElementById('wifi-auth-error');

@@ -1,35 +1,12 @@
-// Lightweight MQTT bootstrap + shared MQTTManager wrapper for the GrowHub PWA
-// Loads mqtt.js from CDN if not already present and exposes window.MQTTManager
+// GrowHub MQTT manager: local mqtt.js + SharedWorker (fallback: direct per-tab connection).
 (function(){
-  const MQTT_CDN = 'https://unpkg.com/mqtt/dist/mqtt.min.js';
-  const LS_LAST_STATE_PREFIX = 'gh_last_state_';
-  const LS_LAST_STATE_TS_PREFIX = 'gh_last_state_ts_';
-  const LS_LAST_HISTORY_PREFIX = 'gh_last_history_';
-  const LS_LAST_HISTORY_TS_PREFIX = 'gh_last_history_ts_';
-  const LS_LAST_DIAG_PREFIX = 'gh_last_diag_';
-  const LS_LAST_DIAG_TS_PREFIX = 'gh_last_diag_ts_';
-
-  function cacheSlug(base){
-    return String(base || 'default').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 48);
-  }
-
-  function lsStateKey(base){ return LS_LAST_STATE_PREFIX + cacheSlug(base); }
-  function lsStateTsKey(base){ return LS_LAST_STATE_TS_PREFIX + cacheSlug(base); }
-  function lsHistoryKey(base){ return LS_LAST_HISTORY_PREFIX + cacheSlug(base); }
-  function lsHistoryTsKey(base){ return LS_LAST_HISTORY_TS_PREFIX + cacheSlug(base); }
-  function lsDiagKey(base){ return LS_LAST_DIAG_PREFIX + cacheSlug(base); }
-  function lsDiagTsKey(base){ return LS_LAST_DIAG_TS_PREFIX + cacheSlug(base); }
-  const STALE_DATA_THRESHOLD = 120000; // 2 minutes — единый порог устаревания (кеш + «не в сети»)
-  const LEGACY_LS_KEYS = ['gh_last_state', 'gh_last_state_ts', 'gh_last_history', 'gh_last_history_ts', 'gh_last_diag', 'gh_last_diag_ts'];
+  const MQTT_LOCAL = 'vendor/mqtt.min.js';
+  const WORKER_URL = 'mqtt-shared-worker.js';
+  const cache = window.GHMqttCache;
+  const STALE_DATA_THRESHOLD = cache ? cache.STALE_DATA_MS : 120000;
 
   function purgeLegacyLsCache(){
-    LEGACY_LS_KEYS.forEach(function(k){
-      try{ localStorage.removeItem(k); }catch(_e){}
-    });
-  }
-
-  if (typeof window !== 'undefined') {
-    window.GH_STALE_DATA_MS = STALE_DATA_THRESHOLD;
+    if(cache && cache.purgeLegacyLsCache) cache.purgeLegacyLsCache();
   }
 
   let mqttReady;
@@ -38,10 +15,10 @@
   } else {
     mqttReady = new Promise((resolve, reject)=>{
       const s = document.createElement('script');
-      s.src = MQTT_CDN;
+      s.src = MQTT_LOCAL;
       s.async = true;
       s.onload = ()=> window.mqtt ? resolve(window.mqtt) : reject(new Error('mqtt.js not loaded'));
-      s.onerror = ()=> reject(new Error('Failed to load mqtt.js'));
+      s.onerror = ()=> reject(new Error('Failed to load local mqtt.js'));
       document.head.appendChild(s);
     });
   }
@@ -62,17 +39,19 @@
     return 'ws';
   }
 
-  class MQTTManager {
+  function normalizeBase(base){
+    return cache ? cache.normalizeBase(base) : (base && base.endsWith('/') ? base : base + '/');
+  }
+
+  class BaseMQTTManager {
     constructor(){
-      this.client = null;
       this.cfg = null;
       this.events = {status: [], state: [], history: [], diag: [], error: [], cached: [], deviceStatus: []};
       this.baseTopic = '';
       this.stateTopic = '';
-      this.queue = [];
-      this.maxQueue = 10;
-      this.reconnectMs = 1000;
-      this.reconnectMax = 10000;
+      this.historyTopic = '';
+      this.diagTopic = '';
+      this.deviceStatusTopic = '';
       this.lastState = null;
       this.lastStateTime = 0;
       this.lastHistory = null;
@@ -80,40 +59,111 @@
       this.lastDiag = null;
       this.lastDiagTime = 0;
       this.connected = false;
-      this.deviceOnline = null; // null = unknown, true = online, false = offline
-      this.awaitingFirstState = true; // Flag to track if we're waiting for first fresh state
-      this.cachedStateWasStale = false; // Flag to indicate cached state was stale
+      this.deviceOnline = null;
+      this.awaitingFirstState = true;
+      this.cachedStateWasStale = false;
     }
-    
+
     isDataStale(timestamp){
+      if(cache) return cache.isStale(timestamp);
       if(!timestamp) return true;
       return (Date.now() - timestamp) > STALE_DATA_THRESHOLD;
+    }
+
+    isCacheFresh(timestamp){
+      if(cache) return cache.isFresh(timestamp);
+      return !!timestamp && (Date.now() - timestamp) <= 60000;
     }
 
     on(evt, cb){ if(this.events[evt]) this.events[evt].push(cb); }
     emit(evt, payload){ (this.events[evt]||[]).forEach(cb=>{ try{ cb(payload); }catch(e){ console.error('[MQTTManager] handler error', e); } }); }
 
-    async connect(cfg){
-      this.cfg = cfg || {};
-      const mqtt = await mqttReady;
-      if(this.client){ try{ this.client.end(true); }catch(_e){} this.client = null; }
-      
-      // Reset state tracking for new connection
-      this.awaitingFirstState = true;
-      this.cachedStateWasStale = false;
-      this.deviceOnline = null;
-
-      purgeLegacyLsCache();
-      if(!cfg || !cfg.host || !cfg.port || !cfg.base) throw new Error('Incomplete MQTT config');
-      const proto = deriveProto(cfg);
-      const path = ensureSlash(cfg.path || '/mqtt');
-      const base = cfg.base.endsWith('/') ? cfg.base : cfg.base + '/';
+    _prepareTopics(cfg){
+      const base = normalizeBase(cfg.base);
       this.baseTopic = base;
       this.stateTopic = base + 'state/json';
       this.historyTopic = base + 'history/json';
       this.diagTopic = base + 'diag/json';
-      this.deviceStatusTopic = base + 'status'; // LWT topic for online/offline
+      this.deviceStatusTopic = base + 'status';
+    }
 
+    _emitCachedHistory(){
+      if(!cache || !this.baseTopic) return;
+      const pack = cache.readPack(this.baseTopic);
+      if(pack && pack.history){
+        this.lastHistory = pack.history;
+        this.lastHistoryTime = pack.historyTs || 0;
+        this.emit('history', pack.history);
+      }
+    }
+
+    _emitCachedDiag(){
+      if(!cache || !this.baseTopic) return;
+      const pack = cache.readPack(this.baseTopic);
+      if(pack && pack.diag){
+        this.lastDiag = pack.diag;
+        this.lastDiagTime = pack.diagTs || 0;
+        this.emit('diag', pack.diag);
+      }
+    }
+
+    _emitCachedState(){
+      if(!cache || !this.baseTopic){
+        this.cachedStateWasStale = true;
+        this.emit('cached', { stale: true, timestamp: 0 });
+        return;
+      }
+      const pack = cache.readPack(this.baseTopic);
+      if(pack && pack.state){
+        this.lastState = pack.state;
+        this.lastStateTime = pack.stateTs || 0;
+        this.cachedStateWasStale = this.isDataStale(this.lastStateTime);
+        this.emit('cached', { stale: this.cachedStateWasStale, timestamp: this.lastStateTime });
+        this.emit('state', pack.state);
+      } else {
+        this.cachedStateWasStale = true;
+        this.emit('cached', { stale: true, timestamp: 0 });
+      }
+    }
+
+    _persistState(js, ts){
+      if(cache && this.baseTopic) cache.writeState(this.baseTopic, js, ts);
+    }
+
+    _persistHistory(hist, ts){
+      if(cache && this.baseTopic) cache.writeHistory(this.baseTopic, hist, ts);
+    }
+
+    _persistDiag(diag, ts){
+      if(cache && this.baseTopic) cache.writeDiag(this.baseTopic, diag, ts);
+    }
+  }
+
+  class DirectMQTTManager extends BaseMQTTManager {
+    constructor(){
+      super();
+      this.client = null;
+      this.queue = [];
+      this.maxQueue = 10;
+      this.reconnectMs = 1000;
+      this.reconnectMax = 10000;
+    }
+
+    async connect(cfg){
+      this.cfg = cfg || {};
+      const mqtt = await mqttReady;
+      if(this.client){ try{ this.client.end(true); }catch(_e){} this.client = null; }
+
+      this.awaitingFirstState = true;
+      this.cachedStateWasStale = false;
+      this.deviceOnline = null;
+      purgeLegacyLsCache();
+
+      if(!cfg || !cfg.host || !cfg.port || !cfg.base) throw new Error('Incomplete MQTT config');
+      this._prepareTopics(cfg);
+
+      const proto = deriveProto(cfg);
+      const path = ensureSlash(cfg.path || '/mqtt');
       const url = `${proto}://${cfg.host}:${cfg.port}${path}`;
       const opts = {
         clientId: 'gh-web-' + Math.random().toString(16).slice(2),
@@ -122,12 +172,11 @@
         keepalive: 60,
         reconnectPeriod: this.reconnectMs,
         connectTimeout: 10000,
-        clean: true,
+        clean: false,
       };
 
       this.client = mqtt.connect(url, opts);
       this._bind();
-      // emit cached state immediately if present
       this._emitCachedState();
       this._emitCachedHistory();
       this._emitCachedDiag();
@@ -141,20 +190,18 @@
         this.client.subscribe(this.stateTopic, {qos:0});
         this.client.subscribe(this.historyTopic, {qos:0});
         this.client.subscribe(this.diagTopic, {qos:0});
-        this.client.subscribe(this.deviceStatusTopic, {qos:0}); // Subscribe to LWT
+        this.client.subscribe(this.deviceStatusTopic, {qos:0});
         this.emit('status','connected');
         this._flushQueue();
       });
       this.client.on('reconnect', ()=>{
         this.connected = false;
         this.emit('status','reconnecting');
-        // backoff for next attempt (capped)
         this.reconnectMs = Math.min(this.reconnectMax, Math.round(this.reconnectMs * 1.7));
         if(this.client) this.client.options.reconnectPeriod = this.reconnectMs;
       });
       this.client.on('close', ()=>{
         this.connected = false;
-        // Не показываем 'disconnected' если недавно получали данные
         const lastStateTime = this.lastStateTime || 0;
         if(Date.now() - lastStateTime > 5000){
           this.emit('status','disconnected');
@@ -174,12 +221,9 @@
             const js = JSON.parse(payload.toString());
             this.lastState = js;
             this.lastStateTime = Date.now();
-            this.awaitingFirstState = false; // Got fresh data
-            this.deviceOnline = true; // If we receive state, device is online
-            try{ 
-              localStorage.setItem(lsStateKey(this.baseTopic), JSON.stringify(js)); 
-              localStorage.setItem(lsStateTsKey(this.baseTopic), String(this.lastStateTime));
-            }catch(_e){}
+            this.awaitingFirstState = false;
+            this.deviceOnline = true;
+            this._persistState(js, this.lastStateTime);
             this.emit('state', js);
           }catch(e){ console.warn('[MQTTManager] state parse error', e); }
         } else if(topic === this.historyTopic){
@@ -187,10 +231,7 @@
             const hist = JSON.parse(payload.toString());
             this.lastHistory = hist;
             this.lastHistoryTime = Date.now();
-            try{
-              localStorage.setItem(lsHistoryKey(this.baseTopic), JSON.stringify(hist));
-              localStorage.setItem(lsHistoryTsKey(this.baseTopic), String(this.lastHistoryTime));
-            }catch(_e){}
+            this._persistHistory(hist, this.lastHistoryTime);
             this.emit('history', hist);
           }catch(e){ console.warn('[MQTTManager] history parse error', e); }
         } else if(topic === this.diagTopic){
@@ -198,70 +239,15 @@
             const diag = JSON.parse(payload.toString());
             this.lastDiag = diag;
             this.lastDiagTime = Date.now();
-            try{
-              localStorage.setItem(lsDiagKey(this.baseTopic), JSON.stringify(diag));
-              localStorage.setItem(lsDiagTsKey(this.baseTopic), String(this.lastDiagTime));
-            }catch(_e){}
+            this._persistDiag(diag, this.lastDiagTime);
             this.emit('diag', diag);
           }catch(e){ console.warn('[MQTTManager] diag parse error', e); }
         } else if(topic === this.deviceStatusTopic){
-          // LWT status: "online" or "offline"
           const status = payload.toString().trim().toLowerCase();
           this.deviceOnline = (status === 'online');
           this.emit('deviceStatus', this.deviceOnline);
         }
       });
-    }
-
-    _emitCachedHistory(){
-      try{
-        const cached = localStorage.getItem(lsHistoryKey(this.baseTopic));
-        const cachedTs = localStorage.getItem(lsHistoryTsKey(this.baseTopic));
-        const timestamp = cachedTs ? parseInt(cachedTs, 10) : 0;
-        if(cached){
-          const hist = JSON.parse(cached);
-          this.lastHistory = hist;
-          this.lastHistoryTime = timestamp;
-          this.emit('history', hist);
-        }
-      }catch(_e){}
-    }
-
-    _emitCachedDiag(){
-      try{
-        const cached = localStorage.getItem(lsDiagKey(this.baseTopic));
-        const cachedTs = localStorage.getItem(lsDiagTsKey(this.baseTopic));
-        const timestamp = cachedTs ? parseInt(cachedTs, 10) : 0;
-        if(cached){
-          const diag = JSON.parse(cached);
-          this.lastDiag = diag;
-          this.lastDiagTime = timestamp;
-          this.emit('diag', diag);
-        }
-      }catch(_e){}
-    }
-
-    _emitCachedState(){
-      try{
-        const cached = localStorage.getItem(lsStateKey(this.baseTopic));
-        const cachedTs = localStorage.getItem(lsStateTsKey(this.baseTopic));
-        const timestamp = cachedTs ? parseInt(cachedTs, 10) : 0;
-        
-        if(cached){
-          const js = JSON.parse(cached);
-          this.lastState = js;
-          this.lastStateTime = timestamp;
-          this.cachedStateWasStale = this.isDataStale(timestamp);
-          this.emit('cached', { stale: this.cachedStateWasStale, timestamp: timestamp });
-          this.emit('state', js);
-        } else {
-          this.cachedStateWasStale = true; // No cached data = treat as stale
-          this.emit('cached', { stale: true, timestamp: 0 });
-        }
-      }catch(_e){
-        this.cachedStateWasStale = true;
-        this.emit('cached', { stale: true, timestamp: 0 });
-      }
     }
 
     _flushQueue(){
@@ -297,6 +283,7 @@
             this.client.subscribe(this.stateTopic);
             this.client.subscribe(this.historyTopic);
             this.client.subscribe(this.diagTopic);
+            this.client.subscribe(this.deviceStatusTopic);
           });
         } catch(_e) {}
       }
@@ -305,14 +292,174 @@
     disconnect(){
       if(this.client){
         try{ this.client.end(true); }catch(_e){}
+        this.client = null;
       }
       this.connected = false;
-      this.deviceOnline = null; // Reset device status on disconnect
+      this.deviceOnline = null;
       this.awaitingFirstState = true;
       this.emit('status','disconnected');
     }
   }
 
+  let sharedWorker = null;
+  let sharedWorkerInitFailed = false;
+
+  class WorkerMQTTManager extends BaseMQTTManager {
+    constructor(){
+      super();
+      this.queue = [];
+      this.maxQueue = 10;
+      this._port = null;
+    }
+
+    _ensureWorker(){
+      if(this._port) return this._port;
+      if(sharedWorkerInitFailed) throw new Error('SharedWorker unavailable');
+      try {
+        sharedWorker = new SharedWorker(WORKER_URL, { name: 'gh-mqtt-v1' });
+        this._port = sharedWorker.port;
+        this._port.start();
+        this._port.onmessage = (e)=> this._onWorkerMessage(e.data);
+        return this._port;
+      } catch(e){
+        sharedWorkerInitFailed = true;
+        throw e;
+      }
+    }
+
+    _onWorkerMessage(msg){
+      if(!msg || !msg.type) return;
+      switch(msg.type){
+        case 'status':
+          this.connected = (msg.status === 'connected');
+          this.emit('status', msg.status);
+          if(this.connected) this._flushQueue();
+          break;
+        case 'state': {
+          const js = msg.payload;
+          this.lastState = js;
+          this.lastStateTime = msg.timestamp || Date.now();
+          if(msg.fromBroker){
+            this.awaitingFirstState = false;
+            this.deviceOnline = true;
+            this._persistState(js, this.lastStateTime);
+          }
+          this.emit('state', js);
+          break;
+        }
+        case 'history': {
+          const hist = msg.payload;
+          this.lastHistory = hist;
+          this.lastHistoryTime = msg.timestamp || Date.now();
+          if(msg.fromBroker !== false) this._persistHistory(hist, this.lastHistoryTime);
+          this.emit('history', hist);
+          break;
+        }
+        case 'diag': {
+          const diag = msg.payload;
+          this.lastDiag = diag;
+          this.lastDiagTime = msg.timestamp || Date.now();
+          if(msg.fromBroker !== false) this._persistDiag(diag, this.lastDiagTime);
+          this.emit('diag', diag);
+          break;
+        }
+        case 'deviceStatus':
+          this.deviceOnline = !!msg.online;
+          this.emit('deviceStatus', this.deviceOnline);
+          break;
+        case 'error':
+          this.emit('error', new Error(msg.message || 'mqtt worker error'));
+          break;
+        default:
+          break;
+      }
+    }
+
+    async connect(cfg){
+      this.cfg = cfg || {};
+      this.awaitingFirstState = true;
+      this.cachedStateWasStale = false;
+      this.deviceOnline = null;
+      purgeLegacyLsCache();
+
+      if(!cfg || !cfg.host || !cfg.port || !cfg.base) throw new Error('Incomplete MQTT config');
+      this._prepareTopics(cfg);
+
+      this._emitCachedState();
+      this._emitCachedHistory();
+      this._emitCachedDiag();
+
+      const port = this._ensureWorker();
+      port.postMessage({ type: 'connect', cfg: cfg });
+    }
+
+    publish(key, val){
+      if(!this.baseTopic) return false;
+      const token = window.GH_MQTT_CMD_TOKEN || 'pwa';
+      if(!this._port){
+        if(this.queue.length < this.maxQueue) this.queue.push({key, val});
+        return false;
+      }
+      if(!this.connected){
+        if(this.queue.length < this.maxQueue) this.queue.push({key, val});
+      }
+      try {
+        this._port.postMessage({ type: 'publish', key: key, val: val, token: token });
+        return this.connected;
+      } catch(e){
+        this.emit('error', e);
+        return false;
+      }
+    }
+
+    _flushQueue(){
+      if(!this.connected || !this._port) return;
+      while(this.queue.length){
+        const item = this.queue.shift();
+        this.publish(item.key, item.val);
+      }
+    }
+
+    resubscribe(){
+      if(this._port) this._port.postMessage({ type: 'resubscribe' });
+    }
+
+    disconnect(){
+      if(this._port){
+        try { this._port.postMessage({ type: 'disconnect' }); } catch(_e){}
+      }
+      this.connected = false;
+      this.deviceOnline = null;
+      this.awaitingFirstState = true;
+      this.emit('status','disconnected');
+    }
+  }
+
+  function canUseSharedWorker(){
+    return typeof SharedWorker !== 'undefined' && !sharedWorkerInitFailed;
+  }
+
+  class MQTTManager {
+    constructor(){
+      this._impl = canUseSharedWorker() ? new WorkerMQTTManager() : new DirectMQTTManager();
+    }
+
+    get cfg(){ return this._impl.cfg; }
+    get baseTopic(){ return this._impl.baseTopic; }
+    get lastStateTime(){ return this._impl.lastStateTime; }
+    get awaitingFirstState(){ return this._impl.awaitingFirstState; }
+    get cachedStateWasStale(){ return this._impl.cachedStateWasStale; }
+    get deviceOnline(){ return this._impl.deviceOnline; }
+    get connected(){ return this._impl.connected; }
+
+    on(evt, cb){ return this._impl.on(evt, cb); }
+    connect(cfg){ return this._impl.connect(cfg); }
+    publish(key, val){ return this._impl.publish(key, val); }
+    resubscribe(){ return this._impl.resubscribe(); }
+    disconnect(){ return this._impl.disconnect(); }
+  }
+
   window.MQTTManager = MQTTManager;
+  window.GH_MQTT_USES_SHARED_WORKER = canUseSharedWorker;
   purgeLegacyLsCache();
 })();

@@ -6,14 +6,13 @@
  */
 // BUILD_ID: local-dev
 
-const CACHE = 'gh-remote-local-dev';
+const CACHE = 'gh-remote-v61';
 
 const ASSETS = [
   './',
   './index.html',
   './profile.html',
   './service.html',
-  './ap_setup.html',
   './reset_all.html',
   './contacts.html',
   './diag.html',
@@ -21,10 +20,13 @@ const ASSETS = [
   './greenhouses.html',
   './theme.css',
   './plant_config.js',
+  './mqtt-cache.js',
   './app.js',
   './pwa-bridge.js',
   './pwa-handoff.js',
   './mqtt-simple.js',
+  './mqtt-shared-worker.js',
+  './vendor/mqtt.min.js',
   './favicon-plant.svg',
   './manifest.json',
 ];

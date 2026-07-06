@@ -410,8 +410,6 @@
         cmds = [{ key: 'profile', val: String(fd.profile) }];
       } else if(path.indexOf('/send_plant') >= 0 && fd.plant !== undefined){
         cmds = [{ key: 'profile', val: String(fd.plant) }];
-      } else if(path.indexOf('/send_ap') >= 0 && fd.ap_mode !== undefined){
-        cmds = [{ key: 'ap_mode', val: String(fd.ap_mode) }];
       } else if(path.indexOf('/send_soil_cal') >= 0){
         var a = num(fd.air_up, 0);
         var w = num(fd.water_up, 0);
@@ -483,10 +481,6 @@
         if(ic) ic.textContent = done ? '✅' : '⚠️';
         if(tx) tx.textContent = done ? 'Калибровка выполнена' : 'Калибровка не выполнена';
       }
-    }
-    var apSel = document.querySelector('select[name="ap_mode"]');
-    if(apSel && js.ap_mode !== undefined){
-      apSel.value = flag(js.ap_mode) ? '1' : '0';
     }
     try {
       var gh = window.ghGreenhouses && window.ghGreenhouses.getActive && window.ghGreenhouses.getActive();
@@ -734,6 +728,31 @@
     }
   }
 
+  function bootstrapFromLocalCache(base){
+    var cacheApi = window.GHMqttCache;
+    if(!cacheApi || !cacheApi.readPack) return false;
+    var resolved = base || cacheApi.resolveActiveBase();
+    if(!resolved) return false;
+    var pack = cacheApi.readPack(resolved);
+    if(!pack) return false;
+    var applied = false;
+    if(pack.state){
+      onMqttState(pack.state);
+      applied = true;
+    }
+    if(pack.history && mqttHistoryHasData(pack.history)){
+      onMqttHistory(pack.history);
+      applied = true;
+    }
+    if(pack.diag && mqttDiagHasData(pack.diag)){
+      onMqttDiag(pack.diag);
+      applied = true;
+    }
+    return applied;
+  }
+
+  bootstrapFromLocalCache();
+
   var nativeFetch = window.fetch.bind(window);
   window.fetch = function(input, init){
     var bridged = handleLocalFetch(input, init || {});
@@ -756,6 +775,7 @@
   window.ghGetLastMqttHistory = function(){ return lastMqttHistory; };
   window.ghGetLastMqttDiag = function(){ return lastMqttDiag; };
   window.ghGetLastApiState = function(){ return lastApiState; };
+  window.ghBootstrapFromLocalCache = bootstrapFromLocalCache;
   window.GH_MQTT_CMD_TOKEN = MQTT_CMD_TOKEN;
 
   window.addEventListener('gh-state-update', function(e){

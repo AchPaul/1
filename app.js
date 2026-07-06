@@ -162,6 +162,7 @@ function switchGreenhouse(id){
     deviceOnline = null;
     cachedDataWasStale = false;
     mqttEverConnected = false;
+    optimisticCacheActive = false;
     connect(gh);
     const displayName = gh.name || 'Новая теплица';
     addLog(`Переключено на: ${displayName}`, 'connection', 'info');
@@ -207,10 +208,12 @@ let lastState = null;
 let lastPubMap = {}; // key -> timestamp
 const PUB_THROTTLE_MS = 400; // minimal interval per key
 const STALE_DATA_THRESHOLD = (typeof window.GH_STALE_DATA_MS === 'number') ? window.GH_STALE_DATA_MS : 120000;
+const OPTIMISTIC_STATUS_MS = (typeof window.GH_OPTIMISTIC_STATUS_MS === 'number') ? window.GH_OPTIMISTIC_STATUS_MS : 60000;
 const FORCE_STATE_INTERVAL = 90000; // мягкое предупреждение до порога STALE (2 мин)
 const DEVICE_OFFLINE_CHECK_DELAY = STALE_DATA_THRESHOLD;
 let lastStateTs = 0;
 let cachedDataWasStale = false; // Flag to track if initial cached data was stale
+let optimisticCacheActive = false;
 let deviceCheckTimer = null; // Timer to check if device is offline
 
 let configFromUrl = false;
@@ -583,6 +586,40 @@ function isTransientConnectionPhase(){
   return connectionPhase === 'connecting' || connectionPhase === 'error' || connectionPhase === 'reconnecting';
 }
 
+function isCacheFreshForStatus(ts){
+  if(!ts) return false;
+  return (Date.now() - ts) <= OPTIMISTIC_STATUS_MS;
+}
+
+function hasOptimisticConnection(){
+  return optimisticCacheActive && isCacheFreshForStatus(lastStateTs);
+}
+
+function applyOptimisticBootstrap(cfg){
+  const cacheApi = window.GHMqttCache;
+  if(!cacheApi || !cfg || !cfg.base) return false;
+  const pack = cacheApi.readPack(cfg.base);
+  if(!pack || !pack.state) return false;
+
+  lastState = pack.state;
+  lastStateTs = pack.stateTs || 0;
+  cachedDataWasStale = cacheApi.isStale(lastStateTs);
+
+  if(typeof window.ghBootstrapFromLocalCache === 'function'){
+    window.ghBootstrapFromLocalCache(cfg.base);
+  } else {
+    renderState(pack.state);
+  }
+
+  if(isCacheFreshForStatus(lastStateTs) && deviceOnline !== false){
+    optimisticCacheActive = true;
+    deviceOnline = true;
+    setConnectionStatus('connected', { name: pack.state.name });
+    return true;
+  }
+  return false;
+}
+
 function setConnectionStatus(phase, opts){
   opts = opts || {};
   connectionPhase = phase;
@@ -604,14 +641,16 @@ function setConnectionStatus(phase, opts){
 }
 
 function updateConnectedDeviceStatus(){
-  if(!connected) return;
+  const optimistic = hasOptimisticConnection();
+  if(!connected && !optimistic) return;
   const now = Date.now();
   const telemetryStale = lastStateTs ? (now - lastStateTs) > STALE_DATA_THRESHOLD : false;
   if(deviceOnline === false || telemetryStale){
+    optimisticCacheActive = false;
     setConnectionStatus('device_offline');
-  } else if(deviceOnline === null){
+  } else if(deviceOnline === null && !optimistic){
     setConnectionStatus('waiting_status');
-  } else if(manager && manager.awaitingFirstState){
+  } else if(manager && manager.awaitingFirstState && !optimistic){
     setConnectionStatus('waiting_data');
   } else {
     const name = lastState && lastState.name;
@@ -739,7 +778,7 @@ function connect(cfg){
     manager = new MQTTManager();
     attachManagerEvents();
   }
-  setConnectionStatus('connecting');
+  if(!hasOptimisticConnection()) setConnectionStatus('connecting');
   manager.connect(cfg).catch(err=>{
     console.error('[GrowHub:PWA] connect error', err);
     setConnectionStatus('error');
@@ -760,7 +799,9 @@ function attachManagerEvents(){
         deviceCheckTimer = setTimeout(()=>{
           if(!manager || !connected) return;
           if(deviceOnline !== null) return;
+          if(hasOptimisticConnection()) return;
           if(!manager.awaitingFirstState) return;
+          optimisticCacheActive = false;
           setConnectionStatus('device_offline');
           addLog('Нет LWT/state (fallback)', 'connection', 'warning');
         }, DEVICE_OFFLINE_CHECK_DELAY);
@@ -800,6 +841,7 @@ function attachManagerEvents(){
         updateConnectedDeviceStatus();
         addLog('Устройство в сети', 'connection', 'success');
       } else {
+        optimisticCacheActive = false;
         setConnectionStatus('device_offline');
         addLog('Теплица не в сети (LWT)', 'connection', 'warning');
       }
@@ -818,11 +860,18 @@ function attachManagerEvents(){
       lastStateTs = ts;
 
       const stale = (manager && manager.cachedStateWasStale) || !ts || (Date.now() - ts > STALE_DATA_THRESHOLD);
-      if(stale && connected && !isTransientConnectionPhase()){
+      if(isCacheFreshForStatus(ts) && deviceOnline !== false){
+        optimisticCacheActive = true;
+        deviceOnline = true;
+        setConnectionStatus('connected', { name: js.name });
+      } else if(stale && connected && !isTransientConnectionPhase()){
+        optimisticCacheActive = false;
         setConnectionStatus('device_offline');
+      } else if(connected){
+        updateConnectedDeviceStatus();
       }
-      // Не ставим deviceOnline=true по кешу.
     } else {
+      optimisticCacheActive = false;
       // Реальное состояние из брокера
       lastStateTs = Date.now();
       clearDeviceCheckTimer();
@@ -864,6 +913,7 @@ function attachManagerEvents(){
     cachedDataWasStale = info && info.stale;
     if(cachedDataWasStale){
       console.log('[GrowHub:PWA] Cached data is stale (>2min old), waiting for fresh data');
+      optimisticCacheActive = false;
       if(connected && !isTransientConnectionPhase()){
         setConnectionStatus('device_offline');
       }
@@ -964,7 +1014,7 @@ document.addEventListener('visibilitychange', ()=>{
 });
 function renderState(js){
   if(typeof window.ghOnMqttState === 'function') window.ghOnMqttState(js);
-  if(document.getElementById('pwa-status-line') && connected){
+  if(document.getElementById('pwa-status-line') && (connected || hasOptimisticConnection())){
     updateConnectedDeviceStatus();
   }
   if(window.__ghDashboardMode || document.getElementById('pwa-bar')) return;
@@ -1323,7 +1373,7 @@ function publish(key, val){
 }
 // Expose for inline forms on other pages
 window.ghPublish = publish;
-window.ghIsMqttConnected = function(){ return connected && lastState !== null; };
+window.ghIsMqttConnected = function(){ return (connected || hasOptimisticConnection()) && lastState !== null; };
 
 // Helper function to show "Saved" state on buttons
 function showSavedState(button, savedText = 'Сохранено ✓', originalText = null, duration = 2000, isError = false){
@@ -1733,7 +1783,8 @@ function init(){
     setConnectionStatus('no_config');
     if(isMainPage && !isDashboard && cfgBox) cfgBox.classList.add('visible');
   } else {
-    setConnectionStatus('connecting');
+    const bootstrapped = applyOptimisticBootstrap(cfg);
+    if(!bootstrapped) setConnectionStatus('connecting');
     connect(cfg);
   }
   bindControls();
