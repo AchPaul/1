@@ -1855,7 +1855,7 @@ function initGreenhouseSelector(){
   
   if(ghs.length === 0){
     if(selectEl) selectEl.style.display = 'none';
-    if(addBtn) addBtn.style.display = '';
+    if(addBtn) addBtn.style.display = 'flex';
     if(!ensureValidConfig(getActiveGreenhouse() || {})){
       setConnectionStatus('no_config');
     }
