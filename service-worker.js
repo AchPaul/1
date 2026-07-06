@@ -14,7 +14,6 @@ const ASSETS = [
   './profile.html',
   './service.html',
   './ap_setup.html',
-  './soil_cal.html',
   './reset_all.html',
   './contacts.html',
   './diag.html',

@@ -76,7 +76,6 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <div class="logs-container" id="logs-box"><div class="empty-state">Загрузка логов...</div></div>
 <div class="diag-actions">
 <button type="button" class="diag-btn" onclick="refreshDiag()">Обновить</button>
-<button type="button" class="diag-btn diag-btn--danger" onclick="clearDiagLogs()">Очистить логи</button>
 </div>
 </div>
 </div>
@@ -130,24 +129,46 @@ function renderLogs(entries,truncated){
   if(truncated)html+='<div class="empty-state">Список обрезан — слишком много записей</div>';
   box.innerHTML=html;
 }
+function diagDataLooksEmpty(d){
+  if(!d)return true;
+  if(typeof window.ghMqttDiagHasData==='function')return !window.ghMqttDiagHasData(d);
+  if(d.logs&&d.logs.length)return false;
+  if(d.events&&d.events.length)return false;
+  if(Number(d.uptime)>0)return false;
+  if(Number(d.heap_free)>0)return false;
+  if(d.reset_reason&&String(d.reset_reason).length)return false;
+  return true;
+}
+function applyDiagData(d){
+  if(!d||diagDataLooksEmpty(d))return;
+  var u=document.getElementById('stat-uptime');if(u)u.textContent=formatUptime(d.uptime);
+  var hf=document.getElementById('stat-heap-free');if(hf)hf.textContent=(d.heap_free!=null?d.heap_free+' B':'—');
+  paintResetReason(document.getElementById('stat-reset'),d.reset_reason,d.reset_code);
+  var logs=d.logs||d.events||[];
+  renderLogs(logs,d.truncated);
+}
+window.applyDiagData=applyDiagData;
 function loadDiag(){
-  fetch('/api/diag',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
-    var u=document.getElementById('stat-uptime');if(u)u.textContent=formatUptime(d.uptime);
-    var hf=document.getElementById('stat-heap-free');if(hf)hf.textContent=(d.heap_free!=null?d.heap_free+' B':'—');
-    paintResetReason(document.getElementById('stat-reset'),d.reset_reason,d.reset_code);
-    var logs=d.logs||d.events||[];
-    renderLogs(logs,d.truncated);
-  }).catch(function(){
+  fetch('/api/diag',{cache:'no-store'}).then(function(r){return r.json();}).then(applyDiagData).catch(function(){
     var box=document.getElementById('logs-box');
     if(box)box.innerHTML='<div class="empty-state">Не удалось загрузить диагностику</div>';
   });
 }
 function refreshDiag(){loadDiag();}
+window.addEventListener('gh-diag-update',function(e){
+  if(e&&e.detail)applyDiagData(e.detail);
+});
 
 var hash=(location.hash||'').replace('#','');
 if(hash==='events')hash='logs';
 if(hash==='logs'||hash==='status')showDiagTab(hash);
-refreshDiag();
+window.addEventListener('gh-app-ready',function(){
+  if(typeof window.ghGetLastMqttDiag==='function'){
+    var cached=window.ghGetLastMqttDiag();
+    if(cached)applyDiagData(cached);
+  }
+  loadDiag();
+});
 setInterval(loadDiag,10000);
 </script>
 

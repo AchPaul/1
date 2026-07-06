@@ -168,6 +168,16 @@
     return false;
   }
 
+  function mqttDiagHasData(raw){
+    if(!raw) return false;
+    if(raw.logs && raw.logs.length) return true;
+    if(raw.events && raw.events.length) return true;
+    if(num(raw.uptime, 0) > 0) return true;
+    if(num(raw.heap_free, 0) > 0) return true;
+    if(raw.reset_reason && String(raw.reset_reason).length) return true;
+    return false;
+  }
+
   function mqttHistoryToApi(raw){
     if(!raw) return { hours: 24, interval_sec: 600, points: [] };
     if(raw.ta && typeof raw.ta.length === 'number'){
@@ -552,7 +562,7 @@
     }
 
     if(method === 'GET' && path.indexOf('/api/diag') >= 0){
-      if(lastMqttDiag && (lastMqttDiag.logs || lastMqttDiag.events)){
+      if(mqttDiagHasData(lastMqttDiag)){
         return Promise.resolve(jsonResponse(lastMqttDiag));
       }
       var localDiag = proxyToLocal(path, init);
@@ -741,6 +751,7 @@
   window.ghMqttHistoryToApi = mqttHistoryToApi;
   window.ghFilterHistoryByHours = filterHistoryByHours;
   window.ghMqttHistoryHasData = mqttHistoryHasData;
+  window.ghMqttDiagHasData = mqttDiagHasData;
   window.ghGetLastMqttState = function(){ return lastMqttState; };
   window.ghGetLastMqttHistory = function(){ return lastMqttHistory; };
   window.ghGetLastMqttDiag = function(){ return lastMqttDiag; };
