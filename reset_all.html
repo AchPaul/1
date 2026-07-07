@@ -26,6 +26,7 @@ h3{text-align:center;padding:0 6px;margin-bottom:20px;font-weight:700;letter-spa
 .reset-btn{border-color:rgba(248,113,113,.5);color:#ffd0d0;background:linear-gradient(160deg,rgba(60,0,18,.5),rgba(10,0,6,.92))}
 .reset-btn:hover{border-color:rgba(248,113,113,.85);box-shadow:0 6px 18px rgba(0,0,0,.6),0 0 16px rgba(248,113,113,.35);color:#fff}
 .reset-btn::before,.reset-btn::after{content:none}
+.local-only-note{max-width:300px;margin:0 auto 12px;padding:10px 14px;border:2px solid rgba(201,0,204,.35);border-radius:10px;background:rgba(63,0,92,.2);color:#d7b7df;font-size:14px;text-align:center;line-height:1.45}
 header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.5);position:relative;z-index:100}
 .header-transition{height:56px;position:relative;overflow:hidden;background:linear-gradient(180deg,rgba(40,0,60,.98) 0%,rgba(31,0,45,.9) 26%,rgba(20,0,31,.72) 55%,rgba(9,0,16,.34) 82%,transparent 100%);margin-top:-8px;margin-bottom:8px}
 .header-transition::before{content:'';position:absolute;inset:-20px 0 0;background:radial-gradient(ellipse at top,rgba(201,0,204,.2) 0%,rgba(120,0,180,.12) 34%,rgba(0,0,0,0) 72%);filter:blur(10px);pointer-events:none}
@@ -53,23 +54,33 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </main>
 
 <script src="plant_config.js"></script>
-<script src="mqtt-cache.js"></script>
 <script src="mqtt-simple.js"></script>
 <script src="pwa-bridge.js"></script>
-
-<script>
-document.getElementById('resetBtn').addEventListener('click',function(){
-if(!confirm('Вы точно хотите сбросить теплицу до заводских настроек?'))return;
-var btn=this;var msg=document.getElementById('resetMsg');
-btn.disabled=true;btn.textContent='Сброс...';
-fetch('/send_reset',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
-if(d&&d.ok){msg.style.color='rgb(185,226,154)';msg.textContent='Сброс выполнен. Перезагрузка...';}
-else{msg.style.color='rgb(239,154,160)';msg.textContent='Ошибка сброса';btn.disabled=false;btn.textContent='Сбросить';}
-}).catch(function(){msg.style.color='rgb(185,226,154)';msg.textContent='Устройство перезагружается...'});
-});
-</script>
-
 <script src="app.js"></script>
+<script>
+(function(){
+  var btn=document.getElementById('resetBtn');
+  var msg=document.getElementById('resetMsg');
+  if(!btn)return;
+  if(typeof window.ghPublish==='function'){
+    var note=document.createElement('p');
+    note.className='local-only-note';
+    note.textContent='Сброс настроек доступен только из локальной сети теплицы. Откройте веб‑интерфейс контроллера по Wi‑Fi.';
+    btn.parentNode.insertBefore(note,btn);
+    btn.disabled=true;
+    btn.style.opacity='0.45';
+    return;
+  }
+  btn.addEventListener('click',function(){
+    if(!confirm('Вы точно хотите сбросить теплицу до заводских настроек?'))return;
+    btn.disabled=true;btn.textContent='Сброс...';msg.textContent='';
+    fetch('/send_reset',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
+      if(d&&d.ok){msg.style.color='rgb(185,226,154)';msg.textContent='Сброс выполнен. Перезагрузка...';}
+      else{msg.style.color='rgb(239,154,160)';msg.textContent=(d&&d.error==='local_only')?'Только из локальной сети теплицы':'Ошибка сброса';btn.disabled=false;btn.textContent='Сбросить';}
+    }).catch(function(){msg.style.color='rgb(239,154,160)';msg.textContent='Ошибка связи';btn.disabled=false;btn.textContent='Сбросить';});
+  });
+})();
+</script>
 
 </body>
 </html>

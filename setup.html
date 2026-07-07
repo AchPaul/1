@@ -58,6 +58,7 @@ input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:8px;
 input[type=range]:hover{opacity:1}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#c900cc;box-shadow:0 0 10px rgba(201,0,204,.6);cursor:pointer}
 input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radius:50%;background:#c900cc;box-shadow:0 0 10px rgba(201,0,204,.6);cursor:pointer}
+.local-only-note{margin:0 0 14px;padding:10px 14px;border:2px solid rgba(201,0,204,.35);border-radius:10px;background:rgba(63,0,92,.2);color:#d7b7df;font-size:14px;text-align:center;line-height:1.45}
 </style>
 </head>
 <body>
@@ -144,7 +145,6 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radiu
 
 
 <script src="plant_config.js"></script>
-<script src="mqtt-cache.js"></script>
 <script src="mqtt-simple.js"></script>
 <script src="pwa-bridge.js"></script>
 
@@ -195,6 +195,19 @@ function doSave(){
 </script>
 
 <script src="app.js"></script>
+<script>
+if(typeof window.ghPublish==='function'){
+  var wiz=document.querySelector('.wiz');
+  if(wiz){
+    var note=document.createElement('p');
+    note.className='local-only-note';
+    note.textContent='Мастер первичной настройки (Wi‑Fi и заводской запуск) работает только из локальной сети теплицы. Подключитесь к Wi‑Fi контроллера и откройте эту страницу с его адреса.';
+    wiz.insertBefore(note,wiz.querySelector('.progress'));
+  }
+  var saveBtn=document.getElementById('saveBtn');
+  if(saveBtn){saveBtn.style.pointerEvents='none';saveBtn.style.opacity='0.45';}
+}
+</script>
 
 </body>
 </html>

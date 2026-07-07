@@ -69,26 +69,37 @@
     var ligHours = num(js.lig_hours, 0);
     var showReboot = !flag(js.rebooted) && ligHours !== 0 && ligHours !== 24;
 
+    var soilErr = flag(js.err_sensor_hg);
+    var airErr = flag(js.err_sensor_dht);
+    var tempErr = flag(js.err_sensor_soil);
     return {
       preset: js.profile_name || '',
+      pn: js.profile_name || '',
+      dn: js.name || '',
       day_night: flag(js.day_time) ? 'День' : 'Ночь',
       light_h: String(ligHours),
       light_on: String(num(js.light_on_hour, 0)),
       temp_label: 'Темп. грунта',
+      ts: tempErr ? 0 : num(js.temp_soil, 0),
+      et: tempErr ? 1 : 0,
       temp_display: temp.display,
       temp_unit: temp.unit,
       temp_day: String(num(js.temp_day, 0)),
       temp_nig: String(num(js.temp_night, 0)),
       temp_day_display: fmtTempPeriod(js.temp_day),
       temp_nig_display: fmtTempPeriod(js.temp_night),
-      h_g_now: flag(js.err_sensor_hg) ? 'Ошибка' : String(num(js.humgr_now, 0)),
-      h_g_unit: flag(js.err_sensor_hg) ? '' : '%',
+      h_g_now: soilErr ? 'Ошибка' : String(num(js.humgr_now, 0)),
+      h_g_unit: soilErr ? '' : '%',
+      hg: soilErr ? 0 : num(js.humgr_now, 0),
+      ehg: soilErr ? 1 : 0,
       h_g_day: String(num(js.humgr_day, 0)),
       h_g_nig: String(num(js.humgr_night, 0)),
       h_g_day_display: fmtHumPeriod(js.humgr_day),
       h_g_nig_display: fmtHumPeriod(js.humgr_night),
-      h_a_now: flag(js.err_sensor_dht) ? 'Ошибка' : String(num(js.humair_now, 0)),
-      h_a_unit: flag(js.err_sensor_dht) ? '' : '%',
+      h_a_now: airErr ? 'Ошибка' : String(num(js.humair_now, 0)),
+      h_a_unit: airErr ? '' : '%',
+      ha: airErr ? 0 : num(js.humair_now, 0),
+      eh: airErr ? 1 : 0,
       h_a_day: fmtHumAirRaw(js, 'day'),
       h_a_nig: fmtHumAirRaw(js, 'night'),
       h_a_day_display: fmtHumAirDayNight(js, 'day'),
@@ -502,7 +513,10 @@
       bw.className = 'ack-btn ack-btn--water';
       bw.textContent = '💧 Бак залит';
       bw.onclick = function(){
-        if(window.ghPublish) window.ghPublish('refill', 'water');
+        if(!window.ghPublish) return;
+        var ok = window.ghPublish('refill', 'water');
+        if(typeof showToast === 'function') showToast(ok ? 'Бак: отправлено' : 'Нет связи с теплицей', ok ? 'ok' : 'err');
+        if(ok){ bw.disabled = true; setTimeout(function(){ bw.disabled = false; }, 2000); }
       };
       wrap.appendChild(bw);
     }
@@ -513,7 +527,10 @@
       bh.className = 'ack-btn ack-btn--humid';
       bh.textContent = '💨 Увлажнитель залит';
       bh.onclick = function(){
-        if(window.ghPublish) window.ghPublish('refill', 'humid');
+        if(!window.ghPublish) return;
+        var ok = window.ghPublish('refill', 'humid');
+        if(typeof showToast === 'function') showToast(ok ? 'Увлажнитель: отправлено' : 'Нет связи с теплицей', ok ? 'ok' : 'err');
+        if(ok){ bh.disabled = true; setTimeout(function(){ bh.disabled = false; }, 2000); }
       };
       wrap.appendChild(bh);
     }
@@ -717,6 +734,9 @@
     lastApiState = mqttToApiState(js);
     if(document.getElementById('device-name-text') && js && js.name){
       document.getElementById('device-name-text').textContent = js.name;
+    }
+    if(document.getElementById('profile-name-text') && js && js.profile_name){
+      document.getElementById('profile-name-text').textContent = js.profile_name;
     }
     updateServiceAcks(js || {});
     syncPageFromMqtt(js);
