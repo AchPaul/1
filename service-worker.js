@@ -6,7 +6,7 @@
  */
 // BUILD_ID: local-dev
 
-const CACHE = 'gh-remote-v61';
+const CACHE = 'gh-remote-v62';
 
 const ASSETS = [
   './',
