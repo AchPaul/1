@@ -83,19 +83,17 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </main>
 
 <script src="plant_config.js"></script>
-<script src="mqtt-simple.js"></script>
-<script src="pwa-bridge.js"></script>
-
+<script src="mqtt-cache.js"></script>
 <script>
-function showDiagTab(tab){
-  document.querySelectorAll('.diag-tab').forEach(function(b){b.classList.toggle('active',b.dataset.tab===tab);});
-  ['status','logs'].forEach(function(t){
-    var p=document.getElementById('panel-'+t);
-    if(p)p.classList.toggle('active',t===tab);
-  });
-  if(tab)try{history.replaceState(null,'','#'+tab);}catch(e){}
+function diagHasData(d){
+  if(!d) return false;
+  if(d.logs && d.logs.length) return true;
+  if(d.events && d.events.length) return true;
+  if(Number(d.uptime)>0) return true;
+  if(Number(d.heap_free)>0) return true;
+  if(d.reset_reason && String(d.reset_reason).length) return true;
+  return false;
 }
-document.querySelectorAll('.diag-tab').forEach(function(b){b.addEventListener('click',function(){showDiagTab(b.dataset.tab);});});
 function formatUptime(sec){
   sec=Number(sec)||0;
   var d=Math.floor(sec/86400);sec%=86400;
@@ -129,16 +127,40 @@ function renderLogs(entries,truncated){
   if(truncated)html+='<div class="empty-state">Список обрезан — слишком много записей</div>';
   box.innerHTML=html;
 }
+function applyDiagData(d){
+  if(!diagHasData(d)) return;
+  var u=document.getElementById('stat-uptime');if(u)u.textContent=formatUptime(d.uptime);
+  var hf=document.getElementById('stat-heap-free');if(hf)hf.textContent=(d.heap_free!=null?d.heap_free+' B':'—');
+  paintResetReason(document.getElementById('stat-reset'),d.reset_reason,d.reset_code);
+  renderLogs(d.logs||d.events||[],d.truncated);
+}
+window.applyDiagData=applyDiagData;
+(function(){
+  var cache=window.GHMqttCache;
+  if(!cache||!cache.readPack)return;
+  var pack=cache.readPack(cache.resolveActiveBase());
+  if(pack&&pack.diag)applyDiagData(pack.diag);
+})();
+</script>
+<script src="mqtt-simple.js"></script>
+<script src="pwa-bridge.js"></script>
+
+<script>
+function showDiagTab(tab){
+  document.querySelectorAll('.diag-tab').forEach(function(b){b.classList.toggle('active',b.dataset.tab===tab);});
+  ['status','logs'].forEach(function(t){
+    var p=document.getElementById('panel-'+t);
+    if(p)p.classList.toggle('active',t===tab);
+  });
+  if(tab)try{history.replaceState(null,'','#'+tab);}catch(e){}
+}
+document.querySelectorAll('.diag-tab').forEach(function(b){b.addEventListener('click',function(){showDiagTab(b.dataset.tab);});});
 function loadDiag(){
   fetch('/api/diag',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
-    var u=document.getElementById('stat-uptime');if(u)u.textContent=formatUptime(d.uptime);
-    var hf=document.getElementById('stat-heap-free');if(hf)hf.textContent=(d.heap_free!=null?d.heap_free+' B':'—');
-    paintResetReason(document.getElementById('stat-reset'),d.reset_reason,d.reset_code);
-    var logs=d.logs||d.events||[];
-    renderLogs(logs,d.truncated);
+    applyDiagData(d);
   }).catch(function(){
     var box=document.getElementById('logs-box');
-    if(box)box.innerHTML='<div class="empty-state">Не удалось загрузить диагностику</div>';
+    if(box&&!box.querySelector('.log-entry'))box.innerHTML='<div class="empty-state">Не удалось загрузить диагностику</div>';
   });
 }
 function refreshDiag(){loadDiag();}
@@ -148,7 +170,10 @@ if(hash==='events')hash='logs';
 if(hash==='logs'||hash==='status')showDiagTab(hash);
 refreshDiag();
 setInterval(loadDiag,10000);
-window.addEventListener('gh-diag-update',function(){loadDiag();});
+window.addEventListener('gh-diag-update',function(e){
+  if(e&&e.detail)applyDiagData(e.detail);
+  else loadDiag();
+});
 </script>
 
 <script src="app.js"></script>

@@ -20,9 +20,9 @@
       "icons": [{ "src": "favicon-plant.svg", "sizes": "any" }]
     },
     {
-      "name": "Сервис",
-      "short_name": "Сервис",
-      "url": "./service.html",
+      "name": "Инфо",
+      "short_name": "Инфо",
+      "url": "./diag.html",
       "icons": [{ "src": "favicon-plant.svg", "sizes": "any" }]
     },
     {

@@ -189,6 +189,16 @@
     return false;
   }
 
+  function readDiagFromLocalCache(base){
+    var cacheApi = window.GHMqttCache;
+    if(!cacheApi || !cacheApi.readPack) return null;
+    var resolved = base || cacheApi.resolveActiveBase();
+    if(!resolved) return null;
+    var pack = cacheApi.readPack(resolved);
+    if(pack && pack.diag && mqttDiagHasData(pack.diag)) return pack.diag;
+    return null;
+  }
+
   function mqttHistoryToApi(raw){
     if(!raw) return { hours: 24, interval_sec: 600, points: [] };
     if(raw.ta && typeof raw.ta.length === 'number'){
@@ -576,11 +586,19 @@
       if(mqttDiagHasData(lastMqttDiag)){
         return Promise.resolve(jsonResponse(lastMqttDiag));
       }
+      var cachedDiag = readDiagFromLocalCache();
+      if(cachedDiag){
+        lastMqttDiag = cachedDiag;
+        return Promise.resolve(jsonResponse(cachedDiag));
+      }
       var localDiag = proxyToLocal(path, init);
       if(localDiag){
         return localDiag.then(function(r){ return r.json(); }).then(function(d){
+          if(mqttDiagHasData(d)) lastMqttDiag = d;
           return jsonResponse(d);
         }).catch(function(){
+          var fallbackDiag = readDiagFromLocalCache();
+          if(fallbackDiag) return jsonResponse(fallbackDiag);
           return jsonResponse({ uptime: 0, heap_free: 0, reset_reason: '', reset_code: 0, logs: [] });
         });
       }
@@ -765,6 +783,7 @@
       applied = true;
     }
     if(pack.diag && mqttDiagHasData(pack.diag)){
+      lastMqttDiag = pack.diag;
       onMqttDiag(pack.diag);
       applied = true;
     }
