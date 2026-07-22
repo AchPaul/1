@@ -14,16 +14,6 @@
   function flag(v){ return v === 1 || v === true || v === '1' || v === 'true'; }
   function num(v, fb){ var n = Number(v); return Number.isFinite(n) ? n : (fb || 0); }
 
-  function isStagePresetProfileId(id){
-    if(typeof window.isStagePresetProfileId === 'function'){
-      return window.isStagePresetProfileId(id);
-    }
-    var n = Number(id);
-    var total = Number(window.GH_PLANT_NUMS);
-    if(!Number.isFinite(n) || !Number.isFinite(total)) return false;
-    return n === total - 3 || n === total - 2 || n === total - 1;
-  }
-
   function fmtTempDisplay(js){
     if(flag(js.err_sensor_soil)) return { display: 'Ошибка', unit: '' };
     return { display: String(num(js.temp_soil, 0)), unit: '°C' };
@@ -134,7 +124,6 @@
       humair_vpd_day: js.humair_vpd_day,
       humair_vpd_night: js.humair_vpd_night,
       humair_vpd_valid: flag(js.humair_vpd_valid) ? 1 : 0,
-      is_stage_preset: isStagePresetProfileId(js.profile_id) ? 1 : 0,
       _name: js.name || 'Теплица'
     };
   }
@@ -382,18 +371,12 @@
   function buildProfileConfigFromMqtt(js){
     if(!js || js.profile_id === undefined) return null;
     var total = Number(window.GH_PLANT_NUMS);
-    if(!Number.isFinite(total)) total = 379;
-    var seed = total - 3;
-    var veg = total - 2;
-    var flow = total - 1;
+    if(!Number.isFinite(total)) total = 378;
     var cur = num(js.profile_id, 0);
     var cfg = {
-      cur_preset: cur,
-      stage_seedling: seed,
-      stage_vegetative: veg,
-      stage_flowering: flow
+      cur_preset: cur
     };
-    if(cur >= 5 && cur < seed && js.profile_name){
+    if(cur >= 5 && cur < total && js.profile_name){
       cfg.cur_plant_name = js.profile_name;
     }
     return cfg;
@@ -452,16 +435,14 @@
     var pid = js.profile_id;
     if(pid !== undefined){
       setSelectIfValid(document.getElementById('profile-select'), pid);
-      setSelectIfValid(document.getElementById('stage-select'), pid);
       document.querySelectorAll('select[data-plant-select]').forEach(function(sel){
         setSelectIfValid(sel, pid);
       });
     }
     var total = Number(window.GH_PLANT_NUMS);
-    if(!Number.isFinite(total)) total = 379;
-    var seed = total - 3;
+    if(!Number.isFinite(total)) total = 378;
     var cur = num(js.profile_id, 0);
-    if(cur >= 5 && cur < seed && js.profile_name){
+    if(cur >= 5 && cur < total && js.profile_name){
       var inp = document.getElementById('plant-search-input');
       if(inp && document.activeElement !== inp) inp.value = js.profile_name;
       if(typeof window.selectPlant === 'function') window.selectPlant(cur, js.profile_name, null);
@@ -617,10 +598,10 @@
         return localProfileCfg.then(function(r){ return r.json(); }).then(function(d){
           return jsonResponse(d);
         }).catch(function(){
-          return jsonResponse({ cur_preset: 0, stage_seedling: 376, stage_vegetative: 377, stage_flowering: 378 });
+          return jsonResponse({ cur_preset: 0 });
         });
       }
-      return Promise.resolve(jsonResponse({ cur_preset: 0, stage_seedling: 376, stage_vegetative: 377, stage_flowering: 378 }));
+      return Promise.resolve(jsonResponse({ cur_preset: 0 }));
     }
 
     if(method === 'GET' && path.indexOf('/api/plants_search') >= 0){

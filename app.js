@@ -224,42 +224,23 @@ let mqttEverConnected = false;
 let lastUserInteractionTime = 0;
 const UI_LOCK_DURATION = 120000; // 120 секунд после последнего взаимодействия
 
-function isStagePresetProfileName(name){
-  if(!name) return false;
-  return /Рассада|Вегетация|Цветение/.test(String(name));
-}
-
-function applyStagePresetUi(profileId, profileName, vpdTargetX10){
-  // Backward compatibility: old call sites passed only profile_name
-  let id = profileId;
-  let name = profileName;
-  let vpdX10 = vpdTargetX10;
-  if(profileName === undefined){
-    name = profileId;
-    id = undefined;
-    vpdX10 = vpdTargetX10;
-  }
-  const stagePresetHide = isStagePresetProfileId(id) || isStagePresetProfileName(name);
-  const manualVpdHide = Number(vpdX10) > 0;
-  const hideGrowthStage = stagePresetHide || manualVpdHide;
+function applyManualVpdUi(vpdTargetX10){
+  // При ручном VPD (>0) скрываем выбор фазы роста — VPD-контролы остаются доступны.
+  const hideGrowthStage = Number(vpdTargetX10) > 0;
   const stateRow = document.getElementById('growth-stage-row');
   if(stateRow) stateRow.style.display = hideGrowthStage ? 'none' : '';
   const settingsSection = document.getElementById('growth-stage-section');
   if(settingsSection) settingsSection.style.display = hideGrowthStage ? 'none' : '';
   const vpdSection = document.getElementById('vpd-target-section');
-  // Stage preset profiles lock/hide both Stage and VPD controls.
-  // Manual VPD mode hides only Stage controls (VPD controls must remain available).
-  if(vpdSection) vpdSection.style.display = stagePresetHide ? 'none' : '';
-  // Extra safety: prevent sending commands from hidden controls
+  if(vpdSection) vpdSection.style.display = '';
   const radios = document.querySelectorAll('input[name="growth_stage"]');
   if(radios && radios.length){
     radios.forEach(r => { r.disabled = hideGrowthStage; });
   }
-
   const vpdInp = document.getElementById('inp_vpd_target_x10');
-  if(vpdInp) vpdInp.disabled = stagePresetHide;
+  if(vpdInp) vpdInp.disabled = false;
   const vpdBtn = document.getElementById('btn_save_vpd_target');
-  if(vpdBtn) vpdBtn.disabled = stagePresetHide;
+  if(vpdBtn) vpdBtn.disabled = false;
 }
 
 function formatVpdTargetX10(x10){
@@ -285,16 +266,6 @@ function setGrowthStageRadiosLockedByVpd(rawVpdValue){
   if(radios && radios.length){
     radios.forEach(r => { r.disabled = disable; });
   }
-}
-
-function isStagePresetProfileId(profileId){
-  if(typeof window.isStagePresetProfileId === 'function' && window.isStagePresetProfileId !== isStagePresetProfileId){
-    return window.isStagePresetProfileId(profileId);
-  }
-  const id = Number(profileId);
-  const n = Number(window.GH_PLANT_NUMS);
-  if(!Number.isFinite(id) || !Number.isFinite(n)) return false;
-  return id === n - 3 || id === n - 2 || id === n - 1;
 }
 
 // Система логирования
@@ -1302,8 +1273,8 @@ function renderState(js){
     apStateEls.forEach(el=> el.textContent = apStateText);
   }
 
-  // Hide growth-stage UI for stage preset profiles (stable by profile_id, with name fallback)
-  applyStagePresetUi(js.profile_id, js.profile_name, js.vpd_target_x10);
+  // При заданном вручную VPD (>0) скрываем выбор фазы роста.
+  applyManualVpdUi(js.vpd_target_x10);
 
   // Alerts - always process all alerts to ensure proper hide/show
   if(alertsBox){
@@ -1529,11 +1500,6 @@ function bindControls(){
   if(inputs.btn_save_vpd_target){
     inputs.btn_save_vpd_target.addEventListener('click', ()=>{
       markUserInteraction();
-
-      if(isStagePresetProfileId(lastState && lastState.profile_id)){
-        showSavedState(inputs.btn_save_vpd_target, 'Заблокировано профилем', null, 2200, true);
-        return;
-      }
 
       // Единая форма: если указан VPD > 0 -> публикуем только VPD (фаза игнорируется)
       // иначе (VPD пустой/0) -> публикуем growth_stage (а VPD берётся прошивкой по фазе)

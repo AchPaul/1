@@ -76,23 +76,6 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </div>
 </div>
 </form>
-<form action="/send_plant" method="POST">
-<div class="group_input" style="margin-bottom:20px">
-<h3 style="margin-bottom:-5px">Заводские стадии:</h3>
-<div class="container" style="margin-bottom:20px">
-<div class="select-dropdown">
-<select name="plant" id="stage-select" class="select-dropdown__button" style="margin-top:20px">
-<option value="376">Рассада</option>
-<option value="377">Вегетация</option>
-<option value="378">Цветение</option>
-</select>
-</div>
-</div>
-<div style="text-align:center;margin-top:20px">
-<input class="neon-buttom icon" type="submit" value="Сохранить"></input>
-</div>
-</div>
-</form>
 <form action="/send_plant" method="POST" id="plant-form">
 <h2 style="margin-bottom:20px">Поиск растения</h2>
 <div class="group_input">
@@ -160,16 +143,8 @@ function bindPlantSearch(){
 bindPlantSearch();function loadProfileConfig(){
   fetch('/api/profile_config',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
     var ps=document.getElementById('profile-select');
-    var ss=document.getElementById('stage-select');
     if(ps&&d.cur_preset>=0&&d.cur_preset<=4)ps.value=String(d.cur_preset);
-    if(ss&&d.stage_seedling!==undefined){
-      ss.querySelector('option:nth-child(1)').value=String(d.stage_seedling);
-      ss.querySelector('option:nth-child(2)').value=String(d.stage_vegetative);
-      ss.querySelector('option:nth-child(3)').value=String(d.stage_flowering);
-      if(d.cur_preset==d.stage_seedling||d.cur_preset==d.stage_vegetative||d.cur_preset==d.stage_flowering)
-        ss.value=String(d.cur_preset);
-    }
-    if(d.cur_preset>=5&&d.cur_preset<376&&d.cur_plant_name){
+    if(d.cur_preset>=5&&d.cur_plant_name){
       var inp=document.getElementById('plant-search-input');
       if(inp)inp.value=d.cur_plant_name;
       selectPlant(d.cur_preset,d.cur_plant_name,null);

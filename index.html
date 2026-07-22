@@ -64,10 +64,13 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 .tile-center--light{border-color:#ffcc00;box-shadow:0 0 15px rgba(255,204,0,.35)}
 .tile-center--vent{border-color:#7df9ff;box-shadow:0 0 15px rgba(125,249,255,.35)}
 .tile-center--growth{border-color:#4aff7f;box-shadow:0 0 15px rgba(74,255,127,.35)}
-.tile--growth-locked .tile-main,.tile--growth-locked .tile-drawer-toggle{cursor:not-allowed;pointer-events:none;opacity:.78}
-.tile--growth-locked .tile-main{flex:0 0 auto}
-.tile--growth-locked .tile-main:active{transform:none}
-.tile--growth-locked .tile-actions{display:none}
+.tile--growth-inactive .tile-center--growth{opacity:.72;border-color:rgba(74,255,127,.42);box-shadow:0 0 10px rgba(74,255,127,.16)}
+.tile--growth-inactive .target-chip{opacity:.72}
+.tile--growth-inactive .target-chip strong{color:#9a9a9a;font-weight:500}
+.growth-gate-notice{font-size:12px;color:#888;text-align:center;padding:6px 0 8px;line-height:1.35}
+#growth-smart-gate{margin-bottom:6px}
+#growth-smart-gate .feature-chip{width:100%}
+.growth-controls--locked{pointer-events:none}
 .gs-btn-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .gs-vpd-stack{display:flex;flex-direction:column;gap:8px}
 .gs-vpd-row{display:flex;gap:6px;align-items:center}
@@ -373,7 +376,10 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 </div>
 <div class="feature-drawer" id="drawer-growth">
 <div id="growth-drawer-body">
-<div id="growth-preset-notice" style="display:none;font-size:12px;color:#888;text-align:center;padding:6px 0">⚙️ Управляется профилем</div>
+<div id="growth-smart-gate" style="display:none">
+<div class="growth-gate-notice">Умная влажность выключена — фаза и VPD не влияют на климат</div>
+<button type="button" class="feature-chip feature-chip--wide" id="feat-growth-smart" data-state="" data-text-on="Умная влажность: вкл" data-text-off="Умная влажность: выкл" onclick="toggleFeature(event,'smart_humair',this)">Умная влажность: выкл</button>
+</div>
 <div id="growth-controls">
 <div class="gs-btn-row">
 <button type="button" class="feature-chip" id="gs-0" onclick="pickStage(0)">🍃 Универс.</button>
@@ -388,7 +394,7 @@ header{height:75px;background:linear-gradient(135deg,#500078 0%,#28003c 100%);di
 <span>kPa</span>
 </div>
 <div style="font-size:11px;color:#888;text-align:center;padding:4px 8px 0;line-height:1.35">При своём VPD фаза не участвует в расчёте порогов. Очистите поле — снова «авто» по фазе.</div>
-<div class="gs-apply-row"><button type="button" class="feature-chip feature-chip--wide" onclick="applyGsSettings()">Применить</button></div>
+<div class="gs-apply-row"><button type="button" class="feature-chip feature-chip--wide" id="gs-apply-btn" onclick="applyGsSettings()">Применить</button></div>
 </div>
 </div>
 </div>
@@ -719,7 +725,6 @@ function closeAllFeatureDrawers(exceptKey){
   }
 }
 function toggleFeatureDrawer(event,key){
-  if(key==='growth'&&gsPreset)return;
   if(event){event.preventDefault();event.stopPropagation();}
   var drawer=document.getElementById('drawer-'+key);
   if(!drawer)return;
@@ -788,7 +793,13 @@ function toggleFeature(event,field,chip,period){
     chip.classList.remove('pending');
     updateFeatureState(field,period,!!nextValue);
     setFeatureChipState(chip,!!nextValue);
-    showToast('Сохранено','ok');
+    if(field==='smart_humair'){
+      setFeatureChipById(chip.id==='feat-growth-smart'?'feat-air-smart':'feat-growth-smart',!!nextValue);
+      refreshGrowthSmartUi();
+      showToast(nextValue?'Фаза роста и VPD активны':'Сохранено','ok');
+    }else{
+      showToast('Сохранено','ok');
+    }
     markDashboardStateDirty();
   }).catch(function(){
     chip.classList.remove('pending');
@@ -939,14 +950,18 @@ function syncDashboardState(data){
   FEATURE_STATE.vent_always_night=van?'checked':'';
 
   syncCoolingChip(data);
-  setFeatureChipById('feat-air-smart',flag1(statePick(data,'sh','smart_humair',0)));
+  var smartOn=flag1(statePick(data,'sh','smart_humair',0));
+  setFeatureChipById('feat-air-smart',smartOn);
+  setFeatureChipById('feat-growth-smart',smartOn);
   setFeatureChipById('feat-air-dehumidify',flag1(statePick(data,'dh','dehumidify_enabled',0)));
   setFeatureChipById('feat-soil-alt',flag1(statePick(data,'aw','alternate_watering',0)));
   setFeatureChipById('feat-vent-day-always',vad);
   setFeatureChipById('feat-vent-night-always',van);
 
   if(statePick(data,'gs','growth_stage',undefined)!==undefined){
-    updateGrowthTile(parseInt(statePick(data,'gs','growth_stage',0),10),parseInt(statePick(data,'vt','vpd_target_x10',0),10),!!flag1(statePick(data,'isp','is_stage_preset',0)),isEditLocked('growth-vpd'));
+    updateGrowthTile(parseInt(statePick(data,'gs','growth_stage',0),10),parseInt(statePick(data,'vt','vpd_target_x10',0),10),isEditLocked('growth-vpd'));
+  }else{
+    refreshGrowthSmartUi();
   }
   applyLiquidGauge('soil-liquid',statePick(data,'hg','h_g_now',null),soilErr);
   applyLiquidGauge('air-liquid',statePick(data,'ha','h_a_now',null),airErr);
@@ -1204,41 +1219,72 @@ dialEl.addEventListener('pointercancel',endDialDrag);
 dialEl.addEventListener('lostpointercapture',function(e){
   if(e.pointerId===dialPointerId){dialPointerId=null;activeDial.isDragging=false;}
 });
-var gsPreset=false;
 var GS_NAMES=['Универсальный','Проращивание','Вегетация','Цветение'];
-function setGrowthTileLocked(locked){
+function fmtGrowthVpdDisplay(vpdX10){
+  return (!vpdX10||vpdX10===0)?'авто':(Math.floor(vpdX10/10)+'.'+(vpdX10%10)+' kPa');
+}
+function applyGrowthSmartGate(smartOn){
   var tile=document.getElementById('tile-growth');
-  if(tile)tile.classList.toggle('tile--growth-locked',!!locked);
-  var main=tile?tile.querySelector('.tile-main'):null;
-  if(main)main.setAttribute('aria-disabled',locked?'true':'false');
-  if(locked){
-    var drawer=document.getElementById('drawer-growth');
-    if(drawer)drawer.classList.remove('active');
-    var toggle=document.getElementById('drawer-toggle-growth');
-    if(toggle){toggle.classList.remove('active');toggle.setAttribute('aria-expanded','false');toggle.textContent='Функции';}
+  if(tile)tile.classList.toggle('tile--growth-inactive',!smartOn);
+  var gate=document.getElementById('growth-smart-gate');
+  var ctrl=document.getElementById('growth-controls');
+  var applyBtn=document.getElementById('gs-apply-btn');
+  if(!smartOn){
+    if(gate)gate.style.display='';
+    if(ctrl){ctrl.style.opacity='0.4';ctrl.classList.add('growth-controls--locked');}
+  }else{
+    if(gate)gate.style.display='none';
+    if(ctrl){ctrl.style.opacity='';ctrl.classList.remove('growth-controls--locked');}
+  }
+  if(applyBtn){
+    applyBtn.disabled=!smartOn;
+    applyBtn.classList.toggle('locked',!smartOn);
   }
 }
-function updateGrowthTile(stage,vpdX10,isPreset,skipControls){
-  gsPreset=!!isPreset;
-  setGrowthTileLocked(gsPreset);
+function refreshGrowthSmartUi(){
+  var stage=0;
+  var vpdX10=0;
+  if(lastDashboardData){
+    stage=parseInt(statePick(lastDashboardData,'gs','growth_stage',0),10)||0;
+    vpdX10=parseInt(statePick(lastDashboardData,'vt','vpd_target_x10',0),10)||0;
+  }else{
+    for(var i=0;i<4;i++){
+      var b=document.getElementById('gs-'+i);
+      if(b&&b.classList.contains('active')){stage=i;break;}
+    }
+    var inp=document.getElementById('gs-vpd');
+    var parsed=parseGsVpdInput(inp?inp.value.trim():'');
+    if(parsed.ok&&!parsed.auto)vpdX10=parsed.x10;
+  }
+  updateGrowthTile(stage,vpdX10,isEditLocked('growth-vpd'));
+}
+function updateGrowthTile(stage,vpdX10,skipControls){
+  var smartOn=isSmartHumairActive();
   setText('growth-stage-value',GS_NAMES[stage]||GS_NAMES[0]);
-  var vDisp=(!vpdX10||vpdX10===0)?'авто':(Math.floor(vpdX10/10)+'.'+(vpdX10%10)+' kPa');
-  setText('tile-growth-vpd',vDisp);
-  if(skipControls)return;
-  var note=document.getElementById('growth-preset-notice');
-  var ctrl=document.getElementById('growth-controls');
-  if(isPreset){if(note)note.style.display='';if(ctrl)ctrl.style.opacity='0.4';}
-  else{if(note)note.style.display='none';if(ctrl)ctrl.style.opacity='';}
-  var hasManual=!isPreset&&vpdX10>0;
+  setText('tile-growth-vpd',!smartOn?'не акт.':fmtGrowthVpdDisplay(vpdX10));
+  applyGrowthSmartGate(smartOn);
+  var locked=!smartOn;
+  var hasManual=false;
+  if(skipControls){
+    var live=document.getElementById('gs-vpd');
+    hasManual=!locked&&!!(live&&live.value.trim().length>0&&parseFloat(live.value)>0);
+  }else{
+    hasManual=!locked&&vpdX10>0;
+  }
   for(var i=0;i<4;i++){
     var b=document.getElementById('gs-'+i);
-    if(b){b.classList.toggle('active',i===stage);b.disabled=isPreset||hasManual;}
+    if(b){
+      if(!skipControls)b.classList.toggle('active',i===stage);
+      b.disabled=locked||hasManual;
+    }
   }
   var inp=document.getElementById('gs-vpd');
   if(inp){
-    inp.disabled=isPreset;
-    if(!isPreset&&vpdX10>0){inp.value=(vpdX10/10).toFixed(1);}
-    else if(!isPreset&&vpdX10===0){inp.value='';}
+    inp.disabled=locked;
+    if(!skipControls){
+      if(!locked&&vpdX10>0){inp.value=(vpdX10/10).toFixed(1);}
+      else if(!locked&&vpdX10===0){inp.value='';}
+    }
   }
 }
 function parseGsVpdInput(raw){
@@ -1249,13 +1295,17 @@ function parseGsVpdInput(raw){
   return {ok:true,auto:false,x10:Math.round(vpd*10)};
 }
 function onGsVpdInput(){
+  if(!isSmartHumairActive())return;
   markEditLock('growth-vpd');
   var inp=document.getElementById('gs-vpd');
   var has=inp&&inp.value.trim().length>0&&parseFloat(inp.value)>0;
-  for(var i=0;i<4;i++){var b=document.getElementById('gs-'+i);if(b)b.disabled=gsPreset||has;}
+  for(var i=0;i<4;i++){var b=document.getElementById('gs-'+i);if(b)b.disabled=has;}
 }
 function pickStage(stage){
-  if(gsPreset)return;
+  if(!isSmartHumairActive()){
+    showToast('Сначала включите умную влажность','err');
+    return;
+  }
   if(navigator.vibrate)navigator.vibrate(10);
   var inp=document.getElementById('gs-vpd');if(inp)inp.value='';
   var d=new URLSearchParams();
@@ -1264,7 +1314,10 @@ function pickStage(stage){
   fetch('/send_vpd_stage',{method:'POST',body:d}).then(function(r){return r.json().then(function(j){return {ok:r.ok,data:j};});}).then(function(res){if(!res.ok||!res.data||!res.data.ok)throw new Error();markDashboardStateDirty();showToast('Сохранено','ok');}).catch(function(){showToast('Ошибка сохранения','err');});
 }
 function applyGsSettings(){
-  if(gsPreset)return;
+  if(!isSmartHumairActive()){
+    showToast('Сначала включите умную влажность','err');
+    return;
+  }
   markEditLock('growth-vpd');
   var inp=document.getElementById('gs-vpd');
   var raw=inp?inp.value.trim():'';
@@ -1671,10 +1724,7 @@ bindEditLock('gs-vpd','growth-vpd');
 initFeatureChips();
 syncVentCurrent();
 refreshDashboardAlerts();
-(function(){
-  var tg=document.getElementById('tile-growth');
-  if(tg&&tg.classList.contains('tile--growth-locked'))gsPreset=true;
-})();
+refreshGrowthSmartUi();
 loadHistoryRangePref();
 fetchDashboardState(true);
 startDashboardStatePoll();

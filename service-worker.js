@@ -4,9 +4,9 @@
  * CSS — stale-while-revalidate (офлайн + свежие стили онлайн).
  * Иконки/manifest — cache-first (офлайн).
  */
-// BUILD_ID: 202607070831
+// BUILD_ID: 202607221730
 
-const CACHE = 'gh-remote-202607070831';
+const CACHE = 'gh-remote-202607222000';
 
 const ASSETS = [
   './',

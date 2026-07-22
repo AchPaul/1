@@ -5,10 +5,7 @@
  */
 (function (global) {
   'use strict';
-  var PLANT_NUMS = 379;
-  var STAGE_PRESET_SEEDLING = 376;
-  var STAGE_PRESET_VEGETATIVE = 377;
-  var STAGE_PRESET_FLOWERING = 378;
+  var PLANT_NUMS = 378;
   var FACTORY_PLANTS = [
     [5,"Абутилон"],
     [6,"Агава"],
@@ -380,17 +377,10 @@
     [372,"Эхмея"],
     [373,"Юкка"],
     [374,"Юстиция"],
-    [375,"Ятрофа"]
+    [375,"Ятрофа"],
+    [376,"Автоцветущие"],
+    [377,"Фотопериодные"]
   ];
-
-  function isStagePresetProfileId(profileId) {
-    var id = Number(profileId);
-    return Number.isFinite(id) && (
-      id === STAGE_PRESET_SEEDLING ||
-      id === STAGE_PRESET_VEGETATIVE ||
-      id === STAGE_PRESET_FLOWERING
-    );
-  }
 
   function utf8FoldLower(str) {
     if (!str) return '';
@@ -446,9 +436,5 @@
   }
 
   global.GH_PLANT_NUMS = PLANT_NUMS;
-  global.GH_STAGE_PRESET_SEEDLING = STAGE_PRESET_SEEDLING;
-  global.GH_STAGE_PRESET_VEGETATIVE = STAGE_PRESET_VEGETATIVE;
-  global.GH_STAGE_PRESET_FLOWERING = STAGE_PRESET_FLOWERING;
-  global.isStagePresetProfileId = isStagePresetProfileId;
   global.ghSearchPlants = ghSearchPlants;
 })(typeof window !== 'undefined' ? window : globalThis);
